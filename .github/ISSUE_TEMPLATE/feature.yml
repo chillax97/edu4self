@@ -1,0 +1,22 @@
+name: Idea
+description: Suggest a change or a new feature
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve for a learner?
+      description: Describe the situation first, then the idea. "I want X" is easier to judge with the why.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Fit
+      options:
+        - label: It works without new runtime dependencies or network access
+        - label: It doesn't let time spent count as proof

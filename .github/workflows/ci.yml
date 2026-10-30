@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: unit · ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests (standard library only)
+        run: python -m unittest discover -s tests -v
+      - name: A fresh vault passes its own check
+        env:
+          EDU4SELF_CONFIG_HOME: ${{ runner.temp }}/cfg
+        run: |
+          python edu4self init "$RUNNER_TEMP/vault" --name CI
+          python edu4self check
+          python edu4self init "$RUNNER_TEMP/empty" --no-example
+          python edu4self check --vault "$RUNNER_TEMP/empty"
+
+  browser:
+    name: browser tests (Chrome)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - run: npm ci
+        working-directory: tests/e2e
+      - name: Run against a throwaway vault
+        working-directory: tests/e2e
+        run: CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" npm test
+
+  plugin:
+    name: Claude Code plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude plugin validate ./plugin
+      - run: claude plugin validate .

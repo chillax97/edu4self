@@ -1,0 +1,23 @@
+# Learning vault (edu4self)
+
+This folder is {{NAME}}'s learning vault. One folder per topic, each taught with the `teach` skill
+(from Matt Pocock's skills). A local dashboard at http://127.0.0.1:{{PORT}} is the learner's front end.
+
+- **The dashboard reads `_system/state.json`, and you are its only writer.** Whenever teaching progress
+  changes (grading, a new lesson or probe, unlocking, a milestone change), update `state.json` in the
+  same turn, then run:
+
+      {{CHECK}}
+
+  It must exit 0.
+- **"check my inbox"** means: process `_system/inbox.jsonl` exactly as described in
+  `{{ENGINE}}/docs/PROTOCOL.md`. Read that file before the first grading in a session.
+- **A new topic**: run the `teach` skill in a new folder here, then register the topic in
+  `state.json` (PROTOCOL.md, section 2) so it appears on the dashboard.
+- **Settings** (name, goals, block kinds, music, bar names and voices) live in `_system/config.json`.
+  The learner normally changes them in the dashboard's Settings panel. Edit the file only when asked;
+  the format is in `{{ENGINE}}/docs/CUSTOMIZING.md`.
+- Never write `_system/inbox.jsonl`, `_system/blocks.jsonl` or `_system/music/`.
+- To point the learner at a task, link it: `http://127.0.0.1:{{PORT}}/#submit=<task-id>`.
+- The example topic `how-learning-works/` can be deleted when the learner asks: remove the folder and
+  its entry in `state.json`, then run the check.

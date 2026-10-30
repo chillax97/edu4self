@@ -1,0 +1,460 @@
+#!/usr/bin/env python3
+"""edu4self command line. Python 3.9+ standard library only.
+
+    ./edu4self setup                 first time: make a vault, start the dashboard, open it
+    ./edu4self init PATH             make a new vault (learning folder) at PATH
+    ./edu4self serve                 run the dashboard in this terminal (Ctrl-C stops it)
+    ./edu4self install               start the dashboard at login (macOS launchd, Linux systemd)
+    ./edu4self uninstall             stop doing that (your files stay)
+    ./edu4self restart | status      restart the service / show what's running
+    ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
+    ./edu4self doctor                check everything and say how to fix what's wrong
+    ./edu4self open                  open the dashboard in a browser
+
+The vault and port are remembered in ~/.config/edu4self/settings.json after init.
+"""
+import argparse
+import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
+import webbrowser
+from datetime import datetime
+
+ENGINE = os.path.dirname(os.path.realpath(__file__))
+APP = os.path.join(ENGINE, "app")
+TEMPLATE = os.path.join(ENGINE, "template")
+EXAMPLE_TOPIC = "how-learning-works"
+LABEL = "io.github.edu4self.dashboard"
+DEFAULT_PORT = 4747
+
+sys.path.insert(0, APP)
+
+
+def settings_path():
+    base = os.environ.get("EDU4SELF_CONFIG_HOME") or os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "edu4self")
+    return os.path.join(base, "settings.json")
+
+
+def read_settings():
+    try:
+        with open(settings_path(), encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def write_settings(**kw):
+    s = read_settings()
+    s.update(kw)
+    os.makedirs(os.path.dirname(settings_path()), exist_ok=True)
+    with open(settings_path(), "w", encoding="utf-8") as fh:
+        json.dump(s, fh, indent=2)
+        fh.write("\n")
+
+
+def resolve(args):
+    """The vault and port to use: flags, then environment, then what init remembered."""
+    s = read_settings()
+    vault = getattr(args, "vault", None) or os.environ.get("EDU4SELF_VAULT") or s.get("vault")
+    port = getattr(args, "port", None) or int(os.environ.get("EDU4SELF_PORT") or s.get("port") or DEFAULT_PORT)
+    if vault:
+        vault = os.path.abspath(os.path.expanduser(vault))
+    return vault, int(port)
+
+
+def need_vault(vault):
+    if not vault or not os.path.isfile(os.path.join(vault, "_system", "state.json")):
+        sys.exit("No vault found%s. Make one with:  ./edu4self init ~/learn" % (" at " + vault if vault else ""))
+    return vault
+
+
+def say(mark, text):
+    print("  %s %s" % (mark, text))
+
+
+# ---------------------------------------------------------------- init
+
+def cmd_init(args):
+    vault = os.path.abspath(os.path.expanduser(args.path))
+    if os.path.exists(vault) and os.listdir(vault):
+        sys.exit("%s already exists and isn't empty. Pick a new folder (it gets created)." % vault)
+    port = args.port or DEFAULT_PORT
+    name = (args.name or "").strip()
+    today = datetime.now().astimezone()
+
+    def skip(src, names):
+        out = [n for n in names if n.endswith(".tmpl") or n in (".DS_Store", "__pycache__")]
+        if args.no_example and os.path.abspath(src) == os.path.abspath(TEMPLATE):
+            out.append(EXAMPLE_TOPIC)
+        return out
+    shutil.copytree(TEMPLATE, vault, ignore=skip, dirs_exist_ok=True)
+
+    # state.json: today's dates, the learner's name, and no example topic if asked
+    sp = os.path.join(vault, "_system", "state.json")
+    with open(sp, encoding="utf-8") as fh:
+        state = json.load(fh)
+    state["updated"] = today.isoformat(timespec="seconds")
+    state["learner"] = name
+    state["coach"]["date"] = today.date().isoformat()
+    if args.no_example:
+        state["topics"] = []
+        state["coach"].update(headline="Welcome. Start your first topic.",
+                              body="Open Claude Code in this folder and say /teach followed by what you want to learn.")
+        state["coach"]["voices"] = [{"voice": "regular", "text": "Empty bar. Best seat in the house. What are we learning?"}]
+    for t in state["topics"]:
+        for h in t["history"]:
+            h["date"] = today.date().isoformat()
+    with open(sp, "w", encoding="utf-8") as fh:
+        json.dump(state, fh, indent=1, ensure_ascii=False)
+        fh.write("\n")
+
+    cfg = {"name": name}
+    with open(os.path.join(vault, "_system", "config.json"), "w", encoding="utf-8") as fh:
+        json.dump(cfg, fh, indent=2)
+        fh.write("\n")
+
+    # instructions for the tutor: CLAUDE.md for Claude Code, AGENTS.md for other agents
+    with open(os.path.join(TEMPLATE, "CLAUDE.md.tmpl"), encoding="utf-8") as fh:
+        text = fh.read()
+    check = "python3 %s check --vault %s" % (shell_quote(os.path.join(ENGINE, "edu4self")), shell_quote(vault))
+    text = (text.replace("{{NAME}}", name or "the learner").replace("{{PORT}}", str(port))
+            .replace("{{ENGINE}}", ENGINE).replace("{{CHECK}}", check))
+    for fname in ("CLAUDE.md", "AGENTS.md"):
+        with open(os.path.join(vault, fname), "w", encoding="utf-8") as fh:
+            fh.write(text)
+    write_settings(vault=vault, port=port)
+    print("Made a vault at %s" % vault)
+    return vault, port
+
+
+def shell_quote(s):
+    return "'" + s.replace("'", "'\\''") + "'" if any(c in s for c in " '\"$`\\") else s
+
+
+# ---------------------------------------------------------------- check
+
+def cmd_check(args):
+    vault = need_vault(resolve(args)[0])
+    a = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
+    b = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), vault])
+    return 0 if a.returncode == 0 and b.returncode == 0 else 1
+
+
+# ---------------------------------------------------------------- serve
+
+def cmd_serve(args):
+    vault, port = resolve(args)
+    need_vault(vault)
+    import server
+    httpd = server.make_server(vault, port)
+    url = "http://127.0.0.1:%d/" % port
+    print("edu4self %s on %s (vault %s). Ctrl-C stops it." % (server.VERSION, url, vault))
+    if args.open:
+        webbrowser.open(url)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+def health(port, timeout=1.5):
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:%d/api/health" % port, timeout=timeout) as r:
+            return json.load(r)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------- service
+
+def python_path():
+    """An interpreter path that survives minor upgrades (the PATH symlink, not the versioned binary)."""
+    p = shutil.which("python3")
+    return os.path.abspath(p) if p else sys.executable
+
+
+def launchd_plist(vault, port):
+    logs = os.path.join(vault, "_system", "logs")
+    args = "".join("    <string>%s</string>\n" % xml(a) for a in
+                   (python_path(), os.path.join(APP, "server.py"), "--vault", vault, "--port", str(port)))
+    return ("""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>%s</string>
+  <key>ProgramArguments</key>
+  <array>
+%s  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+  <key>WorkingDirectory</key>
+  <string>%s</string>
+  <key>StandardOutPath</key>
+  <string>%s</string>
+  <key>StandardErrorPath</key>
+  <string>%s</string>
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>
+""" % (LABEL, args, xml(vault), xml(os.path.join(logs, "dashboard.log")), xml(os.path.join(logs, "dashboard.log"))))
+
+
+def xml(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def systemd_unit(vault, port):
+    q = lambda s: '"%s"' % s.replace("\\", "\\\\").replace('"', '\\"')
+    return """[Unit]
+Description=edu4self learning dashboard
+After=network.target
+
+[Service]
+ExecStart=%s %s --vault %s --port %d
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+""" % (q(python_path()), q(os.path.join(APP, "server.py")), q(vault), port)
+
+
+def plist_path():
+    return os.path.expanduser("~/Library/LaunchAgents/%s.plist" % LABEL)
+
+
+def unit_path():
+    return os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "systemd", "user", "edu4self.service")
+
+
+def run(cmd, check=False):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=check)
+
+
+def cmd_install(args):
+    vault, port = resolve(args)
+    need_vault(vault)
+    write_settings(vault=vault, port=port)   # status, doctor and open use the same port from now on
+    os.makedirs(os.path.join(vault, "_system", "logs"), exist_ok=True)
+    system = platform.system()
+    if system == "Darwin":
+        dest = plist_path()
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as fh:
+            fh.write(launchd_plist(vault, port))
+        dom = "gui/%d" % os.getuid()
+        run(["launchctl", "bootout", "%s/%s" % (dom, LABEL)])
+        r = run(["launchctl", "bootstrap", dom, dest])
+        if r.returncode:
+            sys.exit("launchctl couldn't start it:\n" + r.stdout)
+    elif system == "Linux" and shutil.which("systemctl"):
+        dest = unit_path()
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as fh:
+            fh.write(systemd_unit(vault, port))
+        run(["systemctl", "--user", "daemon-reload"])
+        r = run(["systemctl", "--user", "enable", "--now", "edu4self.service"])
+        if r.returncode:
+            sys.exit("systemctl couldn't start it:\n" + r.stdout)
+    else:
+        print("Starting at login isn't automated on %s yet. Run  ./edu4self serve  in a terminal instead," % system)
+        print("or add that command to your startup apps (Windows: Task Scheduler, 'At log on').")
+        return 1
+    for _ in range(20):
+        if health(port):
+            print("The dashboard is running at http://127.0.0.1:%d/ and starts at login." % port)
+            return 0
+        time.sleep(0.25)
+    print("Installed, but nothing answers on port %d yet. Run ./edu4self doctor." % port)
+    return 1
+
+
+def cmd_uninstall(args):
+    system = platform.system()
+    if system == "Darwin":
+        run(["launchctl", "bootout", "gui/%d/%s" % (os.getuid(), LABEL)])
+        if os.path.exists(plist_path()):
+            os.remove(plist_path())
+    elif system == "Linux" and shutil.which("systemctl"):
+        run(["systemctl", "--user", "disable", "--now", "edu4self.service"])
+        if os.path.exists(unit_path()):
+            os.remove(unit_path())
+            run(["systemctl", "--user", "daemon-reload"])
+    print("The login service is removed. Your vault is untouched.")
+    return 0
+
+
+def service_installed():
+    return os.path.exists(plist_path()) if platform.system() == "Darwin" else os.path.exists(unit_path())
+
+
+def cmd_restart(args):
+    if not service_installed():
+        print("No login service is installed. Use ./edu4self serve, or ./edu4self install.")
+        return 1
+    if platform.system() == "Darwin":
+        r = run(["launchctl", "kickstart", "-k", "gui/%d/%s" % (os.getuid(), LABEL)])
+    else:
+        r = run(["systemctl", "--user", "restart", "edu4self.service"])
+    print(r.stdout.strip() or "Restarted.")
+    return r.returncode
+
+
+def cmd_status(args):
+    vault, port = resolve(args)
+    h = health(port)
+    print("vault:    %s" % (vault or "(none yet: ./edu4self init PATH)"))
+    print("port:     %d" % port)
+    print("server:   %s" % ("running, edu4self %s" % h.get("version") if h else "not answering"))
+    print("service:  %s" % ("installed (starts at login)" if service_installed() else "not installed"))
+    return 0 if h else 1
+
+
+def cmd_open(args):
+    url = "http://127.0.0.1:%d/" % resolve(args)[1]
+    webbrowser.open(url)
+    print(url)
+    return 0
+
+
+# ---------------------------------------------------------------- doctor
+
+def teach_skill_found():
+    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    if os.path.isfile(os.path.join(home, "skills", "teach", "SKILL.md")):
+        return True
+    for root, dirs, files in os.walk(os.path.join(home, "plugins")):
+        if os.path.basename(root) == "teach" and "SKILL.md" in files:
+            return True
+        if root.count(os.sep) - home.count(os.sep) > 8:
+            dirs[:] = []
+    return False
+
+
+def cmd_doctor(args):
+    vault, port = resolve(args)
+    bad = 0
+    print("edu4self doctor")
+    if sys.version_info >= (3, 9):
+        say("✓", "Python %s" % platform.python_version())
+    else:
+        bad += 1
+        say("✗", "Python %s is too old: install 3.9 or newer" % platform.python_version())
+    if vault and os.path.isfile(os.path.join(vault, "_system", "state.json")):
+        say("✓", "vault: %s" % vault)
+        r1 = run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
+        r2 = run([sys.executable, os.path.join(APP, "check_links.py"), vault])
+        if r1.returncode or r2.returncode:
+            bad += 1
+            say("✗", "vault check failed. Ask Claude to fix it, or run ./edu4self check to see why")
+        else:
+            say("✓", "state.json and links are valid")
+    else:
+        bad += 1
+        say("✗", "no vault yet: ./edu4self init ~/learn")
+    h = health(port)
+    if h:
+        say("✓", "dashboard answering on http://127.0.0.1:%d/ (edu4self %s)" % (port, h.get("version")))
+    else:
+        bad += 1
+        say("✗", "nothing answers on port %d: ./edu4self serve, or ./edu4self install" % port)
+    say("✓" if service_installed() else "–", "login service %s" % ("installed" if service_installed() else "not installed (optional: ./edu4self install)"))
+    if shutil.which("claude"):
+        say("✓", "Claude Code found")
+    else:
+        bad += 1
+        say("✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)")
+    if teach_skill_found():
+        say("✓", "teach skill installed")
+    else:
+        bad += 1
+        say("✗", "teach skill not found: claude plugin marketplace add chillax97/edu4self && claude plugin install edu4self@edu4self")
+    print("All good." if not bad else "%d thing%s to fix." % (bad, "" if bad == 1 else "s"))
+    return 1 if bad else 0
+
+
+# ---------------------------------------------------------------- setup
+
+def ask(prompt, default):
+    if not sys.stdin.isatty():
+        return default
+    got = input("%s [%s]: " % (prompt, default)).strip()
+    return got or default
+
+
+def cmd_setup(args):
+    print("edu4self setup. Press Enter to accept the suggestion in brackets.\n")
+    path = args.vault or ask("Where should your learning vault go?", "~/learn")
+    name = args.name if args.name is not None else ask("What should the dashboard call you?", os.environ.get("USER", "").capitalize() or "friend")
+    ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example)
+    vault, port = cmd_init(ns)
+    rc = 0
+    if not args.no_service:
+        rc = cmd_install(argparse.Namespace(vault=vault, port=port))
+    print("\nNext:")
+    print("  1. Give Claude the tutor skills (once; also installs Matt Pocock's teach skill):")
+    print("       claude plugin marketplace add chillax97/edu4self")
+    print("       claude plugin install edu4self@edu4self")
+    print("  2. Open the dashboard:   http://127.0.0.1:%d/" % port)
+    print("  3. Work from your vault: cd %s && claude" % shell_quote(vault))
+    if args.no_service or rc:
+        print("\nThe dashboard isn't running as a service. Start it with:  ./edu4self serve")
+    elif not args.no_open:
+        webbrowser.open("http://127.0.0.1:%d/" % port)
+    return 0
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="edu4self", description="A local learning dashboard with an AI tutor loop.")
+    sub = ap.add_subparsers(dest="cmd")
+
+    def common(p, vault=True):
+        if vault:
+            p.add_argument("--vault", help="the vault folder (default: the one init made)")
+        p.add_argument("--port", type=int, help="dashboard port (default %d)" % DEFAULT_PORT)
+        return p
+
+    p = common(sub.add_parser("setup", help="first-time setup: vault + service + open"), vault=False)
+    p.add_argument("--vault", help="where to make the vault (default ~/learn)")
+    p.add_argument("--name", help="what the dashboard calls you")
+    p.add_argument("--no-example", action="store_true", help="start without the example topic")
+    p.add_argument("--no-service", action="store_true", help="don't start at login")
+    p.add_argument("--no-open", action="store_true", help="don't open a browser")
+    p = common(sub.add_parser("init", help="make a new vault"), vault=False)
+    p.add_argument("path")
+    p.add_argument("--name", default="")
+    p.add_argument("--no-example", action="store_true")
+    p = common(sub.add_parser("serve", help="run the dashboard in this terminal"))
+    p.add_argument("--open", action="store_true", help="open a browser too")
+    for name, h in (("install", "start at login"), ("uninstall", "stop starting at login"), ("restart", "restart the service"),
+                    ("status", "what's running"), ("check", "validate the vault"), ("doctor", "check everything"),
+                    ("open", "open the dashboard")):
+        common(sub.add_parser(name, help=h))
+    args = ap.parse_args(argv)
+    if not args.cmd:
+        ap.print_help()
+        return 0
+    if args.cmd == "init":
+        cmd_init(args)
+        print("Start it with:  ./edu4self serve --open   (or ./edu4self install to start at login)")
+        return 0
+    return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
+            "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,
+            "open": cmd_open}[args.cmd](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)

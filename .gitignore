@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+node_modules/
+.DS_Store
+*.tmp
+# a vault made inside the repo by accident
+/learn/
+/vault/

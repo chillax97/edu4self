@@ -1,0 +1,18 @@
+{
+  "name": "edu4self",
+  "description": "edu4self: a local learning dashboard with Claude as the tutor.",
+  "owner": {
+    "name": "chillax97",
+    "url": "https://github.com/chillax97"
+  },
+  "allowCrossMarketplaceDependenciesOn": [
+    "claude-plugins-official"
+  ],
+  "plugins": [
+    {
+      "name": "edu4self",
+      "source": "./plugin",
+      "description": "Grade dashboard submissions (\"check my inbox\"), register new topics, change dashboard settings."
+    }
+  ]
+}

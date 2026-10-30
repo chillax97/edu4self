@@ -1,0 +1,6 @@
+# edu4self vault
+_system/music/
+_system/logs/
+_system/*.tmp
+.obsidian/workspace*.json
+.DS_Store

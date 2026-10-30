@@ -1,0 +1,163 @@
+# edu4self product spec
+
+Version 1.0 · status: shipped · owner: the maintainers (see [CONTRIBUTING.md](../CONTRIBUTING.md))
+
+## 1. Problem
+
+**Who.** A self-directed adult learning a demanding subject alone, outside a course: a developer moving
+into a new field, a student preparing for an exam, someone learning a language for a move. They already
+use an AI assistant and would happily be taught by it.
+
+**What goes wrong today.** Chat-based tutoring has no memory and no structure. Each session starts from
+zero; nobody tracks what was proven versus merely read; the learner decides every day what to do next and
+often decides "nothing". Progress is invisible, so motivation decays. Study habits default to rereading,
+the method the research rates least useful.
+
+**What it costs.** Weeks of effort that don't stick, and courses abandoned around the second week.
+
+**What success looks like.** The learner opens one page, sees one next step, does it, and submits it. The
+tutor grades it the same day with the full history in view. A month later the learner can point at what
+they can now do, not at hours spent. The failure that matters most is **false proof**: the dashboard
+claiming mastery that a closed-book test would not confirm. Under-crediting is cheaper than
+over-crediting, so the system errs that way.
+
+**Why this problem.** Motivation and memory aren't separate problems. A visible record of *demonstrated*
+ability is both the motivator and the measurement, as long as it can't be gamed by time spent.
+
+## 2. Users
+
+| persona | situation | needs most |
+|---|---|---|
+| **The career switcher** | learning a technical field in the evenings, alone | a clear next step, honest feedback, proof it is working |
+| **The exam preparer** | fixed date, high stakes, limited retakes | a readiness signal before spending an attempt (the optional gate) |
+| **The tinkerer** | wants to make the tool their own | settings without code; a codebase small enough to read in an evening |
+
+Non-users: classrooms and teachers managing many learners; anyone who needs the data in the cloud.
+
+## 3. Goals and non-goals
+
+**Goals**
+1. A complete learn → submit → grade → next loop with an AI tutor that keeps state across sessions.
+2. A dashboard that a non-programmer can install with one command and customize without a terminal.
+3. Separate *effort* (focus blocks) from *evidence* (demonstrated ability), visibly.
+4. Local-first: no account, no network calls, plain files the learner owns.
+5. Small and readable: Python standard library, vanilla JavaScript, no build step.
+
+**Non-goals (v1)**
+- Hosting, sync or multi-device. (A vault in a synced folder works, but isn't designed for.)
+- Multiple learners per vault.
+- An AI inside the app. The tutor is Claude Code, outside the app, invoked by the learner.
+- Spaced-repetition flashcards. Recall checks are scheduled by the tutor, not by an algorithm.
+- Windows login-service automation (manual `serve` works).
+
+## 4. Principles
+
+Each principle comes from evidence or from a failure observed while building the first version.
+
+1. **Retrieval over review.** Practice testing and spacing are the two techniques rated most useful
+   across ages and subjects (Dunlosky et al., 2013). Recall attempts raise long-term retention more than
+   rereading does, even though rereading feels better (Roediger & Karpicke, 2006; Bjork & Bjork, 2020).
+   So every lesson ends in closed-book questions, probes test before teaching, and recall checks return
+   days later.
+2. **Proof is not time.** Time on the die and evidence on the log are drawn separately and can't be
+   converted into each other. Only the tutor can mark evidence, and only for demonstrated ability.
+3. **One next step.** The page leads with a single primary action. Everything else is secondary or
+   behind a click (progressive disclosure).
+4. **Honest under-crediting.** When in doubt, the tutor records understanding but not proof, and schedules
+   a check. The first live run of the protocol did exactly this on an ambiguous signal.
+5. **Gentle, not guilt.** After 3+ idle days the page proposes one 25-minute block, not a backlog.
+   Missed water is never mentioned again. Fun blocks ("play") count toward the die.
+6. **Respect attention.** Water reminders sound once per interval with no repeat nagging; notifications
+   fire only when the tab is in the background. Animations stop under `prefers-reduced-motion`.
+7. **The learner owns the data.** Everything is plain JSON, Markdown and HTML in a folder they chose.
+
+## 5. Functional requirements
+
+| id | requirement | verified by |
+|---|---|---|
+| FR-1 | `./edu4self setup` creates a vault, starts the dashboard at login (macOS, Linux) and opens it | `tests/test_server.py` CliTest; manual on macOS |
+| FR-2 | The dashboard shows the first `todo` task without a pending submission as **Up next** | e2e "submitting answers" |
+| FR-3 | The learner submits answers or notes; they append to `_system/inbox.jsonl`; a pending one can be withdrawn | unit `test_submission_and_withdraw`, e2e |
+| FR-4 | The tutor processes the inbox per [PROTOCOL.md](PROTOCOL.md) and edits only `state.json` | live run with Claude Code (CHANGELOG 1.0.0) |
+| FR-5 | `edu4self check` validates `state.json` and every internal link; exit 0 = valid | unit ValidatorTest |
+| FR-6 | Focus blocks: kind, duration (presets or 1–240 min), start/stop, survive reloads, saved on completion, idempotent across tabs | unit `test_blocks`, e2e focus block |
+| FR-7 | Die / node / rack visualisation from all blocks; per-die details on click | existing behaviour, e2e smoke |
+| FR-8 | Water rounds every 15 or 30 min (or off) during a block; counts saved with the block | unit `test_blocks` (validation) |
+| FR-9 | Two views (bar, classic) with the same data; each browser remembers its choice; Settings sets the default | e2e first visit, classic |
+| FR-10 | Bar view: voices comment on real data (time, streak, die, inbox, proof age, music) plus tutor-written lines (`coach.voices`) | e2e voices check |
+| FR-11 | Jukebox plays one learner-supplied track on loop, resumes where it stopped, supports seek, ±1 min, random spot and volume; one tab plays at a time | e2e jukebox |
+| FR-12 | Settings panel edits name, default view, goals, block presets and kinds, water, music (upload/replace/remove), bar names, gags, custom lines, voice names and colours, Obsidian; validated server-side; reset keeps music | e2e Settings, unit config tests |
+| FR-13 | A broken `config.json` never breaks the page; defaults are used and the problem is shown in Settings | unit `test_broken_config_file_falls_back_to_defaults` |
+| FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `customize` skills; installing it also installs the `teach` skill | `claude plugin validate`; sandboxed install |
+| FR-15 | `edu4self doctor` reports Python, vault, server, service, Claude Code and teach skill, each with a fix | manual |
+
+## 6. Non-functional requirements
+
+- **Privacy:** binds to 127.0.0.1; `Host` and `Origin` checks on every request; no outbound requests;
+  no third-party assets at runtime.
+- **Dependencies:** Python 3.9+ standard library; browser-native JS/CSS. Node is needed only for the
+  browser tests.
+- **Portability:** macOS and Linux first-class; Windows runs `serve` manually.
+- **Accessibility:** keyboard reachable controls, visible focus, `aria-live` status, reduced-motion
+  support, readable contrast in both themes. Phone width (390 px) without sideways scrolling.
+- **Robustness:** append-only logs with de-duplication; atomic writes for config; uploads streamed to a
+  temp file then swapped in; music served with HTTP Range so seeking works.
+- **Size:** the whole client is three files under 150 KB, plus 113 KB of fonts.
+
+## 7. Data contracts
+
+| file | writer | contract |
+|---|---|---|
+| `_system/state.json` | tutor only | [PROTOCOL.md §3](PROTOCOL.md#3-schema-reference) |
+| `_system/inbox.jsonl` | dashboard, append-only | `{id, ts, topic, task, kind, title, fields, note, honor}` and `{id, ts, kind: "withdraw", ref}` |
+| `_system/blocks.jsonl` | dashboard, append-only | `{id, ts, started, block, minutes, task?, water_served?, water_drunk?}` |
+| `_system/config.json` | Settings panel or learner | [CUSTOMIZING.md](CUSTOMIZING.md) |
+
+## 8. Success measures
+
+For a learner (visible on the dashboard itself): days a week with a block (goal 4), focused minutes a
+day (goal 120), and evidence entries per week. For the project: a newcomer reaches a graded first
+lesson within 20 minutes of cloning; `doctor` explains every failed setup step it can detect.
+
+## 9. Risks
+
+| risk | mitigation |
+|---|---|
+| The tutor over-credits (false proof) | protocol rules, `evidence` reserved for demonstrated ability, recall checks after a gap |
+| A bad `state.json` blanks the page | `edu4self check` after every edit; the page shows a clear error instead of crashing |
+| A Settings change breaks the tutor's check | removed block kinds are a note, not an error; covered by a test |
+| A user publishes copyrighted music | no music ships; uploads stay in the vault, which `.gitignore` excludes |
+| Trademark trouble | no third-party marks in the product (see decisions) |
+
+## 10. Decisions
+
+- **The code and the data live apart.** The repo is the engine; the vault is the learner's. `git pull`
+  can never overwrite progress.
+- **The tutor is outside the app.** Claude Code already has file access, skills and the learner's trust.
+  The app stays a viewer with a few write endpoints.
+- **"Focus blocks", never "Pomodoro".** The Pomodoro Technique® and Pomodoro® are registered
+  trademarks of Francesco Cirillo, whose guidelines restrict software built on them. edu4self's blocks
+  are plain timeboxing with free lengths, and it does not use or reference those marks in the product.
+- **Original voice names.** The bar view is inspired by *Disco Elysium*'s skill-voice dialogue, but uses
+  its own characters and names (Logic, Willpower, The archivist, The body, …). Players of that game
+  will recognise the idea; no names, text or assets are taken from it.
+- **Depend on, don't vendor, the teach skill.** It is maintained upstream (MIT); the plugin declares it
+  as a dependency so users get fixes.
+
+## 11. Roadmap (not committed)
+
+Windows login service · an optional local "recall check" scheduler · export of the evidence log as a
+shareable page · translations of the dashboard UI.
+
+## References
+
+- Bjork, R. A., & Bjork, E. L. (2020). Desirable difficulties in theory and practice. *Journal of Applied
+  Research in Memory and Cognition*, 9(4), 475–479.
+- Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2013). Improving students'
+  learning with effective learning techniques. *Psychological Science in the Public Interest*, 14(1), 4–58.
+- Roediger, H. L., & Karpicke, J. D. (2006). Test-enhanced learning. *Psychological Science*, 17(3), 249–255.
+- Wittbrodt, M. T., & Millard-Stafford, M. (2018). Dehydration impairs cognitive performance: a
+  meta-analysis. *Medicine & Science in Sports & Exercise*, 50(11), 2360–2368. (Why the water rounds exist:
+  the effect is small but real, and largest for attention.)
+- Cirillo, F. Pomodoro® trademark guidelines. <https://www.pomodorotechnique.com/pomodoro-trademark-guidelines/>
+- Anthropic. Claude Code plugins and marketplaces. <https://code.claude.com/docs/en/plugin-marketplaces>

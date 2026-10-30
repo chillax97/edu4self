@@ -1,0 +1,12 @@
+{
+  "name": "edu4self",
+  "displayName": "edu4self",
+  "version": "1.0.0",
+  "description": "The tutor side of edu4self: grade dashboard submissions, register new topics, change dashboard settings.",
+  "author": { "name": "chillax97", "url": "https://github.com/chillax97" },
+  "homepage": "https://github.com/chillax97/edu4self",
+  "repository": "https://github.com/chillax97/edu4self",
+  "license": "MIT",
+  "keywords": ["learning", "teaching", "tutor", "dashboard", "spaced-repetition"],
+  "dependencies": ["mattpocock-skills@claude-plugins-official"]
+}

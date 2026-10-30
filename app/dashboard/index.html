@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>edu4self · your learning dashboard</title>
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff5b3a'/%3E%3Cpath d='M18 40c4 6 10 8 16 8 9 0 14-6 14-14S43 18 33 18c-9 0-15 7-15 15h30' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/" aria-label="edu4self home">
+      <span class="brand-mark" aria-hidden="true">e</span>
+      <span class="brand-word">edu4self</span>
+    </a>
+    <div class="topbar-status" id="status" aria-live="polite"></div>
+    <a class="blk-pill" id="blk-pill" href="#block" hidden></a>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-view" type="button" title="Switch between the bar and the classic page"></button>
+      <button class="btn btn-ghost" id="btn-note" type="button" title="Send Claude a question or a note">✉︎ <span class="hide-sm">Note to Claude</span></button>
+      <button class="btn btn-ghost" id="btn-settings" type="button" aria-haspopup="dialog" title="Your name, goals, blocks, music, the bar">⚙ <span class="hide-sm">Settings</span></button>
+      <button class="btn btn-ghost" id="btn-help" type="button" aria-haspopup="dialog">? <span class="hide-sm">How it works</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+  <div class="loading" id="loading">
+    <div class="spinner" aria-hidden="true"></div>
+    <p>Loading your dashboard…</p>
+  </div>
+</main>
+
+<footer class="wrap footer">
+  <span>Runs only on this computer at <code id="footer-port">127.0.0.1</code>. Nothing leaves your machine.</span>
+  <a href="#" id="footer-help">How it works</a>
+</footer>
+
+<!-- onboarding -->
+<div class="overlay" id="onboarding" hidden>
+  <div class="dialog onboard" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <div class="ob-slides">
+      <section class="ob-slide" data-step="0">
+        <div class="ob-art art-1" aria-hidden="true"><span>1</span></div>
+        <h2 id="ob-title">Welcome to edu4self</h2>
+        <p>This is home base for everything you're learning. It always shows <strong>one clear next step</strong>, so you never have to wonder what to do.</p>
+        <p class="ob-small">There's a small example topic to try the loop with. Your own topics show up here as soon as Claude sets them up.</p>
+      </section>
+      <section class="ob-slide" data-step="1" hidden>
+        <div class="ob-art art-2" aria-hidden="true"><span>2</span></div>
+        <h2>Do the work, then submit it here</h2>
+        <p>Open the lesson or probe from the <strong>Up next</strong> card. When you're done, press <strong>Submit answers</strong> and type what you got.</p>
+        <p class="ob-small"><strong>Probes</strong> test what you know without teaching anything, so do them honestly: no running code, no AI.</p>
+      </section>
+      <section class="ob-slide" data-step="2" hidden>
+        <div class="ob-art art-3" aria-hidden="true"><span>3</span></div>
+        <h2>Then tell Claude to check your inbox</h2>
+        <p>Your answers wait in an inbox on this computer. Open Claude Code in your vault folder and say <strong>"check my inbox"</strong>.</p>
+        <p class="ob-small">Claude grades your work, writes down what you've proven, and updates this page. It refreshes on its own.</p>
+      </section>
+    </div>
+    <div class="ob-footer">
+      <div class="ob-dots" role="tablist" aria-label="Onboarding steps">
+        <button class="dot is-on" data-go="0" aria-label="Step 1"></button>
+        <button class="dot" data-go="1" aria-label="Step 2"></button>
+        <button class="dot" data-go="2" aria-label="Step 3"></button>
+      </div>
+      <div class="ob-buttons">
+        <button class="btn btn-ghost" id="ob-back" type="button" hidden>Back</button>
+        <button class="btn btn-primary" id="ob-next" type="button">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- submit / note dialog -->
+<div class="overlay" id="submit" hidden>
+  <form class="dialog submit" role="dialog" aria-modal="true" aria-labelledby="sub-title" id="submit-form" novalidate>
+    <header class="sub-head">
+      <span class="chip" id="sub-chip"></span>
+      <h2 id="sub-title"></h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </header>
+    <div class="sub-rules" id="sub-rules" hidden></div>
+    <p class="sub-intro" id="sub-intro"></p>
+    <div class="sub-fields" id="sub-fields"></div>
+    <label class="field">
+      <span class="field-label">Anything else? <em>optional</em></span>
+      <textarea name="__note" rows="2" placeholder="What felt hard, what you're unsure about, questions for Claude…"></textarea>
+    </label>
+    <label class="honor" id="sub-honor" hidden>
+      <input type="checkbox" name="__honor">
+      <span>I did this <strong>without running code, AI or looking things up.</strong> Otherwise it doesn't measure anything.</span>
+    </label>
+    <p class="form-error" id="sub-error" role="alert" hidden></p>
+    <footer class="sub-foot">
+      <span class="sub-hint">Saved to your inbox on this Mac. Claude sees it the next time you say "check my inbox".</span>
+      <div class="sub-buttons">
+        <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="sub-send">Submit</button>
+      </div>
+    </footer>
+  </form>
+</div>
+
+<!-- help drawer -->
+<div class="overlay overlay-drawer" id="help" hidden>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <header class="drawer-head">
+      <h2 id="help-title">How edu works</h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </header>
+
+    <ol class="howto">
+      <li><strong>Look at Up next.</strong> It's always the single most useful thing to do right now.</li>
+      <li><strong>Open it and do it.</strong> Lessons open in your browser; notes open as text, or in Obsidian if you turn that on in Settings.</li>
+      <li><strong>Submit your answers</strong> with the button on the card.</li>
+      <li><strong>Tell Claude "check my inbox"</strong> in Claude Code, from your vault folder.</li>
+      <li><strong>Come back here.</strong> Claude will have graded it and lined up what's next.</li>
+    </ol>
+
+    <h3>What things mean</h3>
+    <div class="faq">
+      <details open>
+        <summary><span class="chip chip-lesson">Lesson</span> What's a lesson?</summary>
+        <p>A short page that teaches one idea and ends with exercises. It only counts as done once Claude has checked your answers, not when you reach the bottom.</p>
+      </details>
+      <details>
+        <summary><span class="chip chip-probe">Probe</span> What's a probe?</summary>
+        <p>A set of questions that measures what you already know. It teaches nothing. Claude uses it to skip what you know and aim at exactly what you don't, which is why it only works if you do it unaided. "I don't know" is a perfectly good answer.</p>
+      </details>
+      <details>
+        <summary><span class="chip chip-checkpoint">Checkpoint</span> What's a checkpoint?</summary>
+        <p>A probe that closes a milestone. Pass it and the milestone is complete.</p>
+      </details>
+      <details>
+        <summary>What are milestones?</summary>
+        <p>Big, observable abilities, written as something you can do, not something you have read: "can explain X to a friend without notes", "can build Y from a blank file". Claude sets them with you when a topic starts. The estimates are in lessons, not days, and they get revised as real results come in.</p>
+      </details>
+      <details>
+        <summary><span class="gate gate-RED">RED</span> What's the readiness gate?</summary>
+        <p>Optional, for topics that end in a high-stakes attempt you can't retake freely: an exam, a certification, an interview. The gate says whether to spend that attempt yet. <strong>RED</strong>: hold off. <strong>AMBER</strong>: close, keep drilling with realistic mocks. <strong>GREEN</strong>: you've passed realistic mocks, so go for it. Topics without a gate don't show one.</p>
+      </details>
+      <details>
+        <summary>What's the skills ladder?</summary>
+        <p>Every area moves up four rungs: <em>heard of it</em> → <em>understand it</em> → <em>can use it on my own</em> → <em>have public proof</em>. Rungs only go up when there's evidence, never just because a lesson was read.</p>
+      </details>
+      <details>
+        <summary>What's the evidence log?</summary>
+        <p>A square lights up on days you <strong>proved</strong> something: passed a check, transferred an idea to a new problem, solved something unaided. Reading doesn't light it. It's a record of what you've demonstrated, not of time spent.</p>
+      </details>
+      <details>
+        <summary>The bar view and the classic view</summary>
+        <p>Same dashboard, two looks. The button at the top switches between them, and this browser remembers your choice; Settings sets the default. In the bar, your skills talk: each voice comments on something real, like tonight's minutes, your die, what's up next or a past win. Some lines are written by Claude after grading. Press <strong>1</strong> to <strong>9</strong> to pick a reply. The back room holds milestones, proof, skills, your library and your cluster. Click the neon sign to cycle the bar's name. Names, voices, your own lines and the jukebox track are all in Settings.</p>
+      </details>
+      <details>
+        <summary>Water rounds</summary>
+        <p>While a block runs, a glass of water arrives every 15 minutes: a soft clink, and a notification if the dashboard isn't the tab you're looking at. The timer keeps going. Press <strong>Drank it</strong> (or click the glass in the bar) when you have. Set it to 15, 30 or off before you start a block. Each block saves how many glasses came and how many you drank. Nothing nags you about the ones you skipped.</p>
+      </details>
+      <details>
+        <summary>The die, the cluster, and why minutes count</summary>
+        <p>Every finished focus block is laid end to end with the others and cut into 25-minute tiles. 24 tiles etch one die (10 hours). 8 dies make a node, 4 nodes a rack. It is a record of time you actually focused, not of time you meant to.</p>
+      </details>
+    </div>
+
+    <h3>Privacy</h3>
+    <p class="muted">Everything runs on this computer. The dashboard saves your submissions to <code>_system/inbox.jsonl</code>, your blocks to <code>_system/blocks.jsonl</code> and your settings to <code>_system/config.json</code>, all inside your vault. Nothing is sent to the internet. Claude only reads the inbox when you ask it to.</p>
+
+    <h3>Troubleshooting</h3>
+    <div class="faq">
+      <details>
+        <summary>The page won't load</summary>
+        <p>If you installed it as a service, it starts when you log in. To restart it, run this in a terminal from the edu4self folder:</p>
+        <pre><code>./edu4self restart</code></pre>
+        <p><code>./edu4self doctor</code> checks everything and says what's wrong.</p>
+      </details>
+      <details>
+        <summary>I submitted the wrong thing</summary>
+        <p>As long as it's still waiting for Claude, press <strong>Withdraw</strong> on the card and submit again.</p>
+      </details>
+      <details>
+        <summary>How do I add a new topic?</summary>
+        <p>In Claude Code, from your vault folder, run <code>/teach</code> followed by what you want to learn. Claude sets up the folder and it appears here.</p>
+      </details>
+      <details>
+        <summary>How do I turn it off?</summary>
+        <pre><code>./edu4self uninstall</code></pre>
+        <p>Your files stay. <code>./edu4self install</code> brings it back.</p>
+      </details>
+    </div>
+
+    <button class="btn btn-ghost btn-block" id="replay-onboarding" type="button">Replay the intro</button>
+  </aside>
+</div>
+
+<!-- settings -->
+<div class="overlay overlay-drawer" id="settings" hidden>
+  <form class="drawer set-drawer" role="dialog" aria-modal="true" aria-labelledby="set-title" id="set-form" novalidate>
+    <header class="drawer-head">
+      <h2 id="set-title">Settings</h2>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </header>
+    <p class="set-intro">Make it yours. Changes apply when you press <strong>Save</strong>. They're kept in <code>_system/config.json</code> in your vault, which you can also edit by hand.</p>
+    <div id="set-body"></div>
+    <p class="form-error set-error" id="set-error" role="alert" hidden></p>
+    <footer class="set-foot">
+      <button class="btn btn-ghost btn-sm" type="button" id="set-reset">Reset to defaults</button>
+      <div class="sub-buttons">
+        <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="set-save">Save</button>
+      </div>
+    </footer>
+  </form>
+</div>
+
+<!-- block finished -->
+<div class="overlay" id="blk-done" hidden>
+  <canvas class="blk-burst" id="blk-burst" aria-hidden="true"></canvas>
+  <div class="dialog blk-done" role="dialog" aria-modal="true" aria-labelledby="blk-done-title">
+    <span class="chip" id="blk-done-chip"></span>
+    <h2 id="blk-done-title"></h2>
+    <p id="blk-done-body"></p>
+    <div id="blk-done-die"></div>
+    <button class="btn btn-primary" type="button" data-close>Nice</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

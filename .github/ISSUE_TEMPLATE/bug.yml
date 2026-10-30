@@ -1,0 +1,30 @@
+name: Bug report
+description: Something doesn't work the way the docs say
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. ./edu4self setup\n2. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of ./edu4self doctor
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: OS and browser
+      placeholder: macOS 15, Chrome 141
+  - type: markdown
+    attributes:
+      value: Please don't paste anything from your vault you wouldn't want public. Security problems go to SECURITY.md instead.

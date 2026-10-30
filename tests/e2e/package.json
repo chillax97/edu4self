@@ -1,0 +1,12 @@
+{
+  "name": "edu4self-e2e",
+  "private": true,
+  "description": "Browser tests for the edu4self dashboard. Drives a real Chrome against a throwaway vault.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

@@ -1,0 +1,135 @@
+{
+ "schema": 1,
+ "updated": "2026-01-01T09:00:00+00:00",
+ "learner": "",
+ "pace": {
+  "hours_per_step": 2
+ },
+ "coach": {
+  "date": "2026-01-01",
+  "headline": "Welcome. Try the loop once with the example lesson.",
+  "body": "Open Lesson 01, answer the three exercises from memory, press Submit answers, then tell Claude \"check my inbox\". When you're ready for a real topic, say /teach and what you want to learn.",
+  "voices": [
+   {
+    "voice": "logic",
+    "text": "Fifteen minutes, three questions, one submit. That's the whole loop."
+   },
+   {
+    "voice": "regular",
+    "text": "New face. The first round is on the house. The first lesson too."
+   }
+  ]
+ },
+ "topics": [
+  {
+   "id": "how-learning-works",
+   "title": "How learning works",
+   "tagline": "The example topic: why recall beats rereading, and how this dashboard uses that.",
+   "path": "how-learning-works",
+   "color": "#13a38b",
+   "phase": "Example",
+   "block": "lessons",
+   "milestones": [
+    {
+     "id": "M1",
+     "title": "Study like the research says",
+     "goal": "Explain storage vs retrieval strength without notes",
+     "estimate": "1 lesson + a recall check",
+     "status": "active",
+     "steps": [
+      {
+       "title": "Lesson 01: retrieval beats rereading",
+       "done": false,
+       "current": true
+      },
+      {
+       "title": "Probe: how you study now",
+       "done": false
+      },
+      {
+       "title": "Recall check, a few days later",
+       "done": false
+      }
+     ]
+    }
+   ],
+   "queue": [
+    {
+     "id": "hlw-lesson-01",
+     "kind": "lesson",
+     "status": "todo",
+     "label": "Lesson 01",
+     "title": "Retrieval beats rereading",
+     "why": "The idea every later lesson is built on, and a 15-minute way to try the whole loop: read, answer from memory, submit, get graded.",
+     "href": "/vault/how-learning-works/lessons/0001-retrieval-beats-rereading.html",
+     "effort": "15 min · 3 exercises",
+     "submit": {
+      "type": "answers",
+      "intro": "Close the lesson first and answer from memory. Short is fine.",
+      "fields": [
+       "1. Retrieval strength vs storage strength, in your own words",
+       "2. Why can rereading feel better while working worse?",
+       "3. One way you'll practise retrieval this week, on something you're learning"
+      ]
+     }
+    },
+    {
+     "id": "hlw-probe-01",
+     "kind": "probe",
+     "status": "todo",
+     "label": "Probe 01",
+     "title": "How you study now",
+     "why": "Measures your starting habits so lessons aim at what helps most. Nothing to study first.",
+     "href": "/vault/how-learning-works/probes/0001-how-you-study-now.md",
+     "effort": "5 min",
+     "rules": "Answer from memory and honestly. No looking things up.",
+     "submit": {
+      "type": "answers",
+      "intro": "Copy each answer in. \"I don't know\" is a fine answer.",
+      "fields": [
+       "1. What you do after reading something you want to remember",
+       "2. Last time you tested yourself without looking",
+       "3. Something you studied hard and forgot: how you studied it",
+       "4. Usual session length and how often",
+       "5. What you want to learn next, and why"
+      ]
+     }
+    },
+    {
+     "id": "hlw-recall-01",
+     "kind": "checkpoint",
+     "status": "locked",
+     "label": "Recall check",
+     "title": "Storage vs retrieval strength, cold",
+     "why": "A few days after lesson 01, closed book. If you can still explain it, it's yours.",
+     "unlock": "Opens a few days after lesson 01 is graded. Ask Claude then."
+    }
+   ],
+   "regions": [
+    {
+     "code": "A",
+     "name": "Retrieval practice",
+     "level": 0,
+     "note": "Not yet tested."
+    },
+    {
+     "code": "B",
+     "name": "Spacing and review",
+     "level": 0,
+     "note": "Not yet tested."
+    }
+   ],
+   "history": [
+    {
+     "date": "2026-01-01",
+     "kind": "setup",
+     "title": "Vault created from the edu4self template",
+     "detail": "Example topic ready",
+     "evidence": false
+    }
+   ]
+  }
+ ],
+ "linked_topics": [],
+ "processed_inbox": []
+}
