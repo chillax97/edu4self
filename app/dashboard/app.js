@@ -1708,11 +1708,7 @@
   // where you left off (saved every few seconds), and the scrubber, ±1 min and "random spot" choose
   // where it plays. Only one tab plays at a time.
   var MUSIC_KEY = "edu.music.v1", MUSIC_OWNER_KEY = "edu.music.owner.v1";
-  var SCAPES = {
-    night: { name: "Night shift", sub: "slow chords, tape hiss" },
-    rain: { name: "Rain on the window", sub: "rain, the odd heavy drop" },
-    noise: { name: "Brown noise", sub: "a low, steady hush" }
-  };
+  var SCAPES = window.EduScapes.list;   // scapes.js
   // stations that publish their stream addresses for other players, checked to play in a browser
   var STATIONS = [
     { name: "Radio Paradise · Mellow", url: "https://stream.radioparadise.com/mellow-128", note: "mellow rock, folk and electronica, no ads" },
@@ -1977,19 +1973,19 @@
   }
 
   // ---------------------------------------------------------------- soundscapes
-  // Made live with the Web Audio API: no files, no network. The object acts enough like an <audio>
+  // The music is made in scapes.js; this wraps it in something that acts enough like an <audio>
   // element (play, pause, paused, volume, events) for the jukebox to treat it as one.
   function makeScape(id) {
-    var ev = document.createElement("span"), ctx = null, out = null, live = [], timers = [], vol = 0.5;
+    var ev = document.createElement("span"), ctx = null, out = null, piece = null, vol = 0.5;
     var p = { paused: true, currentTime: 0, duration: NaN, seeking: false, dataset: {},
       addEventListener: ev.addEventListener.bind(ev), removeAttribute: function () {},
       load: function () { stop(); if (ctx) { ctx.close(); ctx = null; } } };
     Object.defineProperty(p, "volume", { get: function () { return vol; }, set: function (v) {
-      vol = v; if (out) out.gain.setTargetAtTime(v * 0.7, ctx.currentTime, 0.08);
+      vol = v; if (out) out.gain.setTargetAtTime(v, ctx.currentTime, 0.08);
     } });
     p.play = function () {
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-      // Chrome leaves a context created before the first click suspended; give up quickly, and the
+      // Chrome leaves a context made before the first click suspended; give up quickly, and the
       // jukebox's "waiting for a click" path calls play() again inside the click
       var tries = 0;
       return ctx.resume().then(function () {
@@ -1998,74 +1994,14 @@
         });
       }).then(function () {
         if (!p.paused) return;
-        start(); p.paused = false; ev.dispatchEvent(new Event("play"));
+        out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination);
+        out.gain.setTargetAtTime(vol, ctx.currentTime, 0.6);   // fade in
+        piece = window.EduScapes.start(ctx, out, id, Date.now() % 100000);
+        p.paused = false; ev.dispatchEvent(new Event("play"));
       });
     };
+    function stop() { if (piece) { piece.stop(); piece = null; } out = null; }
     p.pause = function () { if (p.paused) return; stop(); p.paused = true; ev.dispatchEvent(new Event("pause")); };
-
-    function noise(seconds, kind) {
-      var n = ctx.sampleRate * seconds, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), last = 0;
-      for (var i = 0; i < n; i++) {
-        var w = Math.random() * 2 - 1;
-        if (kind === "brown") { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w;
-      }
-      return b;
-    }
-    function loop(buf) { var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.start(); live.push(s); return s; }
-    function filter(type, f, q) { var x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; if (q) x.Q.value = q; live.push(x); return x; }
-    function gain(g) { var x = ctx.createGain(); x.gain.value = g; live.push(x); return x; }
-    function chain() { for (var i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]); return arguments[arguments.length - 1]; }
-    function every(ms, fn) { fn(); timers.push(setInterval(fn, ms)); }
-
-    function start() {
-      out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination); live.push(out);
-      out.gain.setTargetAtTime(vol * 0.7, ctx.currentTime, 0.6);   // fade in
-      if (id === "noise") {
-        chain(loop(noise(4, "brown")), filter("lowpass", 700), gain(0.9), out);
-      } else if (id === "rain") {
-        chain(loop(noise(3, "white")), filter("highpass", 500), filter("lowpass", 6000), gain(0.18), out);
-        chain(loop(noise(4, "brown")), filter("lowpass", 350), gain(0.5), out);
-        var drop = noise(0.05, "white");
-        every(70, function () {   // the odd heavier drop on the glass
-          if (Math.random() > 0.35) return;
-          var s = ctx.createBufferSource(), f = filter("bandpass", 1500 + Math.random() * 3500, 6), g = ctx.createGain(), t = ctx.currentTime;
-          s.buffer = drop; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 + Math.random() * 0.4, t + 0.004);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); chain(s, f, g, out); s.start(t); s.stop(t + 0.06);
-        });
-      } else {
-        // night shift: four soft chords on a loop, a bass note under each, tape hiss on top
-        var CHORDS = [[57, 60, 64, 67, 71], [53, 57, 60, 64, 67], [48, 52, 55, 59, 64], [55, 59, 62, 64, 69]];
-        var hz = function (m) { return 440 * Math.pow(2, (m - 69) / 12); };
-        var tone = filter("lowpass", 1200, 0.7), wet = ctx.createDelay(1); wet.delayTime.value = 0.42; live.push(wet);
-        var fb = gain(0.32), lfo = ctx.createOscillator(), depth = gain(400);
-        lfo.frequency.value = 0.05; chain(lfo, depth, tone.frequency); lfo.start(); live.push(lfo);
-        chain(tone, out); chain(tone, wet, fb, wet); chain(wet, gain(0.5), out);
-        chain(loop(noise(2, "white")), filter("highpass", 3000), gain(0.012), out);
-        var bar = 0;
-        every(8000, function () {
-          var t = ctx.currentTime + 0.05, notes = CHORDS[bar++ % CHORDS.length];
-          notes.concat([notes[0] - 24]).forEach(function (m, i) {
-            var bass = i === notes.length, g = ctx.createGain();
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.exponentialRampToValueAtTime(bass ? 0.16 : 0.05, t + 2.2);
-            g.gain.setTargetAtTime(0.0001, t + 6.5, 1.1);
-            g.connect(tone);
-            [-6, 6].forEach(function (cents) {
-              var o = ctx.createOscillator(); o.type = bass ? "sine" : "triangle";
-              o.frequency.value = hz(m); o.detune.value = bass ? 0 : cents;
-              o.connect(g); o.start(t); o.stop(t + 11);
-            });
-          });
-        });
-      }
-    }
-    function stop() {
-      timers.forEach(clearInterval); timers = [];
-      if (!ctx || !out) return;
-      var nodes = live, o = out; live = []; out = null;
-      o.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
-      setTimeout(function () { nodes.forEach(function (n) { try { if (n.stop) n.stop(); n.disconnect(); } catch (e) {} }); }, 700);
-    }
     return p;
   }
 
