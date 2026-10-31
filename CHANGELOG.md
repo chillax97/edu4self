@@ -3,6 +3,18 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+- `AGENTS.md` (and a `CLAUDE.md` that imports it): the playbook for an agent a person hands this repo
+  to. It sets edu4self up and turns plain-English wishes into settings. The README now leads with it.
+- A two-minute tour video and a GIF cut, recorded from the real dashboard by `tests/e2e/tour.js`.
+
+### Fixed
+- `edu4self check` validates `config.json`. A bad file used to make the dashboard fall back to defaults
+  silently while the check passed.
+- `Home.md` in a new vault links the port it was made for, not always 4747.
+
 ## 1.0.0 - 2026-10-30
 
 First public release, opened up from a personal setup that had been in daily use.
