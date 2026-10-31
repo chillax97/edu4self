@@ -114,6 +114,13 @@ def cmd_init(args):
         json.dump(state, fh, indent=1, ensure_ascii=False)
         fh.write("\n")
 
+    home = os.path.join(vault, "Home.md")
+    if os.path.isfile(home):
+        with open(home, encoding="utf-8") as fh:
+            text = fh.read().replace("{{PORT}}", str(port))
+        with open(home, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
     cfg = {"name": name}
     with open(os.path.join(vault, "_system", "config.json"), "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)

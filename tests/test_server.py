@@ -299,6 +299,13 @@ class CliTest(unittest.TestCase):
         r = subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, text=True)
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_home_note_links_the_port_the_vault_was_made_for(self):
+        vault, env = make_vault(self.tmp, "--port", "4801")
+        with open(os.path.join(vault, "Home.md")) as fh:
+            home = fh.read()
+        self.assertIn("http://127.0.0.1:4801", home)
+        self.assertNotIn("{{", home)
+
     def test_check_catches_a_bad_config(self):
         # an agent that hand-edits config.json must hear about a mistake; the dashboard would
         # otherwise fall back to defaults without a word

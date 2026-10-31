@@ -4,7 +4,7 @@ tags: [home, index]
 
 # Your learning vault
 
-**Dashboard → <http://127.0.0.1:4747>**
+**Dashboard → <http://127.0.0.1:{{PORT}}>**
 
 ## How the loop works
 1. The dashboard's **Up next** card says what to do.
