@@ -38,6 +38,7 @@ class BuiltinTest(unittest.TestCase):
         for tid in ids:
             t = themes.load(os.path.join(BUILTIN, tid), tid)
             self.assertEqual(t["errors"], [], tid)
+            self.assertTrue(t["lesson_css"], tid + " dresses lessons too")
 
 
 class LayoutTest(unittest.TestCase):
@@ -177,7 +178,9 @@ class RouteTest(unittest.TestCase):
         self.assertEqual(self.get("/theme/lesson.css")[2], b"body { background: #111 } h1 { color: gold }")
         self.set_config(theme="mine", theme_lessons=False)
         self.assertNotIn(b"/theme/lesson.css", self.get(lesson)[2])
-        self.set_config(theme="bar", theme_lessons=True)   # the bar has no lesson.css: lessons stay plain
+        self.set_config(theme="bar", theme_lessons=True)
+        self.assertIn(b"/theme/lesson.css", self.get(lesson)[2])
+        self.set_config(theme="broken", theme_lessons=True)   # a broken room never dresses a lesson
         self.assertNotIn(b"/theme/lesson.css", self.get(lesson)[2])
 
     def test_config_keeps_a_bad_theme_id_out(self):
