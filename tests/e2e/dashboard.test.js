@@ -236,6 +236,8 @@ test("the jukebox plays the track, remembers the spot, and a bad setting is refu
   await page.waitForSelector('.bx-music [data-mu-seek]');   // the uploaded track, not the soundscape
   if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
   await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
+  // let it actually move before pausing: a slow machine can report "playing" at 0:00
+  await page.waitForFunction(() => !/^0:00 /.test(document.querySelector(".bx-music [data-mu-time]").textContent), { timeout: 8000 });
   await page.click('.bx-music [data-mu="toggle"]');   // pause: saves the position
   await page.waitForFunction(() => !document.body.classList.contains("music-on"));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("edu.music.v1")));
