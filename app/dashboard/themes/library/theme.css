@@ -27,6 +27,7 @@
 .room .lb-card { background: var(--lb-paper); color: var(--lb-ink); border-radius: 3px; padding: 10px 12px; font: 13px/1.45 var(--bx-mono); }
 .room .lb-card .bx-k, .room .lb-card .card-title { color: #5a3d22; }
 .room .lb-card .card-sub, .room .lb-card .finish-eta, .room .lb-card .bx-chk, .room .lb-card li b { color: #4a3a26; }
+.room .lb-card .finish-eta b { color: var(--lb-ink); }
 .room .lb-card .bx-doors { margin: 0; }
 .room .lb-cup { min-height: 92px; }
 .room .lb-cup .bx-glass { right: 50%; margin-right: -16px; bottom: 26px; border-color: rgba(246,236,210,.85); }
@@ -44,7 +45,9 @@
 .room .lb-book .bx-r:hover, .room .lb-book .bx-r:focus-visible { background: rgba(47,74,54,.1); color: #1d3324; }
 .room .lb-book .bx-n, .room .lb-book .bx-chk, .room .lb-book .bx-keys, .room .lb-book li.is-quiet { color: #7a6a4e; }
 .room .lb-book .bx-keys kbd { color: var(--lb-ink); border-color: #c9b998; }
-.room .lb-book .bx-clock, .room .lb-book .bx-clock .bx-mono { color: var(--lb-ink); }
+.room .lb-book .bx-clock { background: color-mix(in srgb, var(--c) 14%, transparent); border-color: color-mix(in srgb, var(--c) 55%, var(--lb-ink)); }
+.room .lb-book .bx-clock, .room .lb-book .bx-clock > b, .room .lb-book .bx-clock .bx-mono { color: var(--lb-ink); }
+.room .lb-book .bx-wbar { background: rgba(42,33,22,.15); }
 .room .lb-margin .bx-line { color: #3a2e1e; font-style: italic; padding-left: 14px; border-left: 2px solid var(--lb-brass); }
 .room .lb-margin .bx-line::before, .room .lb-margin .bx-line::after { display: none; }
 .room .lb-margin .bx-who { display: block; font: 600 11.5px var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }

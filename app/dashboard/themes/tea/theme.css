@@ -39,7 +39,9 @@
 .room .bx-r:hover, .room .bx-r:focus-visible { background: rgba(93,122,46,.12); color: #2d4212; }
 .room .bx-replies .bx-n, .room .bx-replies li.is-quiet, .room .bx-keys { color: #6e6250; }
 .room .bx-keys kbd { color: #2d261d; border-color: #c9b998; }
-.room .bx-clock, .room .bx-clock .bx-mono { color: #2d261d; }
+.room .bx-clock { background: color-mix(in srgb, var(--c) 14%, transparent); border-color: color-mix(in srgb, var(--c) 55%, #2d261d); }
+.room .bx-clock, .room .bx-clock > b, .room .bx-clock .bx-mono { color: #2d261d; }
+.room .bx-wbar { background: rgba(45,38,29,.15); }
 .room .te-guests { display: flex; flex-direction: column; gap: 14px; font: 16.5px/1.6 var(--serif); }
 .room .bx-line { color: #2d261d; }
 .room .bx-line b { color: #000; }
