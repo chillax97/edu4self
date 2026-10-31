@@ -10,6 +10,46 @@ const REQUIRED = ["name", "rooms", "voices", "job", "replies", "block", "music",
 const LESSON = "vault/how-learning-works/lessons/0001-retrieval-beats-rereading.html";
 let v, server, browser, cfgPath;
 
+// WCAG contrast of every visible text in the room against what's actually behind it (colours blended
+// up the tree). Text over a picture (a gradient or SVG with no solid colour) can't be judged and is skipped.
+function lowContrast() {
+  const parse = (c) => {   // rgb(255 0 0 / .5), rgba(...), or color(srgb 1 0 0 / .5) from color-mix()
+    const m = c.match(/[\d.]+/g);
+    if (!m) return null;
+    const k = c.startsWith("color(") ? 255 : 1;
+    return { r: m[0] * k, g: m[1] * k, b: m[2] * k, a: m[3] === undefined ? 1 : +m[3] };
+  };
+  const over = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
+  const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+  const behind = (el) => {
+    const layers = [];
+    for (let e = el; e; e = e.parentElement) {
+      const st = getComputedStyle(e), bg = parse(st.backgroundColor);
+      if (bg && bg.a > 0) layers.push(bg);
+      if (bg && bg.a >= 1) break;
+      if (st.backgroundImage !== "none" && (!bg || bg.a < 1)) return null;
+    }
+    let c = { r: 255, g: 255, b: 255, a: 1 };
+    for (let i = layers.length - 1; i >= 0; i--) c = over(layers[i], c);
+    return c;
+  };
+  const bad = [];
+  const walker = document.createTreeWalker(document.querySelector(".room"), NodeFilter.SHOW_TEXT);
+  const seen = new Set();
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const el = n.parentElement;
+    if (!n.textContent.trim() || seen.has(el)) continue;
+    seen.add(el);
+    const st = getComputedStyle(el), r = el.getBoundingClientRect();
+    if (!r.width || st.visibility === "hidden" || +st.opacity === 0 || el.closest("[aria-hidden=true]")) continue;
+    const fg = parse(st.color), bg = behind(el);
+    if (!fg || !bg) continue;
+    const L1 = lum(over(fg, bg)), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+    if (ratio < 3) bad.push(n.textContent.trim().slice(0, 40) + " (" + ratio.toFixed(1) + ")");
+  }
+  return bad;
+}
+
 function setConfig(extra) {
   const c = fs.existsSync(cfgPath) ? readJSON(cfgPath) : {};
   fs.writeFileSync(cfgPath, JSON.stringify({ ...c, ...extra }));
@@ -18,6 +58,14 @@ function setConfig(extra) {
 before(async () => {
   v = makeVault("Tester");
   cfgPath = path.join(v.vault, "_system", "config.json");
+  // ten days of blocks and a graded lesson, so the finish line has a pace and dates to show
+  const day = (n) => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(19, 0, 0, 0); return d; };
+  const blocks = [];
+  for (let n = 10; n >= 1; n--) blocks.push({ id: "b" + n, ts: new Date(day(n).getTime() + 50 * 60000).toISOString(), started: day(n).toISOString(), block: "lessons", minutes: 50 });
+  fs.writeFileSync(path.join(v.vault, "_system", "blocks.jsonl"), blocks.map((b) => JSON.stringify(b)).join("\n") + "\n");
+  const st = readJSON(path.join(v.vault, "_system", "state.json")), m = st.topics[0].milestones[0];
+  m.steps[0].done = true;
+  fs.writeFileSync(path.join(v.vault, "_system", "state.json"), JSON.stringify(st));
   server = await startServer(v, await freePort());
   browser = await launch();
 });
@@ -33,9 +81,9 @@ test("there are five built-in rooms", () => {
 
 for (const id of ROOMS) {
   for (const [w, h, label] of [[1440, 1000, "desktop"], [390, 1400, "phone"]]) {
-    test(`${id} on a ${label}: every slot drawn, nothing spills sideways, no errors, the lesson opens`, async () => {
+    test(`${id} on a ${label}: every slot drawn, readable, nothing spills sideways, no errors, the lesson opens`, async () => {
       setConfig({ theme: id });
-      const page = await openPage(browser, server.url, { view: "bar", width: w, height: h });
+      const page = await openPage(browser, server.url, { view: "bar", width: w, height: h, block: true });
       await page.waitForSelector(".room.t-" + id, { timeout: 5000 });
       await sleep(300);
       for (const slot of REQUIRED) {
@@ -43,6 +91,8 @@ for (const id of ROOMS) {
       }
       const job = await page.$eval('.room [data-slot="job"]', (e) => e.innerText.trim());
       assert.ok(job.length > 0, "the job line says something");
+      assert.ok(await page.$('.room [data-slot="timer"] .bx-clock'), "the running block shows its timer");
+      assert.deepEqual(await page.evaluate(lowContrast), [], `${id}: text too faint to read (contrast below 3:1)`);
       const spill = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       assert.ok(spill <= 0, `${id} spills ${spill}px sideways at ${w}px`);
       await page.click('.room [data-slot="replies"] [data-submit="hlw-lesson-01"]');
