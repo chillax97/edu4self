@@ -22,7 +22,7 @@ edu4self is three small programs around one folder of plain files.
 | plugin | `plugin/`, `.claude-plugin/marketplace.json` | Claude Code skills: check-inbox, new-topic, customize |
 
 All Python is standard library (3.9+). The page is vanilla JavaScript in one IIFE: no framework, no
-bundler, no network requests beyond its own server.
+bundler, no network requests beyond its own server (except a radio stream, if the learner picks one).
 
 ## The vault
 

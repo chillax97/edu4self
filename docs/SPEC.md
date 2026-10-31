@@ -85,7 +85,7 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-8 | Water rounds every 15 or 30 min (or off) during a block; counts saved with the block | unit `test_blocks` (validation) |
 | FR-9 | Two views (bar, classic) with the same data; each browser remembers its choice; Settings sets the default | e2e first visit, classic |
 | FR-10 | Bar view: voices comment on real data (time, streak, die, inbox, proof age, music) plus tutor-written lines (`coach.voices`) | e2e voices check |
-| FR-11 | Jukebox plays one learner-supplied track on loop, resumes where it stopped, supports seek, ±1 min, random spot and volume; one tab plays at a time | e2e jukebox |
+| FR-11 | Jukebox plays a built-in soundscape (default, offline), a radio stream, or one learner-supplied track on loop; a track resumes where it stopped and supports seek, ±1 min, random spot; volume; one tab plays at a time | e2e soundscape (measured signal, no offsite requests), radio, jukebox |
 | FR-12 | Settings panel edits name, default view, goals, block presets and kinds, water, music (upload/replace/remove), bar names, gags, custom lines, voice names and colours, Obsidian; validated server-side; reset keeps music | e2e Settings, unit config tests |
 | FR-13 | A broken `config.json` never breaks the page; defaults are used and the problem is shown in Settings | unit `test_broken_config_file_falls_back_to_defaults` |
 | FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `customize` skills; installing it also installs the `teach` skill | `claude plugin validate`; sandboxed install |
@@ -94,7 +94,8 @@ Each principle comes from evidence or from a failure observed while building the
 ## 6. Non-functional requirements
 
 - **Privacy:** binds to 127.0.0.1; `Host` and `Origin` checks on every request; no outbound requests;
-  no third-party assets at runtime.
+  no third-party assets at runtime. The one opt-in exception: a radio station the learner picks, which
+  the browser streams directly while it plays.
 - **Dependencies:** Python 3.9+ standard library; browser-native JS/CSS. Node is needed only for the
   browser tests.
 - **Portability:** macOS and Linux first-class; Windows runs `serve` manually.

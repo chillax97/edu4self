@@ -19,7 +19,7 @@ Saving from Settings writes a fresh, valid file.
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
 | Kinds of block | `blocks.kinds` | 1–8 kinds, see below | Lessons, Practice, Reading, Free, Play |
 | Water | `water.every` | 15, 30 or 0 (off) | 15 |
-| Music | `music` | see below | no track |
+| Music | `music` | see below | the Night shift soundscape, paused |
 | Names on the neon sign | `bar.names` | 1–20 `[name, tagline]` pairs | five names |
 | Bar jokes | `bar.gags` | `true` / `false` | `true` |
 | Your own lines | `bar.lines` | up to 100 `{voice, text}` | none |
@@ -46,17 +46,33 @@ back to the first kind.
 
 ### Music
 
-Settings → Music → **Choose an audio file…** copies any audio file you own (m4a, mp3, ogg, opus, wav,
-flac, aac, webm; up to 1 GB) into `_system/music/`. The jukebox in the bar plays it on loop and resumes
-where it stopped, per browser. The scrubber, −1m / +1m and "random" choose where it plays. Only one
-browser tab plays at a time. Classic view is silent.
+The jukebox in the bar plays one of three things. Pick it in Settings → Music. Only one browser tab plays
+at a time, and the classic view is silent.
+
+- **Soundscape** (the default): *Night shift* (slow chords, tape hiss), *Rain on the window*, or *Brown
+  noise*. Made live in your browser with the Web Audio API, so there is nothing to download and it works
+  offline. Switch between them with the buttons on the jukebox itself.
+- **Radio**: a Radio Paradise channel (Mellow, Serenity, Main mix, Global), or any station by its stream
+  address (an `http://` or `https://` URL that a browser can play, usually ending in `.mp3`, `.aac` or a
+  port). This is the only part of edu4self that uses the internet: while it plays, the page connects to
+  that station.
+- **Your own track**: **Choose an audio file…** copies a file you own (m4a, mp3, ogg, opus, wav, flac,
+  aac, webm; up to 1 GB) into `_system/music/`. It plays on loop and resumes where it stopped, per
+  browser. The scrubber, −1m / +1m and "random" choose where it plays.
 
 ```json
-"music": {"file": "Night-Drive.m4a", "title": "Night Drive", "subtitle": "three hours, no lyrics", "autoplay": true}
+"music": {"source": "scape", "scape": "rain", "autoplay": false}
+"music": {"source": "radio", "stream": {"url": "https://stream.radioparadise.com/mellow-128", "name": "Radio Paradise · Mellow"}}
+"music": {"source": "file", "file": "Night-Drive.m4a", "title": "Night Drive", "subtitle": "three hours, no lyrics", "autoplay": true}
 ```
 
+`source` is `scape`, `radio` or `file`; `scape` is `night`, `rain` or `noise`. Radio needs
+`stream.url`; a file must already be in `_system/music/` (upload it in Settings). A config that names
+only a `file`, from before sources existed, keeps playing that file.
+
 Browsers block sound until you click on the page once; with `autoplay` on, the first click anywhere
-starts it. edu4self ships no music. Please only use files you have the right to play.
+starts it. A soundscape starts paused unless you turn `autoplay` on. edu4self ships no recorded music.
+Please only upload files you have the right to play.
 
 ### Voices
 

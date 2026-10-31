@@ -6,11 +6,16 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- The jukebox plays without any files: three soundscapes made live in the browser (Night shift, Rain
+  on the window, Brown noise; offline, the new default, paused until you press play), or a radio
+  station (four Radio Paradise channels, or any stream address). Your own track still works, and older
+  configs keep playing it. Settings → Music picks the source.
 - `AGENTS.md` (and a `CLAUDE.md` that imports it): the playbook for an agent a person hands this repo
   to. It sets edu4self up and turns plain-English wishes into settings. The README now leads with it.
 - A two-minute tour video and a GIF cut, recorded from the real dashboard by `tests/e2e/tour.js`.
 
 ### Fixed
+- The jukebox could throw when a track was changed or removed (the old player kept firing events).
 - `edu4self check` validates `config.json`. A bad file used to make the dashboard fall back to defaults
   silently while the check passed.
 - `Home.md` in a new vault links the port it was made for, not always 4747.

@@ -59,7 +59,8 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 - **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
   8 dies a node, 4 nodes a rack. A water reminder arrives every 15 minutes while a block runs, if you want one.
 - **Two looks.** *Classic* is calm and plain. *The bar* is a dim room where your skills talk to you about
-  tonight's work, a jukebox plays your own music on loop, and the bartender slides you water.
+  tonight's work, a jukebox plays a built-in soundscape, a radio station or your own track, and the
+  bartender slides you water.
 - **Yours to change, no terminal needed.** Name, goals, block kinds, bar names, voices, your own jokes and
   the jukebox track are all in **⚙ Settings**.
 
@@ -154,7 +155,8 @@ Obsidian" in Settings), and works with git if you want history.
 ## Privacy
 
 The server binds to `127.0.0.1` only and refuses requests from other sites. The page loads nothing from
-the internet; fonts are bundled. Your submissions, blocks, settings and music stay in your vault. Claude
+the internet (fonts are bundled), with one exception you choose: if you pick a radio station for the
+jukebox, the page connects to that station while it plays. Your submissions, blocks, settings and music stay in your vault. Claude
 reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms.
 
 ## Credits

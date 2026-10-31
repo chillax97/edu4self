@@ -41,8 +41,9 @@ vault, so updates never overwrite them.
      the file now. Read the current file (or `GET /api/config` → `.config`), change it, write it all
      back. `POST /api/config` with `{"config": {...}}` does the same and answers 400 with the reason
      when a value is out of range.
-   - **Music**: the person uploads a file they own in Settings → Music. Point them there; leave
-     finding or downloading tracks to them.
+   - **Music**: "something to study to" → a soundscape (`music.source: "scape"`, offline); "real
+     music" → a radio station (`"radio"` and `stream.url`). A file of their own they upload themselves
+     in Settings → Music; leave finding or downloading tracks to them.
 4. **Verify.** Run `./edu4self check --vault <vault>`. Done when it ends with `config.json: OK` and
    exits 0, and `curl -s http://127.0.0.1:<port>/api/config` shows `"error": null` and their
    values.
