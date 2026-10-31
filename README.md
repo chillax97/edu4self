@@ -11,6 +11,23 @@ your focused time into something you can see grow. Nothing leaves your machine.
 
 <sub>The first minute of the tour. [Watch all of it (2 min)](docs/video/tour.mp4).</sub>
 
+## Make it your room
+
+You'll study more in a place you like being in. Pick one of five rooms, each with its own layout,
+colours, characters, jokes and sound, and your lessons dress to match. Or describe a place to Claude
+("a lighthouse in a storm", "my grandmother's kitchen") and it builds one for you, following
+[docs/THEMES.md](docs/THEMES.md). Everything else is yours to change too: your goals, block lengths,
+names, voices, music. All of it is in **⚙ Settings**, no terminal needed.
+
+| the bar | the library | the space station |
+|---|---|---|
+| ![The bar: a neon sign, the jukebox, the die case](docs/images/rooms/bar.png) | ![The library: an open book on the desk, voices in the margin](docs/images/rooms/library.png) | ![The space station: a viewport, the reactor core, the comms log](docs/images/rooms/space.png) |
+| **the night train** | **the tea house** | |
+| ![The night train: your ticket, the dining car, the ticket book](docs/images/rooms/train.png) | ![The tea house: a scroll, the kettle, the tea tin](docs/images/rooms/tea.png) | |
+
+A room changes how things look and what they're called, never how learning works: Lesson 01 is
+Lesson 01 everywhere, and the room can't run code or reach the internet.
+
 ## Hand it to your agent
 
 Open Claude Code (or any coding agent) and paste:
@@ -58,14 +75,12 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
   practice ([why](docs/SPEC.md#principles)).
 - **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
   8 dies a node, 4 nodes a rack. A water reminder arrives every 15 minutes while a block runs, if you want one.
-- **Two looks.** *Classic* is calm and plain. *The bar* is a dim room where your skills talk to you about
-  tonight's work, a jukebox plays a built-in soundscape, a radio station or your own track, and the
-  bartender slides you water.
-- **Yours to change, no terminal needed.** Name, goals, block kinds, bar names, voices, your own jokes and
-  the jukebox track are all in **⚙ Settings**.
+- **A room, or plain.** In a room your skills talk to you about tonight's work, the music plays a
+  built-in soundscape, a radio station or your own track, and the host reminds you to drink water.
+  *Classic* is calm and plain.
 
 <details>
-<summary>Screenshots: the bar, classic view, the back room, Settings, phone</summary>
+<summary>More screenshots: classic view, the back room, Settings, phone</summary>
 
 ![The bar view: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
 
@@ -94,8 +109,6 @@ the dashboard at login and opens <http://127.0.0.1:4747>. After that, give Claud
 claude plugin marketplace add chillax97/edu4self
 claude plugin install edu4self@edu4self     # also installs Matt Pocock's teach skill
 ```
-
-Then work from your vault:
 
 Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
 questions in the side panel), **✦ Grade** grades what you submitted, and **✦ Claude** opens a chat with
@@ -141,6 +154,7 @@ edu4self/               the code (this repo)            ~/learn/                
   template/               what a new vault starts as      _system/blocks.jsonl    your focus blocks
   plugin/                 Claude Code skills              _system/config.json     your Settings
   docs/                   spec, protocol, customizing     _system/music/          your jukebox track
+                                                          themes/                 rooms you made
                                                           <topic>/                lessons, probes, records
 ```
 
@@ -152,6 +166,7 @@ Obsidian" in Settings), and works with git if you want history.
 - [AGENTS.md](AGENTS.md): what an agent does when you hand it this repo
 - [Product spec](docs/SPEC.md): who it's for, what it does, why it's built this way
 - [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
+- [Rooms](docs/THEMES.md): how a room is made, for you or your agent
 - [The Claude protocol](docs/PROTOCOL.md): the contract between the dashboard and the tutor
 - [Architecture](docs/ARCHITECTURE.md): files, API, data flow, security model
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)

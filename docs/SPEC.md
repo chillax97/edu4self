@@ -90,6 +90,7 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-13 | A broken `config.json` never breaks the page; defaults are used and the problem is shown in Settings | unit `test_broken_config_file_falls_back_to_defaults` |
 | FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `customize` skills; installing it also installs the `teach` skill | `claude plugin validate`; sandboxed install |
 | FR-16 | The page runs Claude Code: Grade (inbox), a chat panel, and New topic; one run at a time, live progress, check after every run; without Claude Code the page shows terminal steps instead. Runs are fenced to the vault (no shell, instruction files locked, no web while grading) | unit `ClaudeTest`, e2e `claude.test.js` (stand-in), real probes |
+| FR-17 | Rooms: five built-in rooms (bar, library, space station, night train, tea house) and the learner's own in `<vault>/themes/`, picked in Settings. A room sets layout, palette, fonts, words, voices, jokes, sound, and optionally the lessons' look (on by default, can be turned off). Themed but recognizable: core learning words are never renamed. A room can't run code or load anything; a broken one is listed with its errors, never applied, and `edu4self check` reports it | unit `test_themes.py`, e2e `rooms.test.js` (every room at desktop and phone width, contrast, Settings) |
 | FR-15 | `edu4self doctor` reports Python, vault, server, service, Claude Code and teach skill, each with a fix | manual |
 
 ## 6. Non-functional requirements

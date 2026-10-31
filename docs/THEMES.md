@@ -1,0 +1,182 @@
+# Rooms: making your own
+
+A **room** is where you study in edu4self: the bar, the library, the space station, the night train, the
+tea house, or one you make. It sets the layout, colours, fonts, the names of things, the characters'
+voices, the jokes and the sound. Your goals, blocks, lessons and grades are the same in every room.
+Pick one in **⚙ Settings → Room**.
+
+This guide is for anyone making a room, and it is written so an agent can follow it. Ask Claude
+"make me a room that feels like a lighthouse" and it should be able to finish with nothing but this file.
+
+## The one rule: themed, but recognizable
+
+Every object the learner sees should belong to the room, and still be understood at a glance.
+
+- In the library, finished dies are bound **volumes** in **the bindery**. On the train they are **ticket
+  books** you punch. Both read instantly. A "codex of accumulated attentional resonance" does not.
+- Rename a thing only when the new word is obvious in its place. If the learner would need a legend to
+  decode it, keep the plain word.
+- **Core learning words never change:** Lesson 01, Submit answers, Grade, 25 min, dates, numbers and
+  every button that does something. The engine enforces this: those words can't be renamed.
+- Give each room its own fitting object for every visible thing, including new ones (the shelf for
+  keepsakes, reminders, cards). A room that leaves the bar's jukebox standing in a library feels broken.
+- Keep it light. The jokes are background: one short line, about studying, kind to the learner.
+
+How the five built-ins map the same things:
+
+| thing | bar | library | space station | night train | tea house |
+|---|---|---|---|---|---|
+| host | the bartender | the librarian | Station AI | the conductor | the tea master |
+| music | the jukebox | the gramophone | comms | the radio car | the kettle |
+| a die / a tile | die / tile | volume / page | core / cell | ticket book / punch | tin / leaf |
+| where dies live | the die case | the bindery | reactor core | punches | the tea tin |
+| sound | night | rain | noise | rain | rain |
+
+## Making one, step by step
+
+Each step ends with how you know it's done.
+
+1. **Map the place.** Write down, for this place, the object that plays each part: the host, the music
+   box, the die and its tiles, where finished dies are kept, the sign on the door, the water. Use the
+   table above as the pattern. *Done when every row has a word a stranger would understand.*
+2. **Copy the closest built-in.** Copy `app/dashboard/themes/<id>/` from the engine to
+   `<vault>/themes/<new-id>/` (lowercase letters, digits and `-`, up to 32 characters). A dark place
+   starts from `library` or `train`, a light one from `tea`. *Done when the folder has `theme.json`,
+   `layout.html`, `theme.css` and `lesson.css`.* To change a built-in instead, give the copy the same id:
+   a room in the vault replaces the built-in with that id.
+3. **Write `theme.json`** (reference below): name, icon, one-line `about`, `dark`, palette, backdrop,
+   fonts, the words from step 1, voices, three sign names, five to ten gags, and the lines.
+4. **Draw `layout.html`.** Arrange the slots the way this place is arranged (a desk, a dashboard, a
+   carriage) and add drawing around them: plain elements and inline SVG.
+5. **Style it in `theme.css`.** Every selector starts with `.room`. Set the colour tokens first, then the
+   place's own parts.
+6. **Dress the lessons in `lesson.css`.** Same palette, paper or glass for the quiz box. Keep text
+   contrast high: lessons are read for twenty minutes at a time.
+7. **Prove it works.**
+   - `./edu4self check` prints `themes/<id>: OK` and exits 0. If not, it lists each rule broken; fix
+     and rerun.
+     (From the dashboard's Claude panel there is no shell: the server runs this check after your
+     reply and shows the result. Say so, and set the room anyway; a failing room falls back to the bar.)
+   - Set `"theme": "<id>"` in `_system/config.json` (or pick it in Settings), open the dashboard, and
+     look at it at full width and at phone width (390 px): every slot shows, nothing scrolls sideways,
+     all text is readable against its background, the replies and the timer still click.
+   - Open a lesson: it wears the room, and the quiz is readable.
+
+   *Done when all three hold.* A room that fails its check is listed in Settings with the reason and
+   can't be picked; the page falls back to the bar, so nothing breaks while you work.
+
+## Reference
+
+### The files
+
+| file | required | what it is |
+|---|---|---|
+| `theme.json` | yes | the data: names, colours, words, voices, jokes, sound |
+| `layout.html` | yes | the room's markup, built around slots |
+| `theme.css` | yes | the room's styles, scoped to `.room` |
+| `lesson.css` | no | how lesson pages look in this room; Settings → "Lessons wear the room's look" turns it off |
+
+Each file is at most 64 KB.
+
+### Slots
+
+A slot is an empty element with `data-slot="<name>"`. The engine fills it; anything you put inside is
+replaced. Required slots appear exactly once; optional ones at most once. An empty slot is hidden.
+
+| slot | required | what the engine puts there |
+|---|---|---|
+| `name` | yes | the sign: the room's name and tagline; clicking it cycles the names |
+| `rooms` | yes | the tabs between the front room and the back room |
+| `voices` | yes | the conversation: the host and the characters talking |
+| `job` | yes | what to do now (the next task) |
+| `replies` | yes | the numbered replies: start a block, open a lesson, submit |
+| `block` | yes | the focus block controls |
+| `music` | yes | the player |
+| `tonight` | yes | today's minutes against the goal |
+| `week` | yes | this week's days against the goal |
+| `die` | yes | the die being filled and the finished ones |
+| `timer` | no | the running block's countdown |
+| `finish` | no | how far the topic is and when it ends |
+| `doors` | no | tasks that are still locked |
+| `clock` | no | the time, or the block's time left |
+| `sign` | no | the open / busy sign |
+| `water` | no | the water glass |
+| `keys` | no | the keyboard hint |
+| `shelf` | no | reserved for keepsakes |
+
+The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sign, `.bx-replies`,
+`.bx-log`, `.bx-k` for small labels, `.bx-cab` for the die). Restyle them under `.room`.
+
+### theme.json
+
+```json
+{
+  "name": "The library", "icon": "📚", "dark": true, "scape": "rain",
+  "about": "A reading room after hours. Finished dies stand on the shelf.",
+  "palette": { "bg": "#0d140f", "surface": "#14201a", "ink": "#f3e6c4", "muted": "#b8a888", "line": "#2f4536", "accent": "#d8b26a" },
+  "backdrop": "radial-gradient(ellipse 40% 45% at 50% 30%, rgba(255,214,140,.12), transparent 70%), #0b120d",
+  "fonts": { "head": "serif", "body": "serif", "sign": "serif" },
+  "words": { "host": "The librarian", "music_box": "The gramophone", "die": "volume", "dies": "volumes" },
+  "voices": { "bartender": { "name": "The librarian", "color": "#f3e6c4" } },
+  "names": [["The Reading Room", "silence is a study method"]],
+  "gags": [["regular", "A card in the catalogue reads: SEE ALSO: sleep."]],
+  "lines": { "evening": "Evening. The library fills up around now." }
+}
+```
+
+- **palette** keys: `bg`, `bg2`, `surface`, `surface2`, `ink`, `ink2`, `muted`, `line`, `line2`,
+  `accent`, `accent2`, `accent_ink`. Values are `#hex` or `rgb()`/`rgba()`. They colour the whole page,
+  top bar included. Set `"dark": false` for a light room.
+- **backdrop**: a CSS background made of colours and gradients only.
+- **fonts** (`head`, `body`, `sign`): one of `sans`, `serif`, `mono`, `head` (condensed), `neon`. Only
+  the bundled fonts can be used.
+- **scape**: the default soundscape, `night`, `rain` or `noise`.
+- **words** a room may rename, with the bar's defaults: `front` "The bar", `front_icon`, `back` "The
+  back room", `back_icon`, `view` "Bar view", `place`, `counter`, `host`, `music_box`, `tonight`, `week`,
+  `nights`, `die_case`, `die`, `dies`, `tile`, `tiles`, `shipped`, `doors`, `job`, `note`, `how`,
+  `back_q`, `glass`, `glasses`, `sign_open`, `sign_busy`. Anything else is refused.
+- **voices**: rename or recolour a character by id: `bartender` (the host), `logic`, `volition`, `gpu`,
+  `encyclopedia`, `physical`, `nostalgia`, `critic`, `regular`, `jukebox` (the music box), `you`. The
+  learner's own voice settings still win.
+- **names**: `[name, tagline]` pairs for the sign.
+- **gags**: `[voice, text]` jokes, one every 40 minutes when jokes are on.
+- **lines**: the room's own words for `play`, `evening`, `friday`, `silent` (`{days}` is replaced with
+  the number), `newyear`, `nye`, `halloween`, `valentine`, `music_quiet`, `music_none`.
+
+### layout.html
+
+Allowed: `div span section article aside header footer main nav p h1–h6 ul ol li figure figcaption b i
+em strong small br hr kbd s u sup sub`, and inline SVG (shapes, `g`, `text`, gradients, patterns,
+masks, simple filters). Attributes: `class`, `data-slot`, `data-part`, `aria-hidden`, `aria-label`, `role`, `title`, and
+SVG's drawing attributes. Inside SVG, `id` is allowed when it starts with `t-`, and `url(#t-…)` may
+refer to it.
+
+### theme.css
+
+Every selector starts with `.room`; `@media`, `@supports`, `@container` and `@keyframes` are fine. The
+room sets these colour tokens on `.room`, and the engine's markup uses them:
+
+`--bx-line`, `--bx-line2` (borders), `--bx-k` (small labels), `--bx-text`, `--bx-dim`, `--bx-faint`,
+`--bx-bright`, `--bx-soft`, `--bx-label` (text, strongest to softest), `--bx-edge`, `--bx-panel`,
+`--bx-frame`, `--bx-music-bg` (surfaces), `--bx-sign` (the sign's font).
+
+### lesson.css
+
+Styles the whole lesson page (no `.room` needed). Lessons read these variables, so setting them on
+`:root` does most of the work: `--ink`, `--ink-soft`, `--faint`, `--rule`, `--bg`, `--panel`,
+`--accent`, `--good`, `--bad`, `--code`. The quiz is `.quiz` with `.prompt`, `button.opt`,
+`textarea`, `.verdict.ok`, `.verdict.no` and `.explain`.
+
+## What a room can't do
+
+A room may come from someone else, so nothing in it runs or reaches outside. The server rebuilds the
+layout from the allow-list above and refuses:
+
+- scripts, event handlers (`on…`), links, `src`, `style` attributes, `id` outside SVG, other `data-*`
+  attributes, forms, frames;
+- CSS that loads anything (`@import`, `@font-face`, `url()` other than `data:image`), or styles outside
+  `.room` in `theme.css`;
+- anything in `theme.json` but plain values from the lists above.
+
+The page's Content-Security-Policy runs only the engine's own scripts, as a second wall. If your room
+needs something these rules don't allow, keep the plain version; don't work around them.

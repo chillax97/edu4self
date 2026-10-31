@@ -17,8 +17,8 @@ vault, so updates never overwrite them.
 
 1. **Gather their wishes.** Ask, in one short round, only what they haven't said: what to call them;
    what they want to learn and why (a goal with a date beats a subject); how they like to work (session
-   length, minutes a day, days a week); the look (`bar`, a dim room with talking skills and a jukebox,
-   or `classic`, calm and plain); whether the dashboard should start at login. Offer a sensible default
+   length, minutes a day, days a week); the room (`bar`, `library`, `space`, `train` or `tea`, each a
+   place with its own layout and characters, or the `classic` view, calm and plain); whether the dashboard should start at login. Offer a sensible default
    for each so they can just say yes. Done when every wish is either answered or defaulted out loud.
 2. **Install.** From this repo:
 
@@ -37,6 +37,8 @@ vault, so updates never overwrite them.
    for example "45-minute sessions" → `blocks.presets` and the kinds' `minutes`; "no water
    reminders" → `water.every: 0`; "name the bar after my cat" → `bar.names`; "a grumpier critic" →
    `bar.voices.critic.name` plus a few `bar.lines` in that voice.
+   - **A room**: one of the five → `theme`. A place of their own ("make it a lighthouse") → build it
+     in `<vault>/themes/<id>/` by following [docs/THEMES.md](docs/THEMES.md) to its last step.
    - **Write the whole config.** Missing top-level sections fall back to *defaults*, not to what's in
      the file now. Read the current file (or `GET /api/config` → `.config`), change it, write it all
      back. `POST /api/config` with `{"config": {...}}` does the same and answers 400 with the reason
@@ -44,8 +46,8 @@ vault, so updates never overwrite them.
    - **Music**: "something to study to" → a soundscape (`music.source: "scape"`, offline); "real
      music" → a radio station (`"radio"` and `stream.url`). A file of their own they upload themselves
      in Settings → Music; leave finding or downloading tracks to them.
-4. **Verify.** Run `./edu4self check --vault <vault>`. Done when it ends with `config.json: OK` and
-   exits 0, and `curl -s http://127.0.0.1:<port>/api/config` shows `"error": null` and their
+4. **Verify.** Run `./edu4self check --vault <vault>`. Done when it prints `config.json: OK` (and
+   `themes/<id>: OK` for a room you made) and exits 0, and `curl -s http://127.0.0.1:<port>/api/config` shows `"error": null` and their
    values.
 5. **Hand over.** Tell them: the dashboard URL; that **⚙ Settings** changes all of this later without
    you; and the next move, which happens in the vault, where the tutor instructions live:

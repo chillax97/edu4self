@@ -6,6 +6,11 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Rooms. Pick where you study in Settings: the bar, the library, the space station, the night train
+  or the tea house. Each has its own layout, colours, characters, jokes and sound, and lessons take
+  its look (Settings turns that off). Make your own in `<vault>/themes/`, or ask Claude to:
+  `docs/THEMES.md` is the guide. A room can't run code or load anything, and `edu4self check` says
+  what's wrong with one that doesn't pass.
 - Claude in the page. **✦ Grade** grades your inbox, **✦ Claude** opens a chat with your tutor, and
   **+ New topic** (its own button) starts a topic from what and why. The page runs Claude Code in your
   vault and shows what it reads and edits as it works, then the check result. Without Claude Code, the

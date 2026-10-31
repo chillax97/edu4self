@@ -13,21 +13,33 @@ Saving from Settings writes a fresh, valid file.
 | in Settings | in `config.json` | values | default |
 |---|---|---|---|
 | Your name | `name` | up to 60 characters; empty = the name Claude has | `""` |
-| Default look | `view` | `"bar"` or `"classic"` | `"bar"` |
+| Default look | `view` | `"bar"` (your room) or `"classic"` | `"bar"` |
+| Room | `theme` | `bar`, `library`, `space`, `train`, `tea`, or a room in `<vault>/themes/` | `"bar"` |
+| Lessons wear the room's look | `theme_lessons` | `true` / `false` | `true` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
 | Kinds of block | `blocks.kinds` | 1–8 kinds, see below | Lessons, Practice, Reading, Free, Play |
 | Water | `water.every` | 15, 30 or 0 (off) | 15 |
 | Music | `music` | see below | the Night shift soundscape, paused |
-| Names on the neon sign | `bar.names` | 1–20 `[name, tagline]` pairs | five names |
-| Bar jokes | `bar.gags` | `true` / `false` | `true` |
+| Names on the neon sign | `bar.names` | 1–20 `[name, tagline]` pairs; the bar only, other rooms bring their own | five names |
+| Room jokes | `bar.gags` | `true` / `false` | `true` |
 | Your own lines | `bar.lines` | up to 100 `{voice, text}` | none |
 | Voices | `bar.voices` | per voice: `{name?, color?}` | see below |
 | Open notes in Obsidian | `obsidian.enabled`, `obsidian.vault` | `true`/`false`, vault name | off |
 
 The look (bar or classic) and the water setting are also remembered per browser once you switch them
 on the page itself. **Reset to defaults** in Settings clears both, and keeps your music file.
+
+### Rooms
+
+A room sets the layout, colours, the names of things, the voices, the jokes and the default sound.
+Your own voices and lines (below) still win over the room's. With `theme_lessons` on, lesson
+pages take the room's colours too; off, they keep the plain default look.
+
+To make a room, or change a built-in one, see [THEMES.md](THEMES.md). A room in `<vault>/themes/` with
+a built-in's id replaces it. If the chosen room is broken or missing, the bar shows instead and
+`./edu4self check` says why.
 
 ### Kinds of block
 
@@ -121,6 +133,6 @@ vault's `CLAUDE.md`.
 ## Changing more than settings
 
 The dashboard is three plain files in `app/dashboard/` (`index.html`, `app.js`, `app.css`) with no build
-step: edit, reload. The bar's built-in lines live in `app.js` (`occasionLines`, `FLAVOR`, `barLines`).
+step: edit, reload. The bar's built-in lines live in `app.js` (`occasionLines`, `barLines`); each room's jokes and lines are in its `theme.json`.
 See [ARCHITECTURE.md](ARCHITECTURE.md) before larger changes, and [CONTRIBUTING.md](../CONTRIBUTING.md)
 if you'd like to send them upstream.

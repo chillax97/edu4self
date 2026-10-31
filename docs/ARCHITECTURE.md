@@ -16,6 +16,7 @@ edu4self is three small programs around one folder of plain files.
 |---|---|---|
 | server | `app/server.py` | serves the page, a JSON API, vault files and music; validates everything it writes |
 | page | `app/dashboard/index.html`, `app.js`, `app.css`, `fonts/` | renders state; submissions, blocks, Settings |
+| rooms | `app/themes.py`, `app/dashboard/themes/<id>/` | load, check and clean rooms (built-in and the vault's own) |
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |
 | CLI | `edu4self` | setup, init, serve, login service, check, doctor |
 | template | `template/` | what a new vault starts as, including the example topic |
@@ -55,6 +56,9 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor}` | 201 `{id}` |
 | POST | `/api/withdraw` | `{id}` | 200, or 404 if not pending |
 | POST | `/api/blocks` | `{block, minutes, started, task?, water_served?, water_drunk?}` | 201 new, 200 duplicate |
+| GET | `/api/themes` | | `{themes: [{id, name, icon, about, lessons, builtin, errors}], active}` |
+| GET | `/api/theme?id=` | | 200 `{meta, layout, css}`; 422 `{errors}` for a broken room; 404 |
+| GET | `/theme/lesson.css` | | the active room's lesson styles |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |
 | POST | `/api/music` | raw audio, `X-Filename` header | 201 `{config}`; 413 over 1 GB; 415 not audio |
 | GET | `/api/claude?since=N` | | `{available, busy, kind, conversation, events[N:], next}` |
@@ -89,6 +93,12 @@ minutes, Up next, the die, then the three highest-priority `occasionLines()` (ti
 dates, streaks, records, block moments, water, inbox age, proof age, music), the finish line, a past
 win, and one rotating joke or custom line. Lines carry stable ids so only new ones animate.
 
+**Rooms.** The bar view is drawn from the active room: `layout.html` with named slots that
+`renderBar()` fills, `theme.css` scoped to `.room`, and `theme.json` for the palette, fonts and the words
+the page uses (`W(key)`, `LINE(key)`). A room that fails its check is never applied; the page falls back
+to the bar. When `theme_lessons` is on, vault lesson pages get a `<link>` to `/theme/lesson.css`. The
+rules are in [THEMES.md](THEMES.md).
+
 ## Security model
 
 Threat: a web page in the same browser trying to read or write the learner's data (DNS rebinding,
@@ -116,6 +126,11 @@ agent that grades it. Two walls:
   the vault and fetch a page while grading. Every one was refused, and the disk was checked after. A
   chat or topic run can still fetch web pages, so a fooled chat could send vault content (your
   answers) somewhere. That is the remaining risk.
+
+Third threat: a room from someone else. Nothing in a room runs: `app/themes.py` rebuilds the layout
+from an allow-list (no scripts, handlers, links, `src`, `style` or ids outside SVG), refuses CSS that
+loads anything or styles outside `.room`, and keeps only plain values from `theme.json`. The page is
+served with a CSP that runs only its own scripts.
 
 A terminal `claude` session uses your own permissions, not these. Grade shared material from the page. See [SECURITY.md](../SECURITY.md) to report a problem.
 
