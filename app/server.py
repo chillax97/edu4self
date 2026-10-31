@@ -21,6 +21,8 @@ import mimetypes
 import os
 import posixpath
 import re
+import shutil
+import subprocess
 import sys
 import threading
 import urllib.parse
@@ -503,6 +505,161 @@ def append_inbox(entry):
 
 # ---------------------------------------------------------------- http
 
+# ---------------------------------------------------------------- Claude from the page
+# The dashboard can run Claude Code in the vault, so nobody needs a terminal day to day:
+#   grade: "check my inbox", a fresh session each time
+#   chat:  one ongoing conversation (resumed until the learner starts a new one)
+#   topic: start a topic with the teach skill, as a new conversation the learner then answers in chat
+# One run at a time. The agent works with edits auto-accepted inside the vault only (Claude Code asks
+# before touching anything outside the working folder, and a run from here can't answer, so it's
+# refused), plus read-only web research and the edu4self check. After every run the server runs the
+# check itself and reports it.
+ENGINE = os.path.dirname(APP)
+VAULT_CSP = "sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+CLAUDE_LOCK = threading.Lock()
+RUN = {"proc": None, "busy": False, "kind": None, "session": None, "events": [], "started": None}
+MAX_PROMPT = 5000
+PANEL_NOTE = ("You are running from the edu4self dashboard, not a terminal. The learner reads your replies in a "
+              "small chat panel and answers there: keep replies short and plain, ask one question at a time, "
+              "and avoid wide tables. Work only inside this vault. After changing _system/state.json, run the "
+              "check from CLAUDE.md.")
+
+
+def claude_bin():
+    exe = os.environ.get("EDU4SELF_CLAUDE") or shutil.which("claude")
+    return exe if exe and os.path.isfile(exe) and os.access(exe, os.X_OK) else None
+
+
+def claude_event(kind, text):
+    RUN["events"].append({"n": len(RUN["events"]), "kind": kind, "text": text[:4000], "ts": now_iso()})
+
+
+def tool_summary(name, inp):
+    """One readable line per tool call: what Claude is doing, without the noise."""
+    path = inp.get("file_path") or inp.get("path") or inp.get("notebook_path") or ""
+    if path:
+        rel = os.path.relpath(path, ROOT) if os.path.isabs(path) else path
+        return "%s %s" % ({"Read": "Reading", "Edit": "Editing", "Write": "Writing", "MultiEdit": "Editing"}.get(name, name), rel)
+    if name == "Bash":
+        return "Running " + (inp.get("description") or inp.get("command", ""))[:120]
+    if name in ("WebSearch", "WebFetch"):
+        return "Looking up " + (inp.get("query") or inp.get("url") or "")[:120]
+    if name == "Skill":
+        return "Using the %s skill" % (inp.get("skill") or inp.get("name") or "")
+    return name
+
+
+def claude_args(prompt, resume):
+    check = "Bash(python3 %s check:*)" % os.path.join(ENGINE, "edu4self")
+    tools = ["Read", "Edit", "MultiEdit", "Write", "Glob", "Grep", "WebSearch", "WebFetch", "Skill", "TodoWrite", check]
+    args = [claude_bin(), "-p", prompt, "--output-format", "stream-json", "--verbose",
+            "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
+            "--append-system-prompt", PANEL_NOTE]
+    if resume:
+        args += ["--resume", resume]
+    return args
+
+
+def claude_status(since="0"):
+    try:
+        since = max(0, int(since))
+    except ValueError:
+        since = 0
+    with CLAUDE_LOCK:
+        return {"available": bool(claude_bin()), "busy": RUN["busy"], "kind": RUN["kind"],
+                "conversation": bool(RUN["session"]), "events": RUN["events"][since:], "next": len(RUN["events"])}
+
+
+def claude_start(body):
+    kind, text = body.get("kind"), (body.get("text") or "").strip() if isinstance(body.get("text"), str) else ""
+    if kind not in ("grade", "chat", "topic"):
+        return 400, {"error": "kind is grade, chat or topic"}
+    if kind != "grade" and not text:
+        return 400, {"error": "say something first"}
+    if len(text) > MAX_PROMPT:
+        return 400, {"error": "keep it under %d characters" % MAX_PROMPT}
+    if not claude_bin():
+        return 503, {"error": "Claude Code isn't installed on this computer (or isn't on the PATH)"}
+    with CLAUDE_LOCK:
+        if RUN["busy"]:
+            return 409, {"error": "Claude is busy with the last request"}
+        if kind == "grade":
+            prompt, resume = "check my inbox", None
+            claude_event("you", "Grade my inbox")
+        elif kind == "topic":
+            prompt = ("Start a new topic with the teach skill. What I want to learn, in my words: %s\n"
+                      "Ask me what you need to know first, one question at a time." % text)
+            resume = None
+            RUN["session"] = None
+            claude_event("you", "New topic: " + text)
+        else:
+            prompt, resume = text, RUN["session"]
+            claude_event("you", text)
+        try:
+            proc = subprocess.Popen(claude_args(prompt, resume), cwd=ROOT, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        except OSError as exc:
+            claude_event("error", "Couldn't start Claude Code: %s" % exc)
+            return 500, {"error": str(exc)}
+        RUN.update(proc=proc, busy=True, kind=kind, started=now_iso())
+    threading.Thread(target=claude_watch, args=(proc, kind), daemon=True).start()
+    return 202, {"ok": True}
+
+
+def claude_watch(proc, kind):
+    """Turn Claude's stream into short events for the page, then run the check."""
+    result = None
+    for line in proc.stdout:
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue
+        with CLAUDE_LOCK:
+            if msg.get("session_id") and kind != "grade":
+                RUN["session"] = msg["session_id"]
+            if msg.get("type") == "assistant":
+                for part in (msg.get("message") or {}).get("content") or []:
+                    if part.get("type") == "text" and part.get("text", "").strip():
+                        claude_event("text", part["text"].strip())
+                    elif part.get("type") == "tool_use":
+                        claude_event("tool", tool_summary(part.get("name", ""), part.get("input") or {}))
+            elif msg.get("type") == "result":
+                result = msg
+    err = proc.stderr.read()
+    code = proc.wait()
+    with CLAUDE_LOCK:
+        if result and not result.get("is_error") and code == 0:
+            cost = result.get("total_cost_usd")
+            claude_event("done", "Done" + (" · $%.2f" % cost if isinstance(cost, (int, float)) else ""))
+        elif code < 0:
+            claude_event("error", "Stopped.")
+        else:
+            why = (result or {}).get("result") or err.strip().splitlines()[-1:] or ["exited with %d" % code]
+            claude_event("error", "Claude stopped with a problem: %s" % (why if isinstance(why, str) else why[0]))
+    check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT],
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    with CLAUDE_LOCK:
+        lines = [l for l in check.stdout.strip().splitlines() if l.strip()]
+        claude_event("check", ("Check OK" if check.returncode == 0 else "Check FAILED: " + " / ".join(lines[-3:])))
+        RUN.update(proc=None, busy=False)
+
+
+def claude_stop():
+    with CLAUDE_LOCK:
+        if RUN["proc"] and RUN["proc"].poll() is None:
+            RUN["proc"].terminate()
+            return {"ok": True, "stopping": True}
+    return {"ok": True, "stopping": False}
+
+
+def claude_reset():
+    with CLAUDE_LOCK:
+        if RUN["busy"]:
+            return {"ok": False, "error": "busy"}
+        RUN.update(session=None, events=[])
+    return {"ok": True}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "edu4self/" + VERSION
 
@@ -519,7 +676,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def send_file(self, path):
+    def send_file(self, path, headers=None):
         """Send a file. Honors a single Range request (the audio player needs it to seek)."""
         ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype in ("application/javascript", "application/json"):
@@ -550,6 +707,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", ctype)
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Accept-Ranges", "bytes")
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
             self.send_header("Content-Length", str(end - start + 1))
             self.end_headers()
             fh.seek(start)
@@ -581,6 +740,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         parsed = urllib.parse.urlsplit(self.path)
         route = posixpath.normpath(urllib.parse.unquote(parsed.path))
+        origin = self.headers.get("Origin")
+        if route.startswith("/api/") and origin is not None and origin not in ALLOWED_ORIGINS:
+            return self.send_json(403, {"error": "cross-origin request refused"})
+        if route == "/api/claude":
+            return self.send_json(200, claude_status(urllib.parse.parse_qs(parsed.query).get("since", ["0"])[0]))
         if route in ("/", "/index.html"):
             return self.send_file(os.path.join(DASH, "index.html"))
         if route == "/api/state":
@@ -622,6 +786,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Location", "obsidian://open?vault=%s&file=%s" % (urllib.parse.quote(vault), file_param))
             self.end_headers()
             return
+        # Pages in the vault (lessons, maybe shared by someone) run in a sandbox: their own blank
+        # origin, so they can't read the API, change settings or start Claude. Their scripts still run.
+        if target.endswith((".html", ".htm", ".svg")):
+            return self.send_file(target, {"Content-Security-Policy": VAULT_CSP})
         return self.send_file(target)
 
     def do_POST(self):
@@ -649,6 +817,13 @@ class Handler(BaseHTTPRequestHandler):
         route = urllib.parse.urlsplit(self.path).path
         if route == "/api/config":
             return self.post_config(body)
+        if route == "/api/claude":
+            code, payload = claude_start(body)
+            return self.send_json(code, payload)
+        if route == "/api/claude/stop":
+            return self.send_json(200, claude_stop())
+        if route == "/api/claude/reset":
+            return self.send_json(200, claude_reset())
         try:
             state = json.loads(read_text(STATE))
         except ValueError:

@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 ENGINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -298,6 +299,139 @@ class ValidatorTest(unittest.TestCase):
         r = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), self.vault], stdout=subprocess.PIPE, text=True)
         self.assertEqual(r.returncode, 1)
         self.assertIn("BROKEN", r.stdout)
+
+
+class ClaudeTest(unittest.TestCase):
+    """The page runs Claude Code in the vault. A fake claude stands in, so nothing is spent."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(prefix="edu4self-claude-")
+        cls.vault, cls.env = make_vault(cls.tmp)
+        cls.log = os.path.join(cls.tmp, "claude-calls.jsonl")
+        os.environ["EDU4SELF_CLAUDE"] = os.path.join(ENGINE, "tests", "fake_claude.py")
+        os.environ["FAKE_CLAUDE_LOG"] = cls.log
+        cls.port = free_port()
+        cls.httpd = server.make_server(cls.vault, cls.port)
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        for k in ("EDU4SELF_CLAUDE", "FAKE_CLAUDE_LOG", "FAKE_CLAUDE_SLEEP", "FAKE_CLAUDE_FAIL"):
+            os.environ.pop(k, None)
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    req = ServerTest.req
+
+    def wait_idle(self, timeout=10):
+        end = time.time() + timeout
+        while time.time() < end:
+            code, d, _ = self.req("GET", "/api/claude")
+            if not d["busy"]:
+                return d
+            time.sleep(0.05)
+        self.fail("claude run never finished")
+
+    def calls(self):
+        with open(self.log) as fh:
+            return [json.loads(l) for l in fh if l.strip()]
+
+    def test_grade_runs_claude_in_the_vault_and_checks_after(self):
+        sub = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "x"}}
+        self.assertEqual(self.req("POST", "/api/inbox", sub)[0], 201)
+        code, d, _ = self.req("GET", "/api/claude")
+        self.assertTrue(d["available"])
+        code, d, _ = self.req("POST", "/api/claude", {"kind": "grade"})
+        self.assertEqual(code, 202, d)
+        d = self.wait_idle()
+        kinds = [e["kind"] for e in d["events"]]
+        self.assertIn("tool", kinds)
+        self.assertIn("text", kinds)
+        self.assertEqual(kinds[-1], "check", kinds)
+        self.assertIn("OK", d["events"][-1]["text"])
+        self.assertTrue(any(e["kind"] == "done" for e in d["events"]))
+        # what Claude wrote is what the dashboard shows
+        code, st, _ = self.req("GET", "/api/state")
+        self.assertEqual(st["inbox"]["pending"], [])
+        call = self.calls()[-1]
+        self.assertEqual(os.path.realpath(call["cwd"]), os.path.realpath(self.vault))
+        self.assertIn("check my inbox", call["args"][call["args"].index("-p") + 1])
+        # locked down: edits auto-accepted only inside the vault; never every permission
+        self.assertEqual(call["args"][call["args"].index("--permission-mode") + 1], "acceptEdits")
+        self.assertNotIn("--dangerously-skip-permissions", call["args"])
+        allowed = call["args"][call["args"].index("--allowedTools") + 1]
+        self.assertNotIn("Bash,", allowed + ",")
+        self.assertNotRegex(allowed, r"Bash\((python3|sh|bash)?:?\*\)")
+
+    def test_chat_keeps_one_conversation_until_reset(self):
+        self.assertEqual(self.req("POST", "/api/claude/reset", {})[0], 200)
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "hello"})[0], 202)
+        first = self.wait_idle()
+        self.assertTrue(any(e["kind"] == "you" and e["text"] == "hello" for e in first["events"]))
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "and again"})[0], 202)
+        self.wait_idle()
+        a, b = self.calls()[-2:]
+        self.assertNotIn("--resume", a["args"])
+        self.assertIn("--resume", b["args"])
+        self.assertEqual(self.req("POST", "/api/claude/reset", {})[0], 200)
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "fresh"})[0], 202)
+        self.wait_idle()
+        self.assertNotIn("--resume", self.calls()[-1]["args"])
+
+    def test_a_new_topic_starts_a_fresh_conversation_with_the_teach_skill(self):
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "warm up"})[0], 202)
+        self.wait_idle()
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "topic", "text": "Spanish for a move to Madrid"})[0], 202)
+        self.wait_idle()
+        call = self.calls()[-1]
+        prompt = call["args"][call["args"].index("-p") + 1]
+        self.assertIn("teach", prompt)
+        self.assertIn("Spanish for a move to Madrid", prompt)
+        self.assertNotIn("--resume", call["args"])
+
+    def test_one_run_at_a_time_and_bad_requests(self):
+        os.environ["FAKE_CLAUDE_SLEEP"] = "0.6"
+        try:
+            self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "slow"})[0], 202)
+            code, d, _ = self.req("POST", "/api/claude", {"kind": "grade"})
+            self.assertEqual(code, 409)
+            self.assertIn("busy", d["error"])
+            self.wait_idle()
+        finally:
+            os.environ.pop("FAKE_CLAUDE_SLEEP")
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "dance"})[0], 400)
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": ""})[0], 400)
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "x" * 5001})[0], 400)
+        # another site, or a sandboxed page, can't start the agent
+        code, _, _ = self.req("POST", "/api/claude", {"kind": "grade"}, headers={"Origin": "null"})
+        self.assertEqual(code, 403)
+        code, _, _ = self.req("GET", "/api/claude", headers={"Origin": "null"})
+        self.assertEqual(code, 403)
+
+    def test_a_failed_run_says_so(self):
+        os.environ["FAKE_CLAUDE_FAIL"] = "1"
+        try:
+            self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "break"})[0], 202)
+            d = self.wait_idle()
+        finally:
+            os.environ.pop("FAKE_CLAUDE_FAIL")
+        self.assertTrue(any(e["kind"] == "error" for e in d["events"]), d["events"])
+
+    def test_no_claude_installed(self):
+        old = os.environ["EDU4SELF_CLAUDE"]
+        os.environ["EDU4SELF_CLAUDE"] = os.path.join(self.tmp, "nope")
+        try:
+            self.assertFalse(self.req("GET", "/api/claude")[1]["available"])
+            self.assertEqual(self.req("POST", "/api/claude", {"kind": "grade"})[0], 503)
+        finally:
+            os.environ["EDU4SELF_CLAUDE"] = old
+
+    def test_vault_pages_are_sandboxed(self):
+        # a lesson (maybe one someone shared) can't act as the dashboard: no API calls, no agent
+        code, _, r = self.req("GET", "/vault/how-learning-works/lessons/0001-retrieval-beats-rereading.html")
+        self.assertEqual(code, 200)
+        self.assertIn("sandbox", r.getheader("Content-Security-Policy") or "")
 
 
 class CliTest(unittest.TestCase):
