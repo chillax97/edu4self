@@ -8,7 +8,7 @@
  "coach": {
   "date": "2026-01-01",
   "headline": "Welcome. Try the loop once with the example lesson.",
-  "body": "Open Lesson 01, answer the three exercises from memory, press Submit answers, then tell Claude \"check my inbox\". When you're ready for a real topic, say /teach and what you want to learn.",
+  "body": "Open Lesson 01, answer the three exercises from memory, press Submit answers, then press ✦ Grade. When you're ready for a real topic, press + New topic.",
   "voices": [
    {
     "voice": "logic",

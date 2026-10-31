@@ -9,7 +9,7 @@ tags: [home, index]
 ## How the loop works
 1. The dashboard's **Up next** card says what to do.
 2. Do it, then press **Submit answers** on the card.
-3. In Claude Code, from this folder, say **"check my inbox"**.
+3. Press **✦ Grade** at the top of the dashboard. (Or, in Claude Code from this folder, say **"check my inbox"**.)
 4. Claude grades it and updates the dashboard.
 
 ## Topics

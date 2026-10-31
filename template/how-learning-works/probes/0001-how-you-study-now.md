@@ -19,5 +19,4 @@ nothing and there are no wrong answers. "I don't know" and "never" are useful an
 4. How long are your usual study sessions, and how often do you have one?
 5. What do you want to learn next, and why?
 
-Submit your answers from the dashboard (the probe's **Submit answers** button), then tell Claude
-"check my inbox".
+Submit your answers from the dashboard (the probe's **Submit answers** button), then press **✦ Grade** on the dashboard.
