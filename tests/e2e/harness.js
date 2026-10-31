@@ -26,7 +26,8 @@ export function chromePath() {
 // A new vault in a temp folder. Nothing outside it (or the temp config home) is touched.
 export function makeVault(name = "Tester", extra = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "edu4self-e2e-"));
-  const env = { ...process.env, EDU4SELF_CONFIG_HOME: path.join(dir, "cfg") };
+  // Claude Code is off unless a test brings its own stand-in, so a real install on this machine changes nothing
+  const env = { ...process.env, EDU4SELF_CONFIG_HOME: path.join(dir, "cfg"), EDU4SELF_CLAUDE: path.join(dir, "no-claude") };
   const vault = path.join(dir, "vault");
   execFileSync("python3", [CLI, "init", vault, "--name", name, ...extra], { env, stdio: "pipe" });
   return { dir, vault, env };
