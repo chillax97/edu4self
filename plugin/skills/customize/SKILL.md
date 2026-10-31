@@ -26,5 +26,5 @@ there. Then, if they want you to do it:
      volition, gpu, encyclopedia, physical, nostalgia, critic, regular, jukebox
    - `music`: `{file, title, subtitle, autoplay}`. `file` must already be in `_system/music/`; to add a
      track, the learner uploads it in Settings → Music. Never download or copy music for them.
-3. Run the check command from the vault's `CLAUDE.md`, then `curl -s http://127.0.0.1:<port>/api/config`
+3. Run the check command from the vault's `CLAUDE.md` (it fails on a bad `config.json` and says why), then `curl -s http://127.0.0.1:<port>/api/config`
    and confirm `"error": null`. The dashboard picks the change up within 15 seconds.
