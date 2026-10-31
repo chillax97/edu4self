@@ -1,12 +1,39 @@
 # edu4self
 
-**A learning dashboard that runs on your computer, with Claude as your tutor.**
+**A learning dashboard that runs on your computer, with Claude as your tutor. Hand it to your agent
+and it sets itself up around you.**
 
 You pick what to learn. Claude writes short lessons, tests what you know, and grades your answers.
 The dashboard always shows one next step, keeps a record of what you've actually proven, and turns
 your focused time into something you can see grow. Nothing leaves your machine.
 
-![The bar view: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
+[![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
+
+<sub>The first minute of the tour. [Watch all of it (2 min)](docs/video/tour.mp4).</sub>
+
+## Hand it to your agent
+
+Open Claude Code (or any coding agent) and paste:
+
+```text
+Clone https://github.com/chillax97/edu4self, read its AGENTS.md, and set it up for me.
+```
+
+Then say what you want in your own words. The agent asks what it's missing, installs everything,
+turns your wishes into settings, checks its own work, and tells you how to start your first topic.
+[AGENTS.md](AGENTS.md) is the playbook it follows.
+
+A real run, word for word what was asked:
+
+> Call me Kim. I'm learning Rust so I can contribute to a CLI tool by March. I study 45 minutes at a
+> time, about 90 minutes a day, 5 days a week. No water reminders please. Call the bar 'The Borrow
+> Checker' with the tagline 'nothing outlives its owner', and make the critic grumpier.
+
+It came back with 45-minute blocks, a 90-minute goal over 5 days, water off, the new sign, and a critic
+renamed "The curmudgeon" with lines of its own: *"unwrap() is not error handling. It is a confession."*
+Then it ran `edu4self check` to prove the settings were valid.
+
+Rather click than type? Everything the agent changed is also in **⚙ Settings** on the dashboard.
 
 ## How it works
 
@@ -37,7 +64,9 @@ your focused time into something you can see grow. Nothing leaves your machine.
   the jukebox track are all in **⚙ Settings**.
 
 <details>
-<summary>More screenshots: classic view, the back room, Settings, phone</summary>
+<summary>Screenshots: the bar, classic view, the back room, Settings, phone</summary>
+
+![The bar view: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
 
 | classic | the back room |
 |---|---|
@@ -47,7 +76,7 @@ your focused time into something you can see grow. Nothing leaves your machine.
 
 </details>
 
-## Quick start
+## Set it up yourself
 
 You need **Python 3.9+** (macOS and most Linux have it), **[Claude Code](https://claude.com/claude-code)**, and git.
 
@@ -115,6 +144,7 @@ Obsidian" in Settings), and works with git if you want history.
 
 ## Documentation
 
+- [AGENTS.md](AGENTS.md): what an agent does when you hand it this repo
 - [Product spec](docs/SPEC.md): who it's for, what it does, why it's built this way
 - [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
 - [The Claude protocol](docs/PROTOCOL.md): the contract between the dashboard and the tutor
