@@ -299,6 +299,30 @@ class CliTest(unittest.TestCase):
         r = subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, text=True)
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_check_catches_a_bad_config(self):
+        # an agent that hand-edits config.json must hear about a mistake; the dashboard would
+        # otherwise fall back to defaults without a word
+        vault, env = make_vault(self.tmp)
+        cfg_path = os.path.join(vault, "_system", "config.json")
+        check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        with open(cfg_path, "w") as fh:
+            json.dump({"name": "Kim", "goals": {"day_minutes": 5}}, fh)
+        r = check()
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertIn("daily goal", r.stdout)
+        with open(cfg_path, "w") as fh:
+            fh.write("{not json")
+        self.assertNotEqual(check().returncode, 0)
+        with open(cfg_path, "w") as fh:
+            json.dump({"music": {"file": "missing.mp3"}}, fh)
+        r = check()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("missing.mp3", r.stdout)
+        with open(cfg_path, "w") as fh:
+            json.dump({"name": "Kim", "goals": {"day_minutes": 90}, "bar": {"names": [["The Night Shift", ""]]}}, fh)
+        r = check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+
     def test_init_refuses_a_folder_with_files_in_it(self):
         vault, env = make_vault(self.tmp)
         r = subprocess.run([sys.executable, CLI, "init", vault], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

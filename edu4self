@@ -143,7 +143,30 @@ def cmd_check(args):
     vault = need_vault(resolve(args)[0])
     a = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
     b = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), vault])
-    return 0 if a.returncode == 0 and b.returncode == 0 else 1
+    c = check_config(vault)
+    return 0 if a.returncode == 0 and b.returncode == 0 and c else 1
+
+
+def check_config(vault):
+    """config.json with the same rules the server uses. A bad file doesn't break the dashboard (it falls
+    back to defaults), so without this an agent's mistake would go unnoticed."""
+    import server
+    server.configure(vault, DEFAULT_PORT)
+    raw = server.read_text(server.CONFIG)
+    if not raw.strip():
+        print("config.json: none, defaults in use")
+        return True
+    try:
+        cfg = server.clean_config(json.loads(raw))
+    except ValueError as exc:
+        print("config.json: FAILED: %s" % exc)
+        return False
+    track = cfg["music"]["file"]
+    if track and not os.path.isfile(os.path.join(server.MUSIC_DIR, track)):
+        print("config.json: FAILED: music file %s isn't in _system/music/" % track)
+        return False
+    print("config.json: OK")
+    return True
 
 
 # ---------------------------------------------------------------- serve
