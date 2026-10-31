@@ -187,6 +187,10 @@ await say("The bar: your skills talk you through tonight's work.", "One next ste
 await sleep(4200);
 await point(".bx-job h2");
 await sleep(1500);
+await say("The jukebox starts on a soundscape, made right in your browser.", "No files, no internet. Radio or your own track are one setting away.");
+await tap(".bx-music [data-mu='toggle']", 1200);
+await tap(".bx-music [data-scape='rain']", 1800);
+await tap(".bx-music [data-mu='toggle']", 600);
 
 // 5. the lesson
 await say("Open the lesson. It's short, and ends with exercises.");
@@ -281,8 +285,11 @@ await tap("#set-kind-add", 500);
 await typeIn(".set-kind:last-of-type [data-k='label']", "Spanish", { clear: true });
 await say("…the names on the bar's neon sign…");
 await typeIn("#set-names", "The Night Shift | open till it clicks", { clear: true, delay: 35 });
-await say("…your own jokes, and your own music for the jukebox.");
+await say("…your own jokes…");
 await typeIn("#set-lines", "regular: The coffee machine has been broken since the last exam.", { delay: 22 });
+await say("…and the music: a soundscape, a radio station, or your own track.");
+await tap('label.set-src-opt:has(input[value="radio"])', 1800);
+await tap('label.set-src-opt:has(input[value="file"])', 900);
 const wav = wavFile(v.dir, 6);
 const night = path.join(v.dir, "Night Drive.wav"); fs.renameSync(wav, night);
 await point(".set-upload");
