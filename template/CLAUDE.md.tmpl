@@ -19,6 +19,9 @@ This folder is {{NAME}}'s learning vault. One folder per topic, each taught with
   the format is in `{{ENGINE}}/docs/CUSTOMIZING.md`. Read it, change what was asked, and write the
   whole file back: a missing section means *defaults*, not "keep what was there". The check above
   validates `config.json` too.
+- **A room** ("make it feel like a lighthouse"): build it in `themes/<id>/` by following
+  `{{ENGINE}}/docs/THEMES.md` to its last step, then set `theme` in `config.json`. The check above
+  validates rooms too.
 - Never write `_system/inbox.jsonl`, `_system/blocks.jsonl` or `_system/music/`.
 - To point the learner at a task, link it: `http://127.0.0.1:{{PORT}}/#submit=<task-id>`.
 - The example topic `how-learning-works/` can be deleted when the learner asks: remove the folder and
