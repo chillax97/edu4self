@@ -1497,7 +1497,7 @@
     if (hero && hero.task.kind === "probe") add(41, "logic", 'It\'s a probe: it measures, it doesn\'t judge. "I don\'t know" is a real answer.', "probe");
     if (music && !music.paused && music.currentTime > 3600) add(25, "jukebox", (musicTitle() || "This track") + ", " + Math.floor(music.currentTime / 3600) + " h " + Math.floor(music.currentTime % 3600 / 60) + " min in. You've been in it longer than some people stay at jobs.", "music");
     else if (music && music.paused && musicPrefs().on === false) add(24, "jukebox", "The jukebox is quiet. Press play, or enjoy the silence like a monk.", "music");
-    else if (!musicFile() && hr >= 18) add(23, "jukebox", "No tape in the jukebox. Settings → Music takes any audio file you own.", "music");
+    else if (!musicPlayable() && hr >= 18) add(23, "jukebox", "No tape in the jukebox. Settings → Music has a soundscape, radio, or your own file.", "music");
     if (S.total >= 600) add(20, "encyclopedia", hm(S.total) + " of focus logged since " + shortDate(new Date(S.first)) + ".", "lifetime");
     return O.sort(function (a, b) { return b[0] - a[0]; });
   }
@@ -1703,23 +1703,57 @@
 
 
   // ---------------------------------------------------------------- jukebox music (bar view only)
-  // One track of your own on loop (Settings → Music; stored in _system/music/). It picks up where you
-  // left off (saved every few seconds), and the scrubber, ±1 min and "random spot" choose where it
-  // plays. Only one tab plays at a time.
+  // Three sources (Settings → Music): a soundscape made live in the browser (the default, offline),
+  // a radio station, or one track of your own on loop (stored in _system/music/). A track picks up
+  // where you left off (saved every few seconds), and the scrubber, ±1 min and "random spot" choose
+  // where it plays. Only one tab plays at a time.
   var MUSIC_KEY = "edu.music.v1", MUSIC_OWNER_KEY = "edu.music.owner.v1";
+  var SCAPES = {
+    night: { name: "Night shift", sub: "slow chords, tape hiss" },
+    rain: { name: "Rain on the window", sub: "rain, the odd heavy drop" },
+    noise: { name: "Brown noise", sub: "a low, steady hush" }
+  };
+  // stations that publish their stream addresses for other players, checked to play in a browser
+  var STATIONS = [
+    { name: "Radio Paradise · Mellow", url: "https://stream.radioparadise.com/mellow-128", note: "mellow rock, folk and electronica, no ads" },
+    { name: "Radio Paradise · Serenity", url: "https://stream.radioparadise.com/serenity", note: "ambient and slow" },
+    { name: "Radio Paradise · Main mix", url: "https://stream.radioparadise.com/aac-128", note: "eclectic, picked by people" },
+    { name: "Radio Paradise · Global", url: "https://stream.radioparadise.com/global-128", note: "music from everywhere" }
+  ];
   function musicConf() { return cfg().music || {}; }
+  function musicSrc() { var m = musicConf(); return m.source || (m.file ? "file" : "scape"); }
   function musicFile() { return musicConf().file || ""; }
-  function musicTitle() { return musicConf().title || musicFile().replace(/\.[^.]+$/, ""); }
-  function musicSub() { return (musicConf().subtitle ? musicConf().subtitle + " · " : "") + "on loop"; }
+  function musicStream() { return musicConf().stream || {}; }
+  function musicScape() { return SCAPES[musicConf().scape] ? musicConf().scape : "night"; }
+  // what is loaded; a different one resets the player. A file keeps its bare name, so positions saved
+  // before sources existed still match.
+  function musicKey() {
+    var s = musicSrc();
+    return s === "file" ? musicFile() : s === "radio" ? "radio:" + (musicStream().url || "") : "scape:" + musicScape();
+  }
+  function musicPlayable() { var s = musicSrc(); return s === "scape" || (s === "radio" ? !!musicStream().url : !!musicFile()); }
+  function streamHost() { try { return new URL(musicStream().url).host; } catch (e) { return ""; } }
+  function musicTitle() {
+    var s = musicSrc();
+    if (s === "scape") return SCAPES[musicScape()].name;
+    if (s === "radio") return musicStream().name || streamHost() || "Radio";
+    return musicConf().title || musicFile().replace(/\.[^.]+$/, "");
+  }
+  function musicSub() {
+    var s = musicSrc();
+    if (s === "scape") return SCAPES[musicScape()].sub + " · offline";
+    if (s === "radio") return "live radio · " + streamHost();
+    return (musicConf().subtitle ? musicConf().subtitle + " · " : "") + "on loop";
+  }
   var TAB_ID = Math.random().toString(36).slice(2);
-  var music = null, musicReady = false, musicWaiting = false, musicSaveT = 0, musicDrag = false, musicDuck = 0, musicQueued = null;
+  var music = null, musicReady = false, musicWaiting = false, musicErr = false, musicSaveT = 0, musicDrag = false, musicDuck = 0, musicQueued = null;
   var musicEl = document.createElement("div");
   musicEl.className = "bx-music";
 
   // position, volume and on/off for this browser; the position belongs to one file and resets for a new one
   function musicPrefs() {
-    var m = readJSON(MUSIC_KEY) || {}, same = m.file === musicFile();
-    return { file: musicFile(), t: same ? m.t || 0 : 0, vol: m.vol == null ? 0.5 : m.vol,
+    var m = readJSON(MUSIC_KEY) || {}, same = m.file === musicKey();
+    return { file: musicKey(), t: same ? m.t || 0 : 0, vol: m.vol == null ? 0.5 : m.vol,
       on: m.on == null ? musicConf().autoplay !== false : m.on !== false };
   }
   function saveMusic(extra) {
@@ -1738,14 +1772,24 @@
 
   function ensureMusic() {
     if (music) return music;
+    if (musicSrc() === "scape") {
+      music = makeScape(musicScape());
+      music.volume = musicPrefs().vol;
+      musicReady = true;
+      music.addEventListener("play", function () { store(MUSIC_OWNER_KEY, TAB_ID + ":" + Date.now()); paintMusic(); });
+      music.addEventListener("pause", function () { saveMusic(); releaseMusic(); paintMusic(); });
+      music.dataset.file = musicKey();
+      return music;
+    }
     music = new Audio();
     music.preload = "metadata";
     music.loop = true;
     music.volume = musicPrefs().vol;
     music.addEventListener("loadedmetadata", function () {
-      if (this !== music) return;   // a player that was swapped out
+      if (this !== music) return;
+        // a player that was swapped out
       var t = musicPrefs().t;
-      if (t > 0 && t < music.duration) music.currentTime = t;   // resume where you left off
+      if (musicSrc() === "file" && t > 0 && t < music.duration) music.currentTime = t;   // resume where you left off
       musicReady = true;
       if (musicQueued) { var q = musicQueued; musicQueued = null; musicJump(q); }
       paintMusic();
@@ -1761,13 +1805,21 @@
     music.addEventListener("pause", function () {
       if (this !== music) return;
       saveMusic(); releaseMusic(); paintMusic(); });
-    music.src = "/music?f=" + encodeURIComponent(musicFile());
-    music.dataset.file = musicFile();
+    music.addEventListener("error", function () {
+      if (this !== music) return;
+      musicErr = true; musicWaiting = false; paintMusic(); });
+    music.addEventListener("playing", function () {
+      if (this !== music) return;
+      musicErr = false; paintMusic(); });
+    if (musicSrc() === "radio") { music.loop = false; music.preload = "none"; music.src = musicStream().url; }
+    else music.src = "/music?f=" + encodeURIComponent(musicFile());
+    music.dataset.file = musicKey();
     return music;
   }
 
   function musicStart() {
     var a = ensureMusic(), pr = a.play();
+    musicErr = false;
     if (pr && pr.then) pr.then(function () { musicWaiting = false; paintMusic(); }, function () { musicWaiting = true; paintMusic(); });
   }
 
@@ -1796,14 +1848,16 @@
   // called after every render: play in the bar if you want it on, stop in classic
   function musicSync() {
     if (!isBar()) { if (music && !music.paused) music.pause(); return; }
-    if (music && music.dataset.file !== musicFile()) {   // the track changed in Settings
-      music.pause(); music.removeAttribute("src"); music.load(); music = null; musicReady = false; musicQueued = null;
+    if (music && music.dataset.file !== musicKey()) {   // the source changed in Settings
+      music.pause(); music.removeAttribute("src"); music.load(); music = null; musicReady = false; musicQueued = null; musicErr = false;
       musicEl.innerHTML = "";
     }
     var slot = $("#bx-music-slot");
     // the shell is drawn for one file (or for none); redraw it when that changes
-    if (slot) { if (!musicEl.firstChild || musicEl.dataset.file !== musicFile()) paintMusicShell(); slot.replaceWith(musicEl); paintMusic(); }
-    if (!musicFile()) return;
+    if (!musicEl.firstChild || musicEl.dataset.file !== musicKey()) paintMusicShell();
+    if (slot) slot.replaceWith(musicEl);
+    paintMusic();
+    if (!musicPlayable()) return;
     if (musicPrefs().on && (!music || music.paused) && !musicWaiting && !otherTabPlaying()) musicStart();
   }
 
@@ -1816,8 +1870,8 @@
   }
 
   function paintMusicShell() {
-    musicEl.dataset.file = musicFile();
-    if (!musicFile()) {
+    musicEl.dataset.file = musicKey();
+    if (!musicPlayable()) {
       musicEl.innerHTML = '<div class="bx-mu-empty"><b>No tape loaded.</b><span>The jukebox plays one track of your own on loop, and remembers where it stopped.</span>' +
         '<button class="bx-mu-add" type="button" data-settings="music">Add music in Settings</button></div>';
       return;
@@ -1826,10 +1880,17 @@
       '<div class="bx-mu-head"><button class="bx-mu-play" type="button" data-mu="toggle" aria-label="Play or pause the music"></button>' +
         '<div class="bx-mu-title"><b>' + esc(musicTitle()) + '</b><small data-mu-state></small></div>' +
         '<span class="bx-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>' +
-      '<input class="bx-mu-seek" type="range" min="0" max="1" step="1" value="0" data-mu-seek aria-label="Where in the track to play">' +
-      '<div class="bx-mu-row"><span class="bx-mu-time" data-mu-time>–</span>' +
-        '<button type="button" data-mu="back" title="Back one minute">−1m</button><button type="button" data-mu="fwd" title="Forward one minute">+1m</button>' +
-        '<button type="button" data-mu="rand" title="Jump to a random spot">⤨ random</button></div>' +
+      (musicSrc() === "file" ?
+        '<input class="bx-mu-seek" type="range" min="0" max="1" step="1" value="0" data-mu-seek aria-label="Where in the track to play">' +
+        '<div class="bx-mu-row"><span class="bx-mu-time" data-mu-time>–</span>' +
+          '<button type="button" data-mu="back" title="Back one minute">−1m</button><button type="button" data-mu="fwd" title="Forward one minute">+1m</button>' +
+          '<button type="button" data-mu="rand" title="Jump to a random spot">⤨ random</button></div>'
+      : musicSrc() === "scape" ?
+        '<div class="bx-mu-row bx-mu-scapes">' + Object.keys(SCAPES).map(function (id) {
+          return '<button type="button" data-scape="' + id + '" aria-pressed="' + (id === musicScape()) + '">' + esc(SCAPES[id].name) + "</button>";
+        }).join("") + "</div>"
+      : "") +
+      '<button class="bx-mu-change" type="button" data-settings="music">' + (musicSrc() === "file" ? "change music" : musicSrc() === "radio" ? "change station" : "radio or your own music") + "</button>" +
       '<label class="bx-mu-vol"><span>vol</span><input type="range" min="0" max="1" step="0.05" data-mu-vol aria-label="Music volume"></label>' +
       '<p class="bx-mu-hint" data-mu-hint hidden>Click anywhere to start the music. Browsers need one click first.</p>';
   }
@@ -1844,21 +1905,27 @@
 
   function paintMusic() {
     document.body.classList.toggle("music-on", !!(music && !music.paused));
-    if (!musicEl.firstChild || !musicFile()) return;
+    if (!musicEl.firstChild || !musicPlayable()) return;
     var playing = music && !music.paused;
     document.body.classList.toggle("music-on", !!playing);
     musicEl.classList.toggle("is-playing", !!playing);
     var b = musicEl.querySelector("[data-mu=toggle]");
     b.textContent = playing ? "❚❚" : "▶";
-    musicEl.querySelector("[data-mu-state]").textContent = playing ? musicSub() : musicWaiting ? "waiting for a click" : otherTabPlaying() ? "playing in another tab" : "paused · resumes where you left off";
+    var src = musicSrc();
+    musicEl.querySelector("[data-mu-state]").textContent = musicErr ? (src === "radio" ? "the station isn't answering" : "this track won't play")
+      : playing ? musicSub() : musicWaiting ? "waiting for a click" : otherTabPlaying() ? "playing in another tab"
+      : src === "file" ? "paused · resumes where you left off" : src === "radio" ? "paused · live, joins wherever it is" : "paused · press play";
     musicEl.querySelector("[data-mu-hint]").hidden = !musicWaiting;
     var vol = musicEl.querySelector("[data-mu-vol]");
     if (document.activeElement !== vol) vol.value = musicPrefs().vol;
-    if (!music) { var t = musicPrefs().t; musicEl.querySelector("[data-mu-time]").textContent = t ? "resumes at " + longClock(t) : "–"; }
+    var tm = musicEl.querySelector("[data-mu-time]");
+    if (!music && tm) { var t = musicPrefs().t; tm.textContent = t ? "resumes at " + longClock(t) : "–"; }
     paintMusicTime();
   }
 
   musicEl.addEventListener("click", function (ev) {
+    var sc = ev.target.closest("[data-scape]");
+    if (sc) return switchScape(sc.dataset.scape);
     var b = ev.target.closest("[data-mu]");
     if (!b) return;
     var a = ensureMusic(), what = b.dataset.mu;
@@ -1886,7 +1953,7 @@
   // the first click or key press anywhere lets the music start (browser autoplay rule)
   ["pointerdown", "keydown"].forEach(function (type) {
     document.addEventListener(type, function (ev) {
-      if (!musicWaiting || !isBar() || !musicFile() || musicEl.contains(ev.target)) return;
+      if (!musicWaiting || !isBar() || !musicPlayable() || musicEl.contains(ev.target)) return;
       musicWaiting = false;
       if (musicPrefs().on) musicStart();
     }, true);
@@ -1896,6 +1963,111 @@
   });
   window.addEventListener("pagehide", function () { if (music) saveMusic(); releaseMusic(); });
 
+
+  // a soundscape chip in the jukebox: saved like any setting, keeps playing if it was
+  function switchScape(id) {
+    if (!DATA || !DATA.config || id === musicScape()) return;
+    var was = music && !music.paused, c = JSON.parse(JSON.stringify(DATA.config));
+    c.music.source = "scape"; c.music.scape = id;
+    postConfig({ config: c }).then(function (j) {
+      DATA.config = j.config; applyConfig();
+      if (was) { var pr = musicPrefs(); pr.on = true; writeJSON(MUSIC_KEY, pr); }   // musicPrefs is already keyed to the new scape
+      musicSync();
+    }).catch(function (e) { toast(esc(e.message)); });
+  }
+
+  // ---------------------------------------------------------------- soundscapes
+  // Made live with the Web Audio API: no files, no network. The object acts enough like an <audio>
+  // element (play, pause, paused, volume, events) for the jukebox to treat it as one.
+  function makeScape(id) {
+    var ev = document.createElement("span"), ctx = null, out = null, live = [], timers = [], vol = 0.5;
+    var p = { paused: true, currentTime: 0, duration: NaN, seeking: false, dataset: {},
+      addEventListener: ev.addEventListener.bind(ev), removeAttribute: function () {},
+      load: function () { stop(); if (ctx) { ctx.close(); ctx = null; } } };
+    Object.defineProperty(p, "volume", { get: function () { return vol; }, set: function (v) {
+      vol = v; if (out) out.gain.setTargetAtTime(v * 0.7, ctx.currentTime, 0.08);
+    } });
+    p.play = function () {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Chrome leaves a context created before the first click suspended; give up quickly, and the
+      // jukebox's "waiting for a click" path calls play() again inside the click
+      var tries = 0;
+      return ctx.resume().then(function () {
+        return new Promise(function (ok, no) {
+          (function wait() { if (ctx.state === "running") ok(); else if (++tries > 6) no(new Error("NotAllowedError")); else setTimeout(wait, 50); })();
+        });
+      }).then(function () {
+        if (!p.paused) return;
+        start(); p.paused = false; ev.dispatchEvent(new Event("play"));
+      });
+    };
+    p.pause = function () { if (p.paused) return; stop(); p.paused = true; ev.dispatchEvent(new Event("pause")); };
+
+    function noise(seconds, kind) {
+      var n = ctx.sampleRate * seconds, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0), last = 0;
+      for (var i = 0; i < n; i++) {
+        var w = Math.random() * 2 - 1;
+        if (kind === "brown") { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w;
+      }
+      return b;
+    }
+    function loop(buf) { var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.start(); live.push(s); return s; }
+    function filter(type, f, q) { var x = ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; if (q) x.Q.value = q; live.push(x); return x; }
+    function gain(g) { var x = ctx.createGain(); x.gain.value = g; live.push(x); return x; }
+    function chain() { for (var i = 0; i < arguments.length - 1; i++) arguments[i].connect(arguments[i + 1]); return arguments[arguments.length - 1]; }
+    function every(ms, fn) { fn(); timers.push(setInterval(fn, ms)); }
+
+    function start() {
+      out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination); live.push(out);
+      out.gain.setTargetAtTime(vol * 0.7, ctx.currentTime, 0.6);   // fade in
+      if (id === "noise") {
+        chain(loop(noise(4, "brown")), filter("lowpass", 700), gain(0.9), out);
+      } else if (id === "rain") {
+        chain(loop(noise(3, "white")), filter("highpass", 500), filter("lowpass", 6000), gain(0.18), out);
+        chain(loop(noise(4, "brown")), filter("lowpass", 350), gain(0.5), out);
+        var drop = noise(0.05, "white");
+        every(70, function () {   // the odd heavier drop on the glass
+          if (Math.random() > 0.35) return;
+          var s = ctx.createBufferSource(), f = filter("bandpass", 1500 + Math.random() * 3500, 6), g = ctx.createGain(), t = ctx.currentTime;
+          s.buffer = drop; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 + Math.random() * 0.4, t + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); chain(s, f, g, out); s.start(t); s.stop(t + 0.06);
+        });
+      } else {
+        // night shift: four soft chords on a loop, a bass note under each, tape hiss on top
+        var CHORDS = [[57, 60, 64, 67, 71], [53, 57, 60, 64, 67], [48, 52, 55, 59, 64], [55, 59, 62, 64, 69]];
+        var hz = function (m) { return 440 * Math.pow(2, (m - 69) / 12); };
+        var tone = filter("lowpass", 1200, 0.7), wet = ctx.createDelay(1); wet.delayTime.value = 0.42; live.push(wet);
+        var fb = gain(0.32), lfo = ctx.createOscillator(), depth = gain(400);
+        lfo.frequency.value = 0.05; chain(lfo, depth, tone.frequency); lfo.start(); live.push(lfo);
+        chain(tone, out); chain(tone, wet, fb, wet); chain(wet, gain(0.5), out);
+        chain(loop(noise(2, "white")), filter("highpass", 3000), gain(0.012), out);
+        var bar = 0;
+        every(8000, function () {
+          var t = ctx.currentTime + 0.05, notes = CHORDS[bar++ % CHORDS.length];
+          notes.concat([notes[0] - 24]).forEach(function (m, i) {
+            var bass = i === notes.length, g = ctx.createGain();
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(bass ? 0.16 : 0.05, t + 2.2);
+            g.gain.setTargetAtTime(0.0001, t + 6.5, 1.1);
+            g.connect(tone);
+            [-6, 6].forEach(function (cents) {
+              var o = ctx.createOscillator(); o.type = bass ? "sine" : "triangle";
+              o.frequency.value = hz(m); o.detune.value = bass ? 0 : cents;
+              o.connect(g); o.start(t); o.stop(t + 11);
+            });
+          });
+        });
+      }
+    }
+    function stop() {
+      timers.forEach(clearInterval); timers = [];
+      if (!ctx || !out) return;
+      var nodes = live, o = out; live = []; out = null;
+      o.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+      setTimeout(function () { nodes.forEach(function (n) { try { if (n.stop) n.stop(); n.disconnect(); } catch (e) {} }); }, 700);
+    }
+    return p;
+  }
 
   // ---------------------------------------------------------------- settings
   // A form over _system/config.json. Nothing here needs a terminal or Claude.
@@ -1944,7 +2116,10 @@
         '<input type="text" maxlength="30" data-voice="' + v + '" value="' + esc(o.name || "") + '" placeholder="' + esc(VOICE_DEFAULTS[v].name) + '" aria-label="Name for ' + esc(VOICE_DEFAULTS[v].name) + '">' +
         '<input type="color" data-voice-color="' + v + '" value="' + esc(o.color || VOICE_DEFAULTS[v].c) + '" aria-label="Colour for ' + esc(VOICE_DEFAULTS[v].name) + '"><code>' + v + "</code></div>";
     }).join("");
-    var m = c.music;
+    var m = c.music, src = m.source || (m.file ? "file" : "scape"), scape = SCAPES[m.scape] ? m.scape : "night";
+    m.stream = m.stream || { url: "", name: "" };
+    var station = m.stream.url ? STATIONS.map(function (st) { return st.url; }).indexOf(m.stream.url) : -1;
+    if (station < 0 && m.stream.url) station = "other";
     $("#set-body").innerHTML =
       (err ? '<p class="set-warn">' + esc(err) + ". Saving here writes a fresh, valid file.</p>" : "") +
       '<h3 id="set-you">You</h3>' +
@@ -1971,14 +2146,41 @@
       }).join("") + "</div>" +
 
       '<h3 id="set-music">Music</h3>' +
+      '<p class="set-hint">What the jukebox in the bar plays.</p>' +
+      '<div class="set-src" role="radiogroup" aria-label="Music source">' +
+        [["scape", "Soundscape", "Made live in your browser. Offline, nothing to download."],
+         ["radio", "Radio", "A live station from the internet."],
+         ["file", "Your own track", "An audio file you own, on loop."]].map(function (o) {
+          return '<label class="set-src-opt"><input type="radio" name="set-mu-src" value="' + o[0] + '"' + (src === o[0] ? " checked" : "") + '>' +
+            "<b>" + o[1] + "</b><small>" + o[2] + "</small></label>";
+        }).join("") + "</div>" +
+      '<div class="set-mu-pane" data-pane="scape"' + (src === "scape" ? "" : " hidden") + ">" +
+        Object.keys(SCAPES).map(function (id) {
+          return '<label class="set-pick"><input type="radio" name="set-mu-scape" value="' + id + '"' + (scape === id ? " checked" : "") + "><b>" + esc(SCAPES[id].name) + "</b><small>" + esc(SCAPES[id].sub) + "</small></label>";
+        }).join("") +
+      "</div>" +
+      '<div class="set-mu-pane" data-pane="radio"' + (src === "radio" ? "" : " hidden") + ">" +
+        STATIONS.map(function (st, i) {
+          return '<label class="set-pick"><input type="radio" name="set-mu-station" value="' + i + '"' + (station === i ? " checked" : "") + "><b>" + esc(st.name) + "</b><small>" + esc(st.note) + "</small></label>";
+        }).join("") +
+        '<label class="set-pick"><input type="radio" name="set-mu-station" value="other"' + (station === "other" ? " checked" : "") + "><b>Another station</b><small>paste its stream address</small></label>" +
+        '<div class="set-two">' +
+          fieldRow("Stream address", '<input type="url" id="set-mu-url" maxlength="500" placeholder="https://…" value="' + esc(station === "other" ? m.stream.url : "") + '">') +
+          fieldRow("Name", '<input type="text" id="set-mu-sname" maxlength="60" value="' + esc(station === "other" ? m.stream.name : "") + '">') +
+        "</div>" +
+        '<small class="set-hint">Radio is the one thing here that uses the internet: while it plays, this page connects to the station. ' +
+          'Radio Paradise is listener-supported and ad-free; if it keeps you company, <a href="https://radioparadise.com" target="_blank" rel="noopener">radioparadise.com</a> takes donations.</small>' +
+      "</div>" +
+      '<div class="set-mu-pane" data-pane="file"' + (src === "file" ? "" : " hidden") + ">" +
       (m.file ? '<div class="set-track"><b>' + esc(m.title || m.file) + '</b><code>' + esc(m.file) + '</code><button class="btn btn-ghost btn-sm" type="button" id="set-mu-del">Remove</button></div>'
-              : '<p class="set-hint">No track yet. The jukebox in the bar plays one track of yours on loop and remembers where it stopped.</p>') +
+              : '<p class="set-hint">No track yet. Pick a file and it starts playing in the bar, on loop, remembering where it stopped.</p>') +
       '<label class="set-upload"><input type="file" id="set-mu-file" accept="audio/*,.m4a,.mp3,.ogg,.opus,.wav,.flac,.aac,.webm"><span class="btn btn-soft btn-sm">' + (m.file ? "Replace the track…" : "Choose an audio file…") + "</span>" +
         '<span class="set-prog" id="set-mu-prog" hidden><i></i></span></label>' +
       '<small class="set-hint">Any audio file you own, up to 1 GB. It is copied into <code>_system/music/</code> and never leaves this computer.</small>' +
       '<div class="set-two">' +
         fieldRow("Title", '<input type="text" id="set-mu-title" maxlength="80" value="' + esc(m.title) + '">') +
         fieldRow("Subtitle", '<input type="text" id="set-mu-sub" maxlength="80" value="' + esc(m.subtitle) + '" placeholder="artist, album, mood">') +
+      "</div>" +
       "</div>" +
       '<label class="set-check"><input type="checkbox" id="set-mu-auto"' + (m.autoplay ? " checked" : "") + "> Start playing when the bar opens (browsers still need one click first)</label>" +
 
@@ -2013,6 +2215,11 @@
       k.color = sel === "custom" ? row.querySelector("[data-color-hex]").value : sel;
     });
     var water = document.querySelector('input[name="set-water"]:checked'); if (water) c.water.every = Number(water.value);
+    var msrc = document.querySelector('input[name="set-mu-src"]:checked'); if (msrc) c.music.source = msrc.value;
+    var msc = document.querySelector('input[name="set-mu-scape"]:checked'); if (msc) c.music.scape = msc.value;
+    var mst = document.querySelector('input[name="set-mu-station"]:checked');
+    if (mst && mst.value === "other") c.music.stream = { url: $("#set-mu-url").value.trim(), name: $("#set-mu-sname").value.trim() };
+    else if (mst) c.music.stream = { url: STATIONS[Number(mst.value)].url, name: STATIONS[Number(mst.value)].name };
     c.music.title = $("#set-mu-title").value;
     c.music.subtitle = $("#set-mu-sub").value;
     c.music.autoplay = $("#set-mu-auto").checked;
@@ -2097,6 +2304,10 @@
       t.closest(".set-kind").querySelector(".set-sw").style.setProperty("--c", t.value);
     } else if (t.hasAttribute("data-voice-color")) {
       t.parentNode.querySelector(".set-sw").style.setProperty("--c", t.value);
+    } else if (t.name === "set-mu-src") {
+      document.querySelectorAll(".set-mu-pane").forEach(function (p) { p.hidden = p.dataset.pane !== t.value; });
+    } else if (t.id === "set-mu-url" && t.value.trim()) {
+      var o = document.querySelector('input[name="set-mu-station"][value="other"]'); if (o) o.checked = true;
     } else if (t.id === "set-mu-file" && t.files[0]) uploadMusic(t.files[0]);
   });
 

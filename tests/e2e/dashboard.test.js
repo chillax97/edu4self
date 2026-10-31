@@ -3,7 +3,8 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, wavFile, readJSON, readLines } from "./harness.js";
+import http from "node:http";
+import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, wavFile, readJSON, readLines, sleep } from "./harness.js";
 
 let PORT;
 
@@ -39,10 +40,64 @@ test("first visit: onboarding, then the bar with the example topic", async () =>
   assert.ok(await page.$("body.v-bar"), "bar is the default view");
   assert.match(await page.$eval(".bx-neon", (e) => e.textContent), /Cache Miss/);
   assert.match(await page.$eval(".bx-job h2", (e) => e.textContent), /Retrieval beats rereading/);
-  assert.match(await page.$eval(".bx-music", (e) => e.textContent), /No tape loaded/);
+  // the jukebox has a built-in soundscape, paused: never empty, never online by default
+  assert.match(await page.$eval(".bx-music", (e) => e.textContent), /Night shift.*paused/s);
   const voices = await page.$$eval(".bx-who", (els) => els.map((e) => e.textContent));
   assert.ok(voices.includes("Willpower") && voices.includes("Logic"), "voices speak: " + voices.join(", "));
   assert.ok(!voices.some((n) => /Volition|Encyclopedia|Physical instrument/.test(n)), "no borrowed skill names");
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
+
+// Web Audio has no element to inspect, so tap the line into the speakers and measure what goes through it
+async function listen(page) {
+  await page.evaluateOnNewDocument(() => {
+    const connect = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (dest, ...rest) {
+      if (dest instanceof AudioDestinationNode) {
+        const ctx = this.context;
+        if (!ctx.__tap) { ctx.__tap = ctx.createAnalyser(); connect.call(ctx.__tap, dest); window.__tap = ctx.__tap; }
+        return connect.call(this, ctx.__tap, ...rest);
+      }
+      return connect.call(this, dest, ...rest);
+    };
+  });
+}
+const level = (page) => page.evaluate(() => {
+  if (!window.__tap) return 0;
+  const d = new Float32Array(2048); window.__tap.getFloatTimeDomainData(d);
+  return Math.sqrt(d.reduce((a, x) => a + x * x, 0) / d.length);
+});
+
+test("the soundscape plays, makes real sound, and switches without a file or the internet", async () => {
+  const page = await browser.newPage();
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(String(e)));
+  const offsite = [];
+  page.on("request", (r) => { if (!r.url().startsWith(server.url) && !r.url().startsWith("data:")) offsite.push(r.url()); });
+  await listen(page);
+  await page.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar"); });
+  await page.goto(server.url, { waitUntil: "networkidle0" });
+  await page.waitForSelector('.bx-music [data-mu="toggle"]');
+  assert.equal(await level(page), 0, "silent until asked");
+  for (const id of ["night", "rain", "noise"]) {
+    if (id !== "night") {
+      await page.click(`.bx-music [data-scape="${id}"]`);
+      await page.waitForFunction((id) => document.querySelector(`[data-scape="${id}"]`)?.getAttribute("aria-pressed") === "true", {}, id);
+    } else {
+      await page.click('.bx-music [data-mu="toggle"]');
+    }
+    await page.waitForFunction(() => document.body.classList.contains("music-on"));
+    await sleep(2500);   // the chords fade in over two seconds
+    const rms = await level(page);
+    assert.ok(rms > 0.002, id + " is audible: rms " + rms.toFixed(4));
+  }
+  assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.scape, "noise");
+  await page.click('.bx-music [data-mu="toggle"]');
+  await page.waitForFunction(() => !document.body.classList.contains("music-on"));
+  await sleep(800);
+  assert.ok(await level(page) < 0.001, "pause is silence");
+  assert.deepEqual(offsite, [], "nothing loaded from the internet");
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
@@ -178,6 +233,8 @@ test("Settings: change everything, upload music, survive a restart, then reset",
 
 test("the jukebox plays the track, remembers the spot, and a bad setting is refused", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
+  await page.waitForSelector('.bx-music [data-mu-seek]');   // the uploaded track, not the soundscape
+  if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
   await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
   await page.click('.bx-music [data-mu="toggle"]');   // pause: saves the position
   await page.waitForFunction(() => !document.body.classList.contains("music-on"));
@@ -202,10 +259,68 @@ test("the jukebox plays the track, remembers the spot, and a bad setting is refu
   await page.waitForFunction(() => !document.querySelector(".set-track"));
   assert.equal(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")), false);
   await tap(page, "#settings [data-close]");
-  await page.waitForFunction(() => /No tape loaded/.test(document.querySelector(".bx-music").textContent));
+  // no file left: back to the soundscape
+  await page.waitForFunction(() => /Night shift|Rain|Brown noise/.test(document.querySelector(".bx-music").textContent));
+  assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.source, "scape");
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
+
+test("radio: pick a station in Settings, and the jukebox streams it", async () => {
+  // a stand-in station on another port, so the test never needs the internet
+  const wav = fs.readFileSync(wavFile(v.dir, 30));
+  const station = http.createServer((q, r) => { r.writeHead(200, { "Content-Type": "audio/wav", "Access-Control-Allow-Origin": "*" }); r.end(wav); });
+  await new Promise((ok) => station.listen(0, "127.0.0.1", ok));
+  const url = `http://127.0.0.1:${station.address().port}/live.wav`;
+  const page = await openPage(browser, server.url, { view: "bar" });
+  await page.click("#btn-settings");
+  await page.waitForSelector('#settings:not([hidden]) input[name="set-mu-src"][value="radio"]');
+  await tap(page, 'input[name="set-mu-src"][value="radio"]');
+  // a listed station fills in its address
+  await tap(page, 'input[name="set-mu-station"][value="0"]');
+  await tap(page, "#set-save");
+  await page.waitForSelector("#settings", { hidden: true });
+  let m = readJSON(path.join(v.vault, "_system", "config.json")).music;
+  assert.equal(m.source, "radio");
+  assert.match(m.stream.url, /^https:\/\/stream\.radioparadise\.com\//);
+  // another station by address: typing it picks "Another station"
+  await page.click("#btn-settings");
+  await page.waitForSelector("#settings:not([hidden]) #set-mu-url");
+  await tap(page, "#set-mu-url");
+  await page.type("#set-mu-url", url);
+  await page.type("#set-mu-sname", "Test FM");
+  await page.$eval("#set-mu-url", (e) => e.dispatchEvent(new Event("change", { bubbles: true })));
+  await tap(page, "#set-save");
+  await page.waitForSelector("#settings", { hidden: true });
+  m = readJSON(path.join(v.vault, "_system", "config.json")).music;
+  assert.deepEqual(m.stream, { url, name: "Test FM" });
+  await page.waitForFunction(() => /Test FM/.test(document.querySelector(".bx-music").textContent));
+  if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
+  await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
+  assert.match(await page.$eval(".bx-music", (e) => e.textContent), /live radio · 127\.0\.0\.1/);
+  assert.equal(await page.$(".bx-music [data-mu-seek]"), null, "no scrubber on live radio");
+  // a bad address is refused with a reason
+  const r = await page.evaluate(async () => {
+    const res = await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: { music: { source: "radio", stream: { url: "javascript:alert(1)" } } } }) });
+    return { status: res.status, body: await res.json() };
+  });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /http/);
+  page.errors = page.errors.filter((e) => !/status of 400/.test(e));
+  await page.click('.bx-music [data-mu="toggle"]');
+  await postReset();
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+  station.close();
+});
+async function postReset() {
+  // back to a soundscape for the tests after this one
+  const cfg = readJSON(path.join(v.vault, "_system", "config.json"));
+  cfg.music.source = "scape";
+  const r = await fetch(server.url + "api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config: cfg }) });
+  assert.equal(r.status, 200);
+}
 
 test("phone width: no sideways scrolling in either view or in Settings", async () => {
   for (const view of ["bar", "classic"]) {
