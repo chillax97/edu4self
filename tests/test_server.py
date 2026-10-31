@@ -357,12 +357,23 @@ class ClaudeTest(unittest.TestCase):
         call = self.calls()[-1]
         self.assertEqual(os.path.realpath(call["cwd"]), os.path.realpath(self.vault))
         self.assertIn("check my inbox", call["args"][call["args"].index("-p") + 1])
-        # locked down: edits auto-accepted only inside the vault; never every permission
-        self.assertEqual(call["args"][call["args"].index("--permission-mode") + 1], "acceptEdits")
-        self.assertNotIn("--dangerously-skip-permissions", call["args"])
-        allowed = call["args"][call["args"].index("--allowedTools") + 1]
-        self.assertNotIn("Bash,", allowed + ",")
-        self.assertNotRegex(allowed, r"Bash\((python3|sh|bash)?:?\*\)")
+        # locked down, because a lesson Claude grades may come from a stranger (see claude_args)
+        args = call["args"]
+        flag = lambda f: args[args.index(f) + 1].split(",")
+        self.assertEqual(args[args.index("--permission-mode") + 1], "acceptEdits")
+        self.assertNotIn("--dangerously-skip-permissions", args)
+        allowed, denied = flag("--allowedTools"), flag("--disallowedTools")
+        # no bare file tools: a bare "Write" or "Read" rule means any path on the computer
+        for bare in ("Read", "Edit", "Write", "MultiEdit", "Glob", "Grep", "Bash"):
+            self.assertNotIn(bare, allowed)
+        self.assertFalse(any(a.startswith("Bash") for a in allowed), allowed)
+        self.assertIn("Bash", denied)
+        for f in ("CLAUDE.md", ".claude/**", ".mcp.json"):
+            self.assertIn("Write(./%s)" % f, denied)
+            self.assertIn("Edit(./%s)" % f, denied)
+        self.assertNotIn("WebFetch", allowed)      # grading: nothing it reads can leave
+        self.assertIn("WebFetch", denied)
+        self.assertIn("--strict-mcp-config", args)
 
     def test_chat_keeps_one_conversation_until_reset(self):
         self.assertEqual(self.req("POST", "/api/claude/reset", {})[0], 200)
@@ -373,6 +384,7 @@ class ClaudeTest(unittest.TestCase):
         self.wait_idle()
         a, b = self.calls()[-2:]
         self.assertNotIn("--resume", a["args"])
+        self.assertIn("WebFetch", a["args"][a["args"].index("--allowedTools") + 1].split(","))   # chat may look things up
         self.assertIn("--resume", b["args"])
         self.assertEqual(self.req("POST", "/api/claude/reset", {})[0], 200)
         self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "fresh"})[0], 202)
