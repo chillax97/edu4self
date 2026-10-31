@@ -151,7 +151,41 @@ def cmd_check(args):
     a = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
     b = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), vault])
     c = check_config(vault)
-    return 0 if a.returncode == 0 and b.returncode == 0 and c else 1
+    t = check_themes(vault)
+    return 0 if a.returncode == 0 and b.returncode == 0 and c and t else 1
+
+
+def check_themes(vault, quiet=False):
+    """Rooms in <vault>/themes/ with the server's own checks, and that the chosen room opens.
+    A broken room never breaks the page (it falls back to the bar), so this is where you find out why."""
+    import server
+    import themes
+    server.configure(vault, DEFAULT_PORT)
+    ok = True
+    mine = os.path.join(vault, "themes")
+    for tid, path in themes.folders(server.THEMES_DIR, vault).items():
+        if not path.startswith(os.path.join(mine, "")):
+            continue
+        errs = themes.load(path, tid)["errors"]
+        if errs:
+            ok = False
+            print("themes/%s: FAILED" % tid)
+            for e in errs:
+                print("  - %s" % e)
+        elif not quiet:
+            print("themes/%s: OK" % tid)
+    try:
+        chosen = server.clean_config(json.loads(server.read_text(server.CONFIG) or "{}")).get("theme", "bar")
+    except ValueError:
+        chosen = "bar"
+    path = themes.folders(server.THEMES_DIR, vault).get(chosen)
+    if not path:
+        ok = False
+        print("config.json: FAILED: the room '%s' doesn't exist, so the bar is showing instead" % chosen)
+    elif themes.load(path, chosen)["errors"]:
+        ok = False
+        print("config.json: FAILED: the room '%s' has problems (above), so the bar is showing instead" % chosen)
+    return ok
 
 
 def check_config(vault):
@@ -387,11 +421,11 @@ def cmd_doctor(args):
         say("✓", "vault: %s" % vault)
         r1 = run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
         r2 = run([sys.executable, os.path.join(APP, "check_links.py"), vault])
-        if r1.returncode or r2.returncode:
+        if r1.returncode or r2.returncode or not check_themes(vault, quiet=True):
             bad += 1
             say("✗", "vault check failed. Ask Claude to fix it, or run ./edu4self check to see why")
         else:
-            say("✓", "state.json and links are valid")
+            say("✓", "state.json, links and rooms are valid")
     else:
         bad += 1
         say("✗", "no vault yet: ./edu4self init ~/learn")

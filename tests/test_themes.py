@@ -3,6 +3,7 @@ import http.client
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -10,7 +11,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from test_server import APP, free_port, make_vault, write_json, read_json  # noqa: E402
+from test_server import APP, CLI, free_port, make_vault, write_json, read_json  # noqa: E402
 
 sys.path.insert(0, APP)
 import server  # noqa: E402
@@ -186,6 +187,31 @@ class RouteTest(unittest.TestCase):
     def test_config_keeps_a_bad_theme_id_out(self):
         self.assertEqual(server.clean_config({"theme": "../x"})["theme"], "bar")
         self.assertEqual(server.clean_config({"theme": "night-train"})["theme"], "night-train")
+
+
+class CheckTest(unittest.TestCase):
+    """edu4self check is where an agent hears that the room it made is broken; the page only falls back."""
+
+    def test_check_names_a_broken_room_and_a_missing_one(self):
+        tmp = tempfile.mkdtemp(prefix="edu4self-themecheck-")
+        try:
+            vault, env = make_vault(tmp)
+            check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            make_theme(vault, "cosy", meta={"name": "Cosy"})
+            write_json(os.path.join(vault, "_system", "config.json"), {"theme": "cosy"})
+            r = check()
+            self.assertEqual(r.returncode, 0, r.stdout)
+            self.assertIn("themes/cosy: OK", r.stdout)
+            make_theme(vault, "cosy", css="body { color: red }")
+            r = check()
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("themes/cosy: FAILED", r.stdout)
+            self.assertIn("has problems", r.stdout)
+            write_json(os.path.join(vault, "_system", "config.json"), {"theme": "nowhere"})
+            r = check()
+            self.assertIn("'nowhere' doesn't exist", r.stdout)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == "__main__":
