@@ -1,4 +1,5 @@
 // Rebuilds the README screenshots and the plugin icon from a demo vault:  node screenshots.js
+// ONLY=rooms node screenshots.js redraws just the room pictures.
 // Everything is generated; no personal data is involved.
 import fs from "node:fs";
 import path from "node:path";
@@ -75,9 +76,9 @@ cfg.music.title = "Night Drive"; cfg.music.subtitle = "your own track";
 await fetch(server.url + "api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config: cfg }) });
 
 const browser = await launch();
-async function shot(name, { width = 1440, height = 1000, view = "bar", block = false, room = "front", fn, full = false } = {}) {
+async function shot(name, { width = 1440, height = 1000, view = "bar", block = false, room = "front", fn, full = false, scale = 2 } = {}) {
   const page = await browser.newPage();
-  await page.setViewport({ width, height, deviceScaleFactor: 2 });
+  await page.setViewport({ width, height, deviceScaleFactor: scale });
   await page.evaluateOnNewDocument((o) => {
     localStorage.clear();
     localStorage.setItem("edu.onboarded.v1", "1");
@@ -97,12 +98,26 @@ async function shot(name, { width = 1440, height = 1000, view = "bar", block = f
   console.log("wrote docs/images/" + name);
 }
 
-fs.mkdirSync(OUT, { recursive: true });
-await shot("bar.png", { block: true });
-await shot("backroom.png", { room: "back", full: true });
-await shot("classic.png", { view: "classic", full: true });
-await shot("settings.png", { view: "classic", fn: async (p) => { await p.click("#btn-settings"); await p.waitForSelector("#set-name"); await new Promise((r) => setTimeout(r, 400)); } });
-await shot("phone.png", { width: 390, height: 844, block: true });
+fs.mkdirSync(path.join(OUT, "rooms"), { recursive: true });
+const ONLY = process.env.ONLY;
+if (!ONLY) {
+  await shot("bar.png", { block: true });
+  await shot("backroom.png", { room: "back", full: true });
+  await shot("classic.png", { view: "classic", full: true });
+  await shot("settings.png", { view: "classic", fn: async (p) => { await p.click("#btn-settings"); await p.waitForSelector("#set-name"); await new Promise((r) => setTimeout(r, 400)); } });
+  await shot("phone.png", { width: 390, height: 844, block: true });
+}
+// one picture per built-in room, for the README's room gallery
+const setRoom = async (id) => {
+  const c = (await (await fetch(server.url + "api/config")).json()).config;
+  await fetch(server.url + "api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config: { ...c, theme: id } }) });
+};
+for (const id of fs.readdirSync(path.join(ENGINE, "app", "dashboard", "themes")).sort()) {
+  await setRoom(id);
+  await shot("rooms/" + id + ".png", { block: true, scale: 1 });
+}
+await setRoom("bar");
+if (ONLY) { await browser.close(); await stopServer(server); fs.rmSync(v.dir, { recursive: true, force: true }); process.exit(0); }
 
 // plugin icon: the favicon mark at 1024 px
 const icon = await browser.newPage();
