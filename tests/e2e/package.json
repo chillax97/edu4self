@@ -4,7 +4,9 @@
   "description": "Browser tests for the edu4self dashboard. Drives a real Chrome against a throwaway vault.",
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1"
+    "test": "node --test --test-concurrency=1",
+    "screenshots": "node screenshots.js",
+    "tour": "node tour.js"
   },
   "devDependencies": {
     "puppeteer-core": "^23.11.1"
