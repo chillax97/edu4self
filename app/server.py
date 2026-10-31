@@ -94,8 +94,12 @@ DEFAULT_CONFIG = {
         "gags": True,               # the rotating bar jokes
         "lines": [],                # your own lines: [{"voice": "regular", "text": "..."}]
     },
-    "music": {"file": "", "title": "", "subtitle": "", "autoplay": True},
+    # source: "scape" (built in, made in the browser, offline), "radio" (a stream URL) or "file" (an upload)
+    "music": {"source": "scape", "scape": "night", "stream": {"url": "", "name": ""},
+              "file": "", "title": "", "subtitle": "", "autoplay": False},
 }
+MUSIC_SOURCES = ("scape", "radio", "file")
+SCAPES = ("night", "rain", "noise")
 VOICE_IDS = {"bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia",
              "critic", "regular", "jukebox", "you"}
 COLOR_TOKENS = {"lesson", "probe", "checkpoint", "reading", "project", "mock", "coral", "amber", "green"}
@@ -192,11 +196,30 @@ def clean_config(body):
             cl.append({"voice": ln["voice"], "text": t})
     out["bar"] = {"names": cn, "voices": cv, "gags": bool(bar.get("gags", True)), "lines": cl}
     m = c["music"]
+    raw = body.get("music") if isinstance(body.get("music"), dict) else {}
     f = m.get("file") or ""
     if f and (not isinstance(f, str) or not re.match(r"^[A-Za-z0-9._-]{1,120}$", f) or os.path.splitext(f)[1].lower() not in MUSIC_EXTS):
         raise ValueError("bad music file name")
-    out["music"] = {"file": f, "title": _text(m.get("title") or "", 80, "track title"),
-                    "subtitle": _text(m.get("subtitle") or "", 80, "track subtitle"), "autoplay": bool(m.get("autoplay", True))}
+    # configs from before sources existed name only a file; they keep playing it
+    source = raw.get("source") or ("file" if f else "scape")
+    if source not in MUSIC_SOURCES:
+        raise ValueError("music source must be one of %s" % ", ".join(MUSIC_SOURCES))
+    scape = m.get("scape") or "night"
+    if scape not in SCAPES:
+        raise ValueError("soundscape must be one of %s" % ", ".join(SCAPES))
+    st = m.get("stream") if isinstance(m.get("stream"), dict) else {}
+    url = _text(st.get("url") or "", 500, "station address").strip()
+    if url and not re.match(r"^https?://[^\s]+$", url):
+        raise ValueError("a station address starts with http:// or https://")
+    if source == "radio" and not url:
+        raise ValueError("pick a station or paste its address")
+    if source == "file" and not f:
+        raise ValueError("upload a track first")
+    out["music"] = {"source": source, "scape": scape, "stream": {"url": url, "name": _text(st.get("name") or "", 60, "station name")},
+                    "file": f, "title": _text(m.get("title") or "", 80, "track title"),
+                    "subtitle": _text(m.get("subtitle") or "", 80, "track subtitle"),
+                    # a soundscape waits for a click; older configs and real music keep their autoplay default
+                    "autoplay": bool(raw["autoplay"]) if "autoplay" in raw else source != "scape"}
     return out
 
 
@@ -669,6 +692,8 @@ class Handler(BaseHTTPRequestHandler):
             if target and os.path.isfile(target):
                 os.remove(target)
             cfg["music"]["file"] = ""
+            if cfg["music"]["source"] == "file":
+                cfg["music"]["source"] = "scape"
         elif cfg["music"]["file"] and not os.path.isfile(os.path.join(MUSIC_DIR, cfg["music"]["file"])):
             return self.send_json(400, {"error": "that music file isn't in _system/music/"})
         save_config(cfg)
@@ -710,6 +735,7 @@ class Handler(BaseHTTPRequestHandler):
         if old and old != final and os.path.isfile(os.path.join(MUSIC_DIR, old)):
             os.remove(os.path.join(MUSIC_DIR, old))      # one track at a time
         cfg["music"]["file"] = final
+        cfg["music"]["source"] = "file"
         if not cfg["music"]["title"] or old:
             cfg["music"]["title"] = re.sub(r"[-_]+", " ", stem).strip()[:80]
         save_config(cfg)

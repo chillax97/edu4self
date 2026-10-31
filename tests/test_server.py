@@ -190,6 +190,25 @@ class ServerTest(unittest.TestCase):
         finally:
             self.req("POST", "/api/config", {"reset": True})
 
+    def test_music_sources(self):
+        # a fresh install has a built-in soundscape, paused until a click
+        m = server.clean_config({})["music"]
+        self.assertEqual((m["source"], m["scape"], m["autoplay"]), ("scape", "night", False))
+        # a config from before sources existed keeps playing its file, on autoplay as before
+        m = server.clean_config({"music": {"file": "x.mp3", "title": "X"}})["music"]
+        self.assertEqual((m["source"], m["file"], m["autoplay"]), ("file", "x.mp3", True))
+        m = server.clean_config({"music": {"source": "radio", "stream": {"url": "https://example.org/live.mp3", "name": "Live"}}})["music"]
+        self.assertEqual((m["source"], m["stream"]), ("radio", {"url": "https://example.org/live.mp3", "name": "Live"}))
+        for bad, msg in (({"source": "tape"}, "music source"),
+                         ({"source": "scape", "scape": "jazz"}, "soundscape"),
+                         ({"source": "radio"}, "station"),
+                         ({"source": "radio", "stream": {"url": "javascript:alert(1)"}}, "http"),
+                         ({"source": "radio", "stream": {"url": "ftp://example.org/x"}}, "http"),
+                         ({"source": "file"}, "upload")):
+            with self.assertRaises(ValueError) as cm:
+                server.clean_config({"music": bad})
+            self.assertIn(msg, str(cm.exception), bad)
+
     def test_broken_config_file_falls_back_to_defaults(self):
         with open(self.sys_path("config.json"), "w") as fh:
             fh.write("{not json")
@@ -211,6 +230,7 @@ class ServerTest(unittest.TestCase):
         code, d, _ = self.upload("My%20Song!.mp3", data)
         self.assertEqual(code, 201)
         self.assertEqual(d["config"]["music"]["file"], "My-Song.mp3")
+        self.assertEqual(d["config"]["music"]["source"], "file", "an upload switches the jukebox to it")
         code, body, r = self.req("GET", "/music", headers={"Range": "bytes=100-199"})
         self.assertEqual((code, body), (206, data[100:200]))
         self.assertEqual(r.getheader("Content-Range"), "bytes 100-199/%d" % len(data))
@@ -223,6 +243,7 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(d["config"]["music"]["file"], "other.m4a")
         code, d, _ = self.req("POST", "/api/config", {"config": d["config"], "remove_music": True})
         self.assertEqual((code, d["config"]["music"]["file"]), (200, ""))
+        self.assertEqual(d["config"]["music"]["source"], "scape", "no file left: back to the soundscape")
         self.assertEqual(os.listdir(self.sys_path("music")), [])
         self.assertEqual(self.req("GET", "/music")[0], 404)
 
