@@ -43,8 +43,8 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
    │  (browser)   │ ────────────────────────────────▶ │ (a file in   │
    │              │                                   │  your vault) │
    │              │  3. the page updates itself       └──────┬───────┘
-   │              │ ◀──────────────┐                         │ 2. in Claude Code:
-   └──────────────┘                │                         │    "check my inbox"
+   │              │ ◀──────────────┐                         │ 2. press ✦ Grade
+   └──────────────┘                │                         │    (Claude Code runs it)
                             ┌──────┴───────┐                 │
                             │  state.json  │ ◀───────────────┘
                             │ (written by  │   Claude grades it, writes down what
@@ -96,6 +96,10 @@ claude plugin install edu4self@edu4self     # also installs Matt Pocock's teach 
 ```
 
 Then work from your vault:
+
+Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
+questions in the side panel), **✦ Grade** grades what you submitted, and **✦ Claude** opens a chat with
+your tutor. The page runs Claude Code on your computer, with your own login. A terminal still works too:
 
 ```sh
 cd ~/learn && claude

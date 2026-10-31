@@ -89,12 +89,14 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-12 | Settings panel edits name, default view, goals, block presets and kinds, water, music (upload/replace/remove), bar names, gags, custom lines, voice names and colours, Obsidian; validated server-side; reset keeps music | e2e Settings, unit config tests |
 | FR-13 | A broken `config.json` never breaks the page; defaults are used and the problem is shown in Settings | unit `test_broken_config_file_falls_back_to_defaults` |
 | FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `customize` skills; installing it also installs the `teach` skill | `claude plugin validate`; sandboxed install |
+| FR-16 | The page runs Claude Code: Grade (inbox), a chat panel, and New topic; one run at a time, live progress, check after every run; without Claude Code the page shows terminal steps instead. Runs are fenced to the vault (no shell, instruction files locked, no web while grading) | unit `ClaudeTest`, e2e `claude.test.js` (stand-in), real probes |
 | FR-15 | `edu4self doctor` reports Python, vault, server, service, Claude Code and teach skill, each with a fix | manual |
 
 ## 6. Non-functional requirements
 
-- **Privacy:** binds to 127.0.0.1; `Host` and `Origin` checks on every request; no outbound requests;
-  no third-party assets at runtime. The one opt-in exception: a radio station the learner picks, which
+- **Privacy:** binds to 127.0.0.1; `Host` and `Origin` checks on every request; no outbound requests
+  from the server or page, and no third-party assets at runtime. Claude Code, when you use it, talks to
+  Anthropic as it always does, and a chat may search the web. The one opt-in exception: a radio station the learner picks, which
   the browser streams directly while it plays.
 - **Dependencies:** Python 3.9+ standard library; browser-native JS/CSS. Node is needed only for the
   browser tests.

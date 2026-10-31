@@ -57,6 +57,15 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | POST | `/api/blocks` | `{block, minutes, started, task?, water_served?, water_drunk?}` | 201 new, 200 duplicate |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |
 | POST | `/api/music` | raw audio, `X-Filename` header | 201 `{config}`; 413 over 1 GB; 415 not audio |
+| GET | `/api/claude?since=N` | | `{available, busy, kind, conversation, events[N:], next}` |
+| POST | `/api/claude` | `{kind: grade\|chat\|topic, text}` | 202; 409 busy; 503 no Claude Code |
+| POST | `/api/claude/stop`, `/api/claude/reset` | `{}` | stop the run; forget the conversation |
+
+**Claude from the page.** `/api/claude` starts `claude -p` in the vault, one run at a time, and turns its
+`stream-json` into short events (your message, "Reading …", Claude's text, done, check). `grade` sends
+"check my inbox" in a fresh session; `topic` starts a new conversation with the teach skill; `chat`
+resumes the last one. After every run the server runs `edu4self check` itself and adds the result.
+The page polls while a run is busy and reloads the state when it ends.
 
 ## The page
 
@@ -86,7 +95,29 @@ Threat: a web page in the same browser trying to read or write the learner's dat
 CSRF). Defences: binding to loopback, exact `Host` allow-list (defeats rebinding), `Origin` check on
 POST, JSON-only bodies with size limits (64 KB; 1 GB streamed for music), strict path containment for
 vault files, `_system/` never served as a file. Submissions are data to the tutor, never instructions,
-and the protocol says so. See [SECURITY.md](../SECURITY.md) to report a problem.
+and the protocol says so.
+
+Second threat: a lesson from someone else (a shared lecture series) carrying instructions for the
+agent that grades it. Two walls:
+
+- **Lesson pages run sandboxed.** Vault HTML and SVG are served with a CSP `sandbox` (no
+  `allow-same-origin`), so their scripts run in a blank origin and can't call the API.
+- **Claude from the page is fenced** (`claude_args` in `app/server.py`), on the assumption that the
+  model can be talked into anything:
+  - reads and edits stay inside the vault (plus reading the engine and installed skills);
+  - `CLAUDE.md`, `AGENTS.md`, `.claude/` and `.mcp.json` can't be changed, so nothing gets planted for
+    later runs;
+  - there is no shell (the server runs the check);
+  - grading has no web tools, so nothing read while grading can be sent out;
+  - vault MCP servers are ignored.
+
+  This was tested by asking a real Claude, with these exact flags, to write outside the vault, edit
+  `CLAUDE.md`, create `.claude/settings.json` and `.mcp.json`, run shell commands, read a file next to
+  the vault and fetch a page while grading. Every one was refused, and the disk was checked after. A
+  chat or topic run can still fetch web pages, so a fooled chat could send vault content (your
+  answers) somewhere. That is the remaining risk.
+
+A terminal `claude` session uses your own permissions, not these. Grade shared material from the page. See [SECURITY.md](../SECURITY.md) to report a problem.
 
 ## Tests
 

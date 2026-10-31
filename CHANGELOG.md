@@ -6,6 +6,10 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Claude in the page. **✦ Grade** grades your inbox, **✦ Claude** opens a chat with your tutor, and
+  **+ New topic** (its own button) starts a topic from what and why. The page runs Claude Code in your
+  vault and shows what it reads and edits as it works, then the check result. Without Claude Code, the
+  page keeps its terminal instructions.
 - The jukebox plays without any files: three soundscapes made live in the browser (Night shift, Rain
   on the window, Brown noise; offline, the new default, paused until you press play), or a radio
   station (four Radio Paradise channels, or any stream address). Your own track still works, and older
@@ -15,6 +19,13 @@ versions follow [Semantic Versioning](https://semver.org).
 - `AGENTS.md` (and a `CLAUDE.md` that imports it): the playbook for an agent a person hands this repo
   to. It sets edu4self up and turns plain-English wishes into settings. The README now leads with it.
 - A two-minute tour video and a GIF cut, recorded from the real dashboard by `tests/e2e/tour.js`.
+
+### Security
+- Lesson pages in the vault run sandboxed (CSP `sandbox`), so a shared lesson's scripts can't use the
+  dashboard API.
+- Claude runs started from the page are fenced: reads and edits stay inside the vault, the instruction
+  files are locked, there is no shell, and grading has no web access. Tested with a real Claude told
+  to break out.
 
 ### Fixed
 - The jukebox could throw when a track was changed or removed (the old player kept firing events).
