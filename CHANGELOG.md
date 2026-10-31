@@ -9,7 +9,9 @@ versions follow [Semantic Versioning](https://semver.org).
 - The jukebox plays without any files: three soundscapes made live in the browser (Night shift, Rain
   on the window, Brown noise; offline, the new default, paused until you press play), or a radio
   station (four Radio Paradise channels, or any stream address). Your own track still works, and older
-  configs keep playing it. Settings → Music picks the source.
+  configs keep playing it. Settings → Music picks the source. The soundscapes are music, not noise:
+  Night shift is lo-fi electric piano with soft bass and brushes, Rain is slow piano over a soft rain
+  bed (`app/dashboard/scapes.js`; `tests/e2e/scapes.js` renders them to WAV and measures them).
 - `AGENTS.md` (and a `CLAUDE.md` that imports it): the playbook for an agent a person hands this repo
   to. It sets edu4self up and turns plain-English wishes into settings. The README now leads with it.
 - A two-minute tour video and a GIF cut, recorded from the real dashboard by `tests/e2e/tour.js`.

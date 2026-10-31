@@ -49,7 +49,7 @@ back to the first kind.
 The jukebox in the bar plays one of three things. Pick it in Settings → Music. Only one browser tab plays
 at a time, and the classic view is silent.
 
-- **Soundscape** (the default): *Night shift* (slow chords, tape hiss), *Rain on the window*, or *Brown
+- **Soundscape** (the default): *Night shift* (lo-fi electric piano, soft bass, brushes), *Rain on the window* (slow piano over soft rain), or *Brown
   noise*. Made live in your browser with the Web Audio API, so there is nothing to download and it works
   offline. Switch between them with the buttons on the jukebox itself.
 - **Radio**: a Radio Paradise channel (Mellow, Serenity, Main mix, Global), or any station by its stream
