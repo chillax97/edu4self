@@ -1743,6 +1743,7 @@
     music.loop = true;
     music.volume = musicPrefs().vol;
     music.addEventListener("loadedmetadata", function () {
+      if (this !== music) return;   // a player that was swapped out
       var t = musicPrefs().t;
       if (t > 0 && t < music.duration) music.currentTime = t;   // resume where you left off
       musicReady = true;
@@ -1750,11 +1751,16 @@
       paintMusic();
     });
     music.addEventListener("timeupdate", function () {
+      if (this !== music) return;
       if (Date.now() - musicSaveT > 3000 && !music.paused) { musicSaveT = Date.now(); saveMusic(); store(MUSIC_OWNER_KEY, TAB_ID + ":" + Date.now()); }
       paintMusicTime();
     });
-    music.addEventListener("play", function () { store(MUSIC_OWNER_KEY, TAB_ID + ":" + Date.now()); paintMusic(); });
-    music.addEventListener("pause", function () { saveMusic(); releaseMusic(); paintMusic(); });
+    music.addEventListener("play", function () {
+      if (this !== music) return;
+      store(MUSIC_OWNER_KEY, TAB_ID + ":" + Date.now()); paintMusic(); });
+    music.addEventListener("pause", function () {
+      if (this !== music) return;
+      saveMusic(); releaseMusic(); paintMusic(); });
     music.src = "/music?f=" + encodeURIComponent(musicFile());
     music.dataset.file = musicFile();
     return music;
