@@ -6,7 +6,7 @@
 
   var LIST = {
     night: { name: "Night shift", sub: "electric piano, soft bass, brushes" },
-    rain: { name: "Rain on the window", sub: "slow piano over soft rain" },
+    rain: { name: "Rain on the window", sub: "rain on the glass, slow piano" },
     noise: { name: "Brown noise", sub: "a low, steady hush" }
   };
 
@@ -149,11 +149,20 @@
   }
 
   function rain(ctx, dry, wet, rand, keep) {
-    // a soft rain bed: brown noise, low and round, far behind the piano
-    var bed = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
-    bed.buffer = noiseBuffer(ctx, 6, "brown", rand); bed.loop = true;
-    lp.type = "lowpass"; lp.frequency.value = 900; g.gain.value = 0.05;
-    bed.connect(lp); lp.connect(g); g.connect(dry); bed.start(); keep.push(bed);
+    // rain in three layers: a steady wash that swells now and then, a low rumble, and close patter
+    // made of tiny droplet grains; the piano sits on top
+    var white = noiseBuffer(ctx, 4, "white", rand);
+    var wash = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), wg = ctx.createGain();
+    wash.buffer = white; wash.loop = true;
+    hp.type = "highpass"; hp.frequency.value = 400; lp.type = "lowpass"; lp.frequency.value = 3200; wg.gain.value = 0.05;
+    var gust = ctx.createOscillator(), gd = ctx.createGain();
+    gust.frequency.value = 0.07; gd.gain.value = 0.018; gust.connect(gd); gd.connect(wg.gain); gust.start();
+    wash.connect(hp); hp.connect(lp); lp.connect(wg); wg.connect(dry); wash.start();
+    var rum = ctx.createBufferSource(), rl = ctx.createBiquadFilter(), rg = ctx.createGain();
+    rum.buffer = noiseBuffer(ctx, 6, "brown", rand); rum.loop = true;
+    rl.type = "lowpass"; rl.frequency.value = 260; rg.gain.value = 0.12;
+    rum.connect(rl); rl.connect(rg); rg.connect(dry); rum.start();
+    keep.push(wash, gust, rum);
     // slow piano in D major pentatonic, leaning on the low and middle notes
     var SCALE = [50, 54, 57, 59, 62, 64, 66, 69, 71, 74];
     return [
@@ -163,7 +172,15 @@
         if (rand() < 0.3) felt(ctx, wet, SCALE[Math.max(0, i - 2)] - 12, t + 0.02, v * 0.7);   // a low note under it, sometimes
         return t + 1.1 + rand() * 2.2;
       } },
-      { next: 0.5, step: function (t) {        // the odd drop on the glass
+      { next: 0.2, step: function (t) {        // patter: droplets close to the window
+        var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), len = 0.006 + rand() * 0.012;
+        s.buffer = white; f.type = "bandpass"; f.frequency.value = 1800 + rand() * 5000; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.02 + rand() * 0.05, t + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        s.connect(f); f.connect(g); g.connect(dry); s.start(t, rand() * 3); s.stop(t + len + 0.01);
+        return t + 0.012 + rand() * 0.05;
+      } },
+      { next: 0.5, step: function (t) {        // the odd heavier drop on the glass
         drop(ctx, dry, t, rand);
         return t + 0.4 + rand() * 2.5;
       } }

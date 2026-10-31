@@ -12,8 +12,9 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await stopServer(server); fs.rmSync(v.dir, { recursive: true, force: true }); });
 
-// noisiness: 0 = clean tones, 1 = static. Before the rewrite, rain measured 0.87.
-const LIMITS = { night: 0.12, rain: 0.35, noise: 1 };
+// noisiness: 0 = clean tones, 1 = static. Rain is noise by nature and has to be heard (it measures
+// ~0.44 with the piano, 0.57 alone); the limit catches it turning into plain static like brown noise (~0.6-0.9).
+const LIMITS = { night: 0.12, rain: 0.55, noise: 1 };
 for (const id of Object.keys(LIMITS)) {
   test(`soundscape ${id}: audible, no clipping, noisiness under ${LIMITS[id]}`, async () => {
     const [left] = await render(page, id, 12);
