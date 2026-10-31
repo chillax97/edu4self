@@ -1,0 +1,10 @@
+/* Lessons on the station: a readout screen, cyan headings, an orange accent for what matters. */
+:root { --ink: #e4f6ff; --ink-soft: #c6e2f0; --faint: #8fb1c4; --rule: #1c2c44; --bg: #060b14; --panel: #0b1424;
+  --accent: #ff9d3d; --good: #7dffb0; --bad: #ff8a7a; --code: #0f1a2e;
+  --serif: -apple-system, "Segoe UI", system-ui, sans-serif; }
+body { background: radial-gradient(1px 1px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 80% 12%, #fff, transparent), #060b14; }
+h1, h2, h3 { color: #bff0ff; }
+.quiz { background: #0b1424; border-color: #27406a; }
+.quiz button { background: #ff9d3d; color: #1a0e02; border-color: #ff9d3d; }
+.quiz button.opt { background: #0f1a2e; color: #e4f6ff; border-color: #27406a; }
+.quiz textarea, .quiz input[type=text] { background: #0f1a2e; color: #e4f6ff; border-color: #27406a; }

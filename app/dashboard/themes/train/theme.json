@@ -1,0 +1,44 @@
+{
+  "name": "Night train",
+  "icon": "🚂",
+  "about": "A dining car on a night express. Hills go by in the windows, your job is a ticket that gets punched, the radio car plays.",
+  "dark": true,
+  "scape": "rain",
+  "palette": { "bg": "#120a12", "bg2": "#1d1019", "surface": "#1a0e16", "surface2": "#24131e", "ink": "#fff1cf", "ink2": "#f0dcb8",
+               "muted": "#c9b08c", "line": "#4a2533", "line2": "#5e2f40", "accent": "#ffcf6b", "accent2": "#fff1cf" },
+  "backdrop": "radial-gradient(ellipse 50% 40% at 85% 0%, rgba(255,220,140,.14), transparent 70%), linear-gradient(#0d0a1c, #170c16 60%)",
+  "fonts": { "head": "head", "body": "serif", "sign": "head" },
+  "words": {
+    "front": "The dining car", "front_icon": "🚂", "back": "The sleeper car", "back_icon": "🛏",
+    "view": "Train view", "place": "the train", "counter": "the table", "host": "The conductor", "music_box": "The radio car",
+    "tonight": "Tonight's stretch", "week": "Nights aboard", "die_case": "Punches", "die": "ticket book", "dies": "ticket books",
+    "tile": "punch", "tiles": "punches", "shipped": "filled", "doors": "Stations ahead", "job": "Your ticket",
+    "note": "Leave a note for the conductor.", "how": "How does this train work?", "back_q": "What's in the sleeper car?",
+    "sign_open": "CAR 4", "sign_busy": "IN MOTION"
+  },
+  "voices": { "bartender": { "name": "The conductor", "color": "#ffcf6b" }, "regular": { "name": "The passenger", "color": "#c8b6ff" },
+              "jukebox": { "name": "The radio car", "color": "#7fe3ff" }, "encyclopedia": { "name": "The timetable", "color": "#f5d06f" } },
+  "names": [["The Night Express", "next stop: understanding"], ["The Slow Local", "every station, no skipping"],
+            ["The Midnight Line", "lights low, minds on"]],
+  "gags": [
+    ["regular", "A man two seats down has been reading the same page since Vienna. He says he's spacing it out."],
+    ["bartender", "punches a ticket with great ceremony. It's the only thing he's sure of tonight."],
+    ["regular", "Someone wrote in the fogged window: retrieval > rereading. It's still there an hour later."],
+    ["jukebox", "The radio car only gets one station after midnight. Nobody has asked to change it."],
+    ["regular", "The passenger across the aisle is studying flashcards upside down. Says it's harder that way. Says that's the point."],
+    ["bartender", "announces the next stop. It's the same as the last one. It's always tonight."],
+    ["regular", "A sign by the door: no cramming between stations."]
+  ],
+  "lines": {
+    "play": "A play block. The passenger across the aisle puts away his book too. Fun is on the timetable.",
+    "evening": "Evening. The train fills up around now. Nobody else in this car brought homework.",
+    "friday": "Friday night, and you're on a night train studying. The other passengers respect it. Quietly.",
+    "silent": "Nothing graded in {days} days. The conductor is just watching the hills.",
+    "newyear": "New year. Same train. The ticket book doesn't reset.",
+    "nye": "Last night of the year. Fill the ticket book, not just the year.",
+    "halloween": "Halloween. Someone in the sleeper car is dressed as a ghost train. Very committed.",
+    "valentine": "Valentine's Day. Two passengers share one textbook. It's either romance or a budget.",
+    "music_quiet": "The radio car is quiet. Press play, or listen to the rails.",
+    "music_none": "Nothing on the radio."
+  }
+}

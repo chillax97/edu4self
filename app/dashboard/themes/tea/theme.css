@@ -1,0 +1,67 @@
+/* Tea house: the one light room. Every engine colour the bar sets dark is reset here. */
+.room { --bx-line: #d9ccb4; --bx-line2: #e3d8c4; --bx-k: #5d7a2e; --bx-text: #4b4033; --bx-dim: #6e6250; --bx-faint: #7a6c58;
+  --bx-bright: #2d261d; --bx-soft: #3d3428; --bx-label: #4b4033; --bx-edge: #c9b998; --bx-panel: #f6efe2; --bx-frame: #fbf6ec;
+  --bx-music-bg: #f6efe2; --te-green: #5d7a2e; --te-wood: #8a6a44; --te-paper: #fbf6ec; --te-red: #a8321e; color: #2d261d; }
+.room .te { margin-top: 22px; display: grid; gap: 18px; }
+.room .te-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.room .bx-neon { font: italic 400 36px/1.05 var(--serif); color: #2d261d; text-shadow: none; animation: none; }
+.room .bx-neon small { font: 600 12.5px var(--sans); color: var(--te-green); letter-spacing: .2em; }
+.room .bx-neon:focus-visible { outline-color: var(--te-green); }
+.room .te-noren { margin-left: auto; font: 600 12px var(--sans); letter-spacing: .2em; color: var(--te-paper); background: var(--te-red); padding: 4px 10px; border-radius: 2px; }
+.room .te-time { font: 600 13px var(--bx-mono); color: #2d261d; font-variant-numeric: tabular-nums; }
+.room .bx-tabs { background: #e9dfcd; }
+.room .bx-tabs button { color: #4b4033; }
+.room .bx-tabs button[aria-pressed="true"] { background: var(--te-green); color: #fff; }
+.room .bx-k { font: italic 600 15px var(--serif); letter-spacing: .03em; text-transform: none; color: var(--te-green); }
+.room .bx-mono, .room .bx-chk { color: #5e5242; }
+
+.room .te-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 16px; border-bottom: 8px solid var(--te-wood);
+  background: repeating-linear-gradient(90deg, rgba(138,106,68,.06) 0 2px, transparent 2px 60px), #f6efe2; border-radius: 10px 10px 0 0; }
+.room .te-cup { background: var(--te-paper); border: 1px solid #d9ccb4; border-radius: 12px 12px 26px 26px; padding: 14px 16px; }
+.room .te-cup.bx-cab { background: var(--te-paper); border-color: #d9ccb4; }
+.room .bx-pips i { background: #efe6d4; border-color: #c9b998; color: #6e6250; }
+.room .bx-pips.h i.on { background: var(--te-green); border-color: #4a6424; }
+.room .bx-pips.h i.half { background: linear-gradient(to top, var(--te-green) 50%, #efe6d4 50%); }
+.room .bx-pips.m i.on { background: var(--te-green); border-color: #4a6424; color: #fff; }
+.room .bx-pips.m i.is-today { outline-color: #2d261d; }
+.room .bx-num, .room .bx-num small { color: #2d261d; }
+.room .bx-cab .die i { border-color: rgba(93,122,46,.45); }
+
+.room .te-room { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 290px; gap: 22px; }
+.room .te-scroll { background: var(--te-paper); border-left: 1px solid #e3d8c4; border-right: 1px solid #e3d8c4; padding: 0 28px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 18px 40px -26px rgba(60,40,20,.5); font: 17px/1.6 var(--serif); }
+.room .te-rod { height: 14px; margin: 0 -40px; border-radius: 7px; background: linear-gradient(#a07a4c, #6e4f2c); }
+.room .te-scroll .bx-job { border-left: 0; background: none; padding: 10px 0 0; }
+.room .te-scroll .bx-job h2 { font: 400 32px/1.15 var(--serif); text-transform: none; color: #2d261d; }
+.room .te-scroll .bx-job p, .room .te-scroll .bx-meta { color: #4b4033; }
+.room .bx-label { color: var(--te-red); }
+.room .bx-r { color: #3d5a1c; }
+.room .bx-r:hover, .room .bx-r:focus-visible { background: rgba(93,122,46,.12); color: #2d4212; }
+.room .bx-replies .bx-n, .room .bx-replies li.is-quiet, .room .bx-keys { color: #6e6250; }
+.room .bx-keys kbd { color: #2d261d; border-color: #c9b998; }
+.room .bx-clock, .room .bx-clock .bx-mono { color: #2d261d; }
+.room .te-guests { display: flex; flex-direction: column; gap: 14px; font: 16.5px/1.6 var(--serif); }
+.room .bx-line { color: #2d261d; }
+.room .bx-line b { color: #000; }
+.room .bx-line::before { border-radius: 50%; transform: none; box-shadow: 0 0 0 3px #f3ecdf; }
+.room .bx-line::after { color: #fff; }
+.room .te-tray { position: relative; height: 64px; }
+.room .te-tray .bx-glass { left: 8px; right: auto; bottom: 6px; border-color: #8a6a44; background: rgba(93,122,46,.06); }
+.room .te-side { display: grid; gap: 14px; align-content: start; }
+.room .te-side .bx-juke { border-radius: 14px; background: #f6efe2; border: 1px solid #c9b998; padding: 14px; }
+.room .te-side .bx-juke::before, .room .te-side .bx-juke::after { display: none; }
+.room .te-k { margin: 0 0 10px; font: italic 600 15px var(--serif); color: var(--te-green); }
+.room .bx-juke .blk-opt { background: #fbf6ec !important; color: #2d261d !important; border-color: #c9b998 !important; }
+.room .bx-juke .blk-opt[aria-pressed="true"] { background: var(--te-green) !important; color: #fff !important; border-color: var(--te-green) !important; }
+.room .bx-juke .blk-lab, .room .bx-juke .blk-water, .room .bx-juke .blk-custom input { color: #2d261d !important; }
+.room .bx-juke .blk-start { background: var(--te-green) !important; color: #fff !important; }
+.room .bx-juke .blk-clock { color: #2d261d !important; }
+.room .bx-music, .room .bx-music * { color: #2d261d; }
+.room .bx-music button { background: #fbf6ec; border-color: #c9b998; }
+.room .bx-mu-play { background: var(--te-green) !important; color: #fff !important; }
+.room .te-note { background: var(--te-paper); border: 1px solid #e3d8c4; border-radius: 8px; padding: 12px 14px; }
+.room .finish .card-title, .room .bx-doors .bx-k { color: var(--te-green); }
+.room .finish .card-sub, .room .finish-eta, .room .bx-doors li b, .room .bx-doors li .bx-chk { color: #4b4033; }
+
+@media (max-width: 1180px) { .room .te-room { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .room .te-side { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
+@media (max-width: 760px) { .room .te-shelf, .room .te-room { grid-template-columns: minmax(0, 1fr); } .room .te-scroll { padding: 0 18px; } .room .te-rod { margin: 0 -24px; } }

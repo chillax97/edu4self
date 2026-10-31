@@ -1,0 +1,6 @@
+/* Lessons in the library: a page of a good book under a reading lamp. */
+:root { --ink: #2a2116; --ink-soft: #4a3a26; --faint: #8a7a5e; --rule: #d9c9a4; --bg: #f6ecd2; --panel: #efe2c2;
+  --accent: #2f4a36; --good: #1f6b3a; --bad: #8f2d1f; --code: #ece0c0; }
+html { background: #0d140f; }
+body { background: radial-gradient(ellipse 70% 40% at 50% 0%, #fbf3dd, #f6ecd2 70%); box-shadow: 0 0 80px rgba(0,0,0,.5); max-width: 56rem; margin: 0 auto; min-height: 100vh; }
+.kicker { color: #7a5a2a; }

@@ -1,0 +1,33 @@
+<!-- Space station: a console bar across the top with the gauges, a round viewport with a planet and
+     the comms log beside the mission, and the control panel on the right. -->
+<div class="sp">
+  <header class="sp-bar">
+    <div data-slot="name"></div>
+    <div class="sp-gauge" data-slot="tonight"></div>
+    <div class="sp-gauge" data-slot="week"></div>
+    <div class="sp-gauge bx-cab" data-slot="die"></div>
+    <div class="sp-status"><span class="sp-led" data-slot="sign"></span><span class="sp-time" data-slot="clock"></span></div>
+  </header>
+  <div class="sp-main">
+    <section class="sp-left">
+      <div class="sp-port" aria-hidden="true"><div class="sp-planet"></div><div class="sp-ring"></div></div>
+      <div class="sp-panel" data-slot="finish"></div>
+      <div class="sp-panel" data-slot="doors"></div>
+      <div class="sp-pouch" data-slot="water"></div>
+    </section>
+    <section class="sp-mid">
+      <div data-slot="rooms"></div>
+      <div data-slot="timer"></div>
+      <div class="sp-comms"><p class="sp-k">Comms log</p><div class="bx-log" data-slot="voices"></div></div>
+      <div class="sp-mission">
+        <div data-slot="job"></div>
+        <ol class="bx-replies" data-slot="replies"></ol>
+        <p class="bx-keys" data-slot="keys"></p>
+      </div>
+    </section>
+    <aside class="sp-right">
+      <div class="bx-juke"><p class="sp-k">Focus control</p><div data-slot="block"></div></div>
+      <div data-slot="music"></div>
+    </aside>
+  </div>
+</div>

@@ -1,0 +1,44 @@
+{
+  "name": "The library",
+  "icon": "📚",
+  "about": "A reading room after hours. Your job is the open book on the desk, the voices write in its margin, finished dies stand on the shelf.",
+  "dark": true,
+  "scape": "rain",
+  "palette": { "bg": "#0d140f", "bg2": "#142018", "surface": "#14201a", "surface2": "#1a2a21", "ink": "#f3e6c4", "ink2": "#e2d4b0",
+               "muted": "#b8a888", "line": "#2f4536", "line2": "#3d5745", "accent": "#d8b26a", "accent2": "#f3e6c4" },
+  "backdrop": "radial-gradient(ellipse 40% 45% at 50% 30%, rgba(255,214,140,.12), transparent 70%), linear-gradient(#142018, #0b120d)",
+  "fonts": { "head": "serif", "body": "serif", "sign": "serif" },
+  "words": {
+    "front": "The reading room", "front_icon": "📚", "back": "The archive", "back_icon": "🗄",
+    "view": "Library view", "place": "the library", "counter": "the desk", "host": "The librarian", "music_box": "The gramophone",
+    "tonight": "Ink tonight", "week": "Evenings this week", "nights": "evenings", "die_case": "The bindery", "die": "volume", "dies": "volumes",
+    "tile": "page", "tiles": "pages", "shipped": "bound", "doors": "Shelved for later", "job": "On the desk",
+    "note": "Leave a note for the librarian.", "how": "How does this library work?", "back_q": "What's in the archive?",
+    "sign_open": "QUIET", "sign_busy": "READING", "glass": "cup", "glasses": "cups"
+  },
+  "voices": { "bartender": { "name": "The librarian", "color": "#f3e6c4" }, "regular": { "name": "The night owl", "color": "#c8b6ff" },
+              "jukebox": { "name": "The gramophone", "color": "#d8b26a" }, "encyclopedia": { "name": "The catalogue", "color": "#f5d06f" } },
+  "names": [["The Reading Room", "silence is a study method"], ["The Late Stacks", "open until you close the book"],
+            ["The Quiet Wing", "whispers only, thoughts loud"]],
+  "gags": [
+    ["regular", "Someone pencilled in a margin: 'tested myself here, got it wrong, remembered it forever.'"],
+    ["bartender", "stamps a due date on nothing in particular. Old habit."],
+    ["regular", "The night owl has twelve books open and is reading none of them. He calls it interleaving."],
+    ["jukebox", "The gramophone skips on the same note every time. Nobody gets up to fix it. It's part of the room now."],
+    ["regular", "A card in the catalogue reads: SEE ALSO: sleep."],
+    ["bartender", "shelves a book you finished last week. 'You'll want it again in a few days,' she says. She's right."],
+    ["regular", "Somebody left flashcards in the returns slot. All of them answered, none of them read."]
+  ],
+  "lines": {
+    "play": "A play block. Even the librarian puts down her pencil. Fun is on the reading list.",
+    "evening": "Evening. The library fills up around now. Nobody else at these desks brought homework.",
+    "friday": "Friday night, and you're in the library. The night owl nods at you. Quietly.",
+    "silent": "Nothing graded in {days} days. The librarian is dusting the same shelf.",
+    "newyear": "New year. Same desk. The volumes don't unbind.",
+    "nye": "Last night of the year. Bind the volume, not just the year.",
+    "halloween": "Halloween. Someone hid a skeleton in anatomy. It's been there since 1987.",
+    "valentine": "Valentine's Day. Two people keep reaching for the same book. The librarian pretends not to notice.",
+    "music_quiet": "The gramophone is quiet. Press play, or keep the silence. This is a library.",
+    "music_none": "No record on the gramophone."
+  }
+}

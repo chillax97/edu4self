@@ -1,0 +1,37 @@
+<!-- Night train: three windows across the top (tonight, the week, the ticket book), then the ticket
+     (your job) beside the dining-car talk, then the line of stations and the radio car. -->
+<div class="tr">
+  <header class="tr-head">
+    <div data-slot="name"></div>
+    <div class="tr-lamp"><span class="tr-sign" data-slot="sign"></span><span class="tr-time" data-slot="clock"></span></div>
+    <div data-slot="rooms"></div>
+  </header>
+  <div class="tr-windows">
+    <div class="tr-win"><div class="tr-moon" aria-hidden="true"></div><div class="tr-hills" aria-hidden="true"></div><div class="tr-in" data-slot="tonight"></div></div>
+    <div class="tr-win"><div class="tr-hills tr-hills-2" aria-hidden="true"></div><div class="tr-in" data-slot="week"></div></div>
+    <div class="tr-win"><div class="tr-hills tr-hills-3" aria-hidden="true"></div><div class="tr-in bx-cab" data-slot="die"></div></div>
+  </div>
+  <div class="tr-row">
+    <section class="tr-ticket">
+      <div data-slot="timer"></div>
+      <div data-slot="job"></div>
+      <ol class="bx-replies" data-slot="replies"></ol>
+      <p class="bx-keys" data-slot="keys"></p>
+    </section>
+    <section class="tr-talk">
+      <p class="tr-k">Overheard in the dining car</p>
+      <div class="bx-log" data-slot="voices"></div>
+      <div class="tr-water" data-slot="water"></div>
+    </section>
+  </div>
+  <div class="tr-bottom">
+    <div class="tr-panel">
+      <div data-slot="finish"></div>
+      <div data-slot="doors"></div>
+    </div>
+    <div class="tr-panel tr-radio">
+      <div class="bx-juke"><p class="tr-k">The radio car · focus block</p><div data-slot="block"></div></div>
+      <div data-slot="music"></div>
+    </div>
+  </div>
+</div>

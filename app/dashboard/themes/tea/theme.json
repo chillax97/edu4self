@@ -1,0 +1,46 @@
+{
+  "name": "Tea house",
+  "icon": "🍵",
+  "about": "A quiet tea house in daylight. Paper screens, a low table, a kettle. Your job is a scroll, finished dies are tins of leaves on the shelf.",
+  "dark": false,
+  "scape": "rain",
+  "palette": { "bg": "#f3ecdf", "bg2": "#e9dfcd", "surface": "#fbf6ec", "surface2": "#f1e8d8", "ink": "#2d261d", "ink2": "#4b4033",
+               "muted": "#6e6250", "line": "#d9ccb4", "line2": "#c9b998", "accent": "#5d7a2e", "accent2": "#2d261d" },
+  "backdrop": "radial-gradient(ellipse 50% 50% at 10% 0%, rgba(140,170,80,.16), transparent 70%), #efe6d4",
+  "fonts": { "head": "serif", "body": "serif", "sign": "serif" },
+  "words": {
+    "front": "The tea room", "front_icon": "🍵", "back": "The garden", "back_icon": "🌿",
+    "view": "Tea house view", "place": "the tea house", "counter": "the low table", "host": "The tea master", "music_box": "The kettle",
+    "tonight": "Today's steeping", "week": "Days this week", "nights": "days", "die_case": "The tea tin", "die": "tin", "dies": "tins",
+    "tile": "leaf", "tiles": "leaves", "shipped": "filled", "doors": "Still steeping", "job": "The scroll",
+    "note": "Leave a note for the tea master.", "how": "How does this tea house work?", "back_q": "What's in the garden?",
+    "sign_open": "OPEN", "sign_busy": "STEEPING", "glass": "cup", "glasses": "cups"
+  },
+  "voices": { "bartender": { "name": "The tea master", "color": "#5d7a2e" }, "logic": { "name": "Logic", "color": "#2f5d9a" },
+              "volition": { "name": "Willpower", "color": "#7a3f8f" }, "gpu": { "name": "The kettle", "color": "#b5651d" },
+              "encyclopedia": { "name": "The scroll keeper", "color": "#8a6a1e" }, "physical": { "name": "The body", "color": "#b04a2a" },
+              "nostalgia": { "name": "Nostalgia", "color": "#2e7a6a" }, "critic": { "name": "The critic", "color": "#a8325e" },
+              "regular": { "name": "The guest", "color": "#5a4aa0" }, "jukebox": { "name": "The kettle", "color": "#1f6f86" },
+              "you": { "name": "You", "color": "#2f7a3a" } },
+  "names": [["Slow Steep", "one cup, one lesson"], ["The Second Pour", "better the second time"], ["Still Water", "nothing to hurry"]],
+  "gags": [
+    ["regular", "The guest says the second steeping is always better. He means rereading. The tea master means recall."],
+    ["bartender", "pours exactly enough. Not more. 'You can always come back for another cup,' she says."],
+    ["regular", "A small sign by the door: one thing at a time."],
+    ["jukebox", "The kettle sings when it's ready. Nobody has ever rushed it."],
+    ["regular", "Someone left a teacup on the windowsill with a flashcard under it. Both are still warm."],
+    ["bartender", "folds a napkin into a crane. 'Practice,' she says. 'The first hundred were bad.'"]
+  ],
+  "lines": {
+    "play": "A play block. The tea master sets out sweets. Rest is part of the ceremony.",
+    "evening": "Evening. The lanterns are on. Nobody else here brought homework.",
+    "friday": "Friday, and you're in a tea house studying. The other guests bow slightly.",
+    "silent": "Nothing graded in {days} days. The tea master is sweeping the same leaves.",
+    "newyear": "New year. Same tea house. The tins stay full.",
+    "nye": "Last day of the year. Fill the tin, not just the year.",
+    "halloween": "Halloween. Someone hung a paper lantern with a face on it. It's very polite.",
+    "valentine": "Valentine's Day. Two guests share one pot. It steeps slower that way.",
+    "music_quiet": "The kettle is quiet. Press play, or listen to the rain on the paper screens.",
+    "music_none": "The kettle is cold."
+  }
+}

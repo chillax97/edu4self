@@ -1,0 +1,43 @@
+{
+  "name": "Space station",
+  "icon": "🛰",
+  "about": "Deck 7 of an orbital station. A planet turns in the viewport, the station AI reads the comms, the core charges as you focus.",
+  "dark": true,
+  "scape": "noise",
+  "palette": { "bg": "#05080f", "bg2": "#0a1220", "surface": "#0a1220", "surface2": "#0f1a2e", "ink": "#e4f6ff", "ink2": "#c6e2f0",
+               "muted": "#8fb1c4", "line": "#1c2c44", "line2": "#27406a", "accent": "#ff9d3d", "accent2": "#d6f3ff" },
+  "backdrop": "radial-gradient(1px 1px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 70% 10%, #fff, transparent), radial-gradient(1px 1px at 40% 80%, #cde, transparent), radial-gradient(1.5px 1.5px at 85% 60%, #fff, transparent), radial-gradient(1px 1px at 25% 55%, #bcd, transparent), radial-gradient(ellipse 60% 40% at 50% 120%, rgba(40,120,255,.22), transparent 70%), #04070d",
+  "fonts": { "head": "mono", "body": "sans", "sign": "mono" },
+  "words": {
+    "front": "Observation deck", "front_icon": "🛰", "back": "Cargo bay", "back_icon": "📦",
+    "view": "Station view", "place": "the station", "counter": "the console", "host": "Station AI", "music_box": "Comms",
+    "tonight": "Fuel · this shift", "week": "Shifts this week", "nights": "shifts", "die_case": "Reactor core", "die": "core", "dies": "cores",
+    "tile": "cell", "tiles": "cells", "shipped": "charged", "doors": "Airlocks sealed", "job": "Mission",
+    "note": "Send a message to Station AI.", "how": "How does this station work?", "back_q": "What's in the cargo bay?",
+    "sign_open": "O₂ OK", "sign_busy": "FOCUS LOCK", "glass": "water pouch", "glasses": "water pouches"
+  },
+  "voices": { "bartender": { "name": "Station AI", "color": "#7fd8ff" }, "regular": { "name": "The engineer", "color": "#c8b6ff" },
+              "jukebox": { "name": "Comms", "color": "#7dffb0" }, "gpu": { "name": "The core", "color": "#ff9d3d" } },
+  "names": [["DECK 7", "orbit 4,112 · all systems nominal"], ["LONG HAUL", "the stars are not in a hurry"],
+            ["THE QUIET SECTOR", "no signal, no distractions"]],
+  "gags": [
+    ["regular", "The engineer taped a note to the airlock: 'spaced repetition is not a docking procedure.'"],
+    ["bartender", "runs a diagnostic on you. Result: needs one more focus block, and water."],
+    ["regular", "Someone floated a flashcard past the viewport. It's still orbiting."],
+    ["jukebox", "Comms picked up the same faint signal for three nights. It's lo-fi. Nobody minds."],
+    ["regular", "A sticker on the console: 'In space, no one can hear you reread.'"],
+    ["bartender", "reminds you that a day here is 90 minutes long. Plenty of time for a block, it says."]
+  ],
+  "lines": {
+    "play": "A play block. The engineer powers down the drills. Fun is on the mission plan.",
+    "evening": "Evening shift. The deck fills up around now. Nobody else up here brought homework.",
+    "friday": "Friday night, and you're studying in orbit. The crew respects it. Quietly.",
+    "silent": "No grading for {days} days. Station AI is counting stars to pass the time.",
+    "newyear": "New year. Same orbit. The core doesn't discharge.",
+    "nye": "Last shift of the year. Charge the core, not just the clock.",
+    "halloween": "Halloween. The engineer says the noise in the vents is the station settling. Sure.",
+    "valentine": "Valentine's Day. Two crew members share a viewport. Attention, as they say, is all you need.",
+    "music_quiet": "Comms are quiet. Press play, or listen to the hum of the station.",
+    "music_none": "No signal on comms."
+  }
+}

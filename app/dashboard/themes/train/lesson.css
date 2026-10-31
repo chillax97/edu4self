@@ -1,0 +1,12 @@
+/* Lessons on the night train: warm lamp light on a dark carriage, the ticket-cream for quizzes. */
+:root { --ink: #fff1cf; --ink-soft: #e8d4b0; --faint: #b49a78; --rule: #4a2533; --bg: #170c16; --panel: #24131e;
+  --accent: #ffcf6b; --good: #9be0a8; --bad: #ff9a8a; --code: #2a1622; }
+body { background: radial-gradient(ellipse 60% 30% at 80% 0%, rgba(255,220,140,.10), transparent 70%), #170c16; }
+a { border-bottom-color: rgba(255,207,107,.35); }
+.quiz { background: #fff1cf; color: #2a1a10; border-color: #c9a87a; }
+.quiz .prompt, .quiz p { color: #2a1a10; }
+.quiz button { background: #8a2a3a; color: #fff1cf; border-color: #8a2a3a; }
+.quiz button.opt { background: #fff8e6; color: #2a1a10; border-color: #c9a87a; }
+.quiz textarea, .quiz input[type=text] { background: #fff8e6; color: #2a1a10; }
+.quiz .verdict.ok { color: #1f6b3a; } .quiz .verdict.no { color: #a3241a; }
+.quiz .explain { color: #4a3420; }
