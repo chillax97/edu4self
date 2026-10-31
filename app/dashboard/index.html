@@ -18,8 +18,11 @@
     </a>
     <div class="topbar-status" id="status" aria-live="polite"></div>
     <a class="blk-pill" id="blk-pill" href="#block" hidden></a>
+    <button class="btn btn-topic btn-sm" id="btn-grade" type="button" hidden></button>
+    <button class="btn btn-primary btn-sm" id="btn-topic" type="button" title="Start learning something new">+ <span class="hide-sm">New topic</span></button>
     <div class="topbar-actions">
       <button class="btn btn-ghost" id="btn-view" type="button" title="Switch between the bar and the classic page"></button>
+      <button class="btn btn-ghost" id="btn-claude" type="button" aria-haspopup="dialog" title="Talk to your tutor" hidden>✦ <span class="hide-sm">Claude</span></button>
       <button class="btn btn-ghost" id="btn-note" type="button" title="Send Claude a question or a note">✉︎ <span class="hide-sm">Note to Claude</span></button>
       <button class="btn btn-ghost" id="btn-settings" type="button" aria-haspopup="dialog" title="Your name, goals, blocks, music, the bar">⚙ <span class="hide-sm">Settings</span></button>
       <button class="btn btn-ghost" id="btn-help" type="button" aria-haspopup="dialog">? <span class="hide-sm">How it works</span></button>
@@ -58,7 +61,7 @@
       <section class="ob-slide" data-step="2" hidden>
         <div class="ob-art art-3" aria-hidden="true"><span>3</span></div>
         <h2>Then tell Claude to check your inbox</h2>
-        <p>Your answers wait in an inbox on this computer. Open Claude Code in your vault folder and say <strong>"check my inbox"</strong>.</p>
+        <p>Your answers wait in an inbox on this computer. Press <strong>✦ Grade it now</strong> and Claude grades them right here. (Or, in Claude Code, say <strong>"check my inbox"</strong>.)</p>
         <p class="ob-small">Claude grades your work, writes down what you've proven, and updates this page. It refreshes on its own.</p>
       </section>
     </div>
@@ -97,7 +100,7 @@
     </label>
     <p class="form-error" id="sub-error" role="alert" hidden></p>
     <footer class="sub-foot">
-      <span class="sub-hint">Saved to your inbox on this Mac. Claude sees it the next time you say "check my inbox".</span>
+      <span class="sub-hint">Saved to your inbox on this computer. Claude grades it when you press Grade it now.</span>
       <div class="sub-buttons">
         <button class="btn btn-ghost" type="button" data-close>Cancel</button>
         <button class="btn btn-primary" type="submit" id="sub-send">Submit</button>
@@ -118,7 +121,7 @@
       <li><strong>Look at Up next.</strong> It's always the single most useful thing to do right now.</li>
       <li><strong>Open it and do it.</strong> Lessons open in your browser; notes open as text, or in Obsidian if you turn that on in Settings.</li>
       <li><strong>Submit your answers</strong> with the button on the card.</li>
-      <li><strong>Tell Claude "check my inbox"</strong> in Claude Code, from your vault folder.</li>
+      <li><strong>Press ✦ Grade it now.</strong> Claude grades it in the page. (No Claude button? Install Claude Code, or say "check my inbox" in Claude Code from your vault folder.)</li>
       <li><strong>Come back here.</strong> Claude will have graded it and lined up what's next.</li>
     </ol>
 
@@ -183,7 +186,7 @@
       </details>
       <details>
         <summary>How do I add a new topic?</summary>
-        <p>In Claude Code, from your vault folder, run <code>/teach</code> followed by what you want to learn. Claude sets up the folder and it appears here.</p>
+        <p>Press <strong>+ New topic</strong> at the top and say what you want to learn. Claude asks a few questions, sets up the folder, and the topic appears here. (Or, in Claude Code from your vault folder, run <code>/teach</code> and the topic.)</p>
       </details>
       <details>
         <summary>How do I turn it off?</summary>
@@ -213,6 +216,39 @@
         <button class="btn btn-primary" type="submit" id="set-save">Save</button>
       </div>
     </footer>
+  </form>
+</div>
+
+<!-- Claude, in the page -->
+<div class="overlay overlay-drawer" id="claude" hidden>
+  <section class="drawer cl-drawer" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+    <header class="drawer-head">
+      <h2 id="cl-title">✦ Claude</h2>
+      <div class="cl-head-actions">
+        <button class="btn btn-ghost btn-sm" type="button" id="cl-new" title="Forget this conversation and start a new one">New conversation</button>
+        <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+      </div>
+    </header>
+    <p class="cl-intro">Your tutor, working in your vault on this computer. Ask anything, answer its questions, or say what you want changed.</p>
+    <div class="cl-log" id="cl-log" aria-live="polite"></div>
+    <form class="cl-form" id="cl-form">
+      <textarea id="cl-input" rows="2" maxlength="5000" placeholder="Ask, answer, or say what you want…" aria-label="Message to Claude"></textarea>
+      <div class="cl-actions">
+        <span class="cl-status" id="cl-status"></span>
+        <button class="btn btn-ghost btn-sm" type="button" id="cl-grade">Grade my inbox</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="cl-stop" hidden>Stop</button>
+        <button class="btn btn-primary btn-sm" type="submit" id="cl-send">Send</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- a new topic -->
+<div class="overlay" id="newtopic" hidden>
+  <form class="dialog nt-dialog" id="nt-form" role="dialog" aria-modal="true" aria-labelledby="nt-title" novalidate>
+    <span class="chip chip-lesson">New topic</span>
+    <h2 id="nt-title">What do you want to learn?</h2>
+    <div id="nt-body"></div>
   </form>
 </div>
 

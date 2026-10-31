@@ -319,7 +319,8 @@
   function renderHero(entry) {
     if (!entry) {
       return '<section class="hero hero-empty"><h2>Nothing waiting on you.</h2>' +
-        '<p class="hero-why">Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.</p></section>';
+        '<p class="hero-why">' + (claudeOK() && pendingCount() ? gradeButton() + " Claude grades what's in your inbox and lines up your next step."
+          : 'Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.') + "</p></section>";
     }
     var t = entry.task, topic = entry.topic, meta = kindMeta(t.kind);
     var pend = pendingFor(t.id);
@@ -337,7 +338,7 @@
     if (t.rules) html += '<div class="hero-rules"><span aria-hidden="true">⚑</span><span><strong>Rules:</strong> ' + esc(t.rules) + '</span></div>';
     if (pend) {
       html += '<div class="hero-submitted"><span class="chip chip-wait">Submitted</span>' +
-        '<p>Sent ' + esc(ago(pend.ts)) + '. In Claude Code, say <strong>"check my inbox"</strong> to get it graded.</p>' +
+        '<p>Sent ' + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <strong>"check my inbox"</strong> to get it graded.') + "</p>" + gradeButton() +
         '<button class="btn btn-ghost btn-sm" data-withdraw="' + esc(pend.id) + '">Withdraw</button></div>' +
         '<div class="hero-actions">' + openButton(t, "btn btn-ghost") + '</div>';
     } else {
@@ -451,7 +452,7 @@
     return '<section class="card"><div class="card-head"><div><span class="card-title">' + (cards ? "Your other courses" : "Add a topic") + '</span></div>' +
       (cards ? '<span class="card-sub">Linked, read-only</span>' : "") + '</div>' +
       (cards ? '<div class="linked-grid">' + cards + '</div>' : "") +
-      '<div class="add-topic" style="margin-top:12px"><span class="plus">+</span><span>Want to learn something new? Open Claude Code in your vault folder and say <code>/teach</code> plus the topic. It shows up here.</span></div>' +
+      '<button class="add-topic" type="button" data-newtopic style="margin-top:12px"><span class="plus">+</span><span>Want to learn something new? <b>Start a new topic</b>: say what and why, Claude sets it up, and it shows up here.</span></button>' +
       '</section>';
   }
 
@@ -549,7 +550,7 @@
   function openNote() {
     submitCtx = { kind: "note", topic: "general", task: "note", title: "Note to Claude", probe: false };
     renderSubmitForm({ chipClass: "chip-reading", chip: "Note", title: "Send Claude a note",
-      intro: "A question, something that confused you, or a change you want. Claude reads it next time you say \"check my inbox\".",
+      intro: "A question, something that confused you, or a change you want. Claude reads it the next time it grades your inbox.",
       fields: [], honor: false, button: "Send note", noteLabel: "Your note", noteRequired: true });
   }
 
@@ -601,7 +602,7 @@
       .then(function (res) {
         if (!res.ok) throw new Error(res.body.error || "Could not save");
         closeOverlay($("#submit"));
-        toast("<span>✓</span><span><b>Saved to your inbox.</b> Next, in Claude Code say \"check my inbox\".</span>", 7000);
+        toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade it now when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
         load();
       })
       .catch(function (e) { btn.disabled = false; btn.textContent = "Try again"; fail("Couldn't save: " + e.message + ". Your text is still here."); });
@@ -1464,7 +1465,7 @@
     actionableTasks().forEach(function (e) {
       var p = pendingFor(e.task.id);
       var days = p ? Math.floor((Date.now() - new Date(p.ts).getTime()) / 864e5) : 0;
-      if (days >= 1) add(75, "bartender", (e.task.label || e.task.title) + " has been on the counter for " + plural(days, "day") + '. Say "check my inbox". I\'m starting to take it personally.', "pend-" + e.task.id);
+      if (days >= 1) add(75, "bartender", (e.task.label || e.task.title) + " has been on the counter for " + plural(days, "day") + (claudeOK() ? ". Grade it. I'm starting to take it personally." : '. Say "check my inbox". I\'m starting to take it personally.'), "pend-" + e.task.id);
     });
     if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
     else if (S.streak >= 2) add(70, "volition", S.streak + " days in a row with a block. Don't look down.", "streak");
@@ -1537,9 +1538,9 @@
 
     if (hero) {
       var ht = hero.task, name = (ht.label ? ht.label + ", " : "") + ht.title, pend = pendingFor(ht.id);
-      L.push(["logic", pend ? esc(name) + " is in the inbox, sent " + esc(ago(pend.ts)) + '. Tell Claude <b>"check my inbox"</b> and it gets graded.'
+      L.push(["logic", pend ? esc(name) + " is in the inbox, sent " + esc(ago(pend.ts)) + (claudeOK() ? ". Press Grade it now and it gets graded." : '. Tell Claude <b>"check my inbox"</b> and it gets graded.')
         : "Up next: " + esc(name) + "." + (active && active.task === ht.id ? " The clock is already running on it." : ""), null, "logic"]);
-    } else L.push(["logic", 'Nothing waiting on you. Tell Claude <b>"check my inbox"</b> and it lines up the next thing.', null, "logic"]);
+    } else L.push(["logic", claudeOK() ? "Nothing waiting on you. Grade your inbox, or start a new topic." : 'Nothing waiting on you. Tell Claude <b>"check my inbox"</b> and it lines up the next thing.', null, "logic"]);
 
     var togo = DIE_TILES - d.etched;
     L.push(["gpu", !d.etched ? (d.shipped ? "Die #" + d.n + " is blank. The last one shipped. This one wants its first tile." : "The die is blank. One 25-minute block etches the first tile.")
@@ -1579,7 +1580,9 @@
   }
 
   function barJob(hero) {
-    if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">The job</div><h2>Nothing waiting on you.</h2><p>Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.</p></div>';
+    if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">The job</div><h2>Nothing waiting on you.</h2><p>' +
+      (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
+        : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.') + "</p></div>";
     var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id);
     return '<div class="bx-job" style="--c:var(--' + (KIND[t.kind] ? t.kind : "lesson") + ')">' +
       '<div class="bx-k">The job · ' + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
@@ -1589,7 +1592,7 @@
         (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
         (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
-      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + '. In Claude Code, say <b>"check my inbox"</b> to get it graded.</div>' : "") +
+      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? " " + gradeButton() : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + "</div>" : "") +
       "</div>";
   }
 
@@ -1960,6 +1963,136 @@
   window.addEventListener("pagehide", function () { if (music) saveMusic(); releaseMusic(); });
 
 
+  // ---------------------------------------------------------------- Claude, in the page
+  // The server runs Claude Code in the vault (see /api/claude). Grading, chatting and starting a topic
+  // all happen here; the drawer shows what Claude is doing while it works. Without Claude Code
+  // installed, the page keeps its old instructions for doing it in a terminal.
+  var CL = { available: false, busy: false, conversation: false, next: 0, events: [], timer: 0, gen: 0 };
+  function claudeOK() { return CL.available; }
+  function pendingCount() { return (DATA && DATA.inbox && DATA.inbox.pending || []).filter(function (e) { return e.kind !== "note"; }).length; }
+  function gradeButton(label) {
+    return claudeOK() ? '<button class="btn btn-topic btn-sm" type="button" data-claude="grade"' + (CL.busy ? " disabled" : "") + ">" + (label || "✦ Grade it now") + "</button>" : "";
+  }
+  // A poll that left before a send or reset answers about the old world: CL.gen drops those answers.
+  function claudePoll() {
+    var gen = CL.gen;
+    return fetch("/api/claude?since=" + CL.next, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (gen !== CL.gen) return;
+      var wasAvail = CL.available, wasBusy = CL.busy;
+      if (j.next < CL.next) { CL.events = []; CL.next = 0; return claudePoll(); }   // the server started over
+      CL.available = j.available; CL.busy = j.busy; CL.conversation = j.conversation;
+      var fresh = j.events.filter(function (e) { return e.n >= CL.next; });
+      if (fresh.length) { CL.events = CL.events.concat(fresh); }
+      CL.next = Math.max(CL.next, j.next);
+      paintClaude();
+      if (wasBusy && !j.busy) {
+        var last = CL.events[CL.events.length - 1] || {};
+        toast(last.kind === "check" && /OK/.test(last.text) ? "<span>✦</span><span><b>Claude is done.</b></span>" : "<span>!</span><span><b>Claude finished with a problem.</b> Open ✦ Claude to see it.</span>", 5000);
+        load();
+      }
+      if (wasAvail !== j.available || wasBusy !== j.busy) { if (DATA) render(); }
+      clearTimeout(CL.timer);
+      if (j.busy) CL.timer = setTimeout(claudePoll, 700);
+    }).catch(function () {});
+  }
+  function claudeSend(kind, text) {
+    openClaude();
+    var st = $("#cl-status");
+    CL.gen++;
+    return fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: kind, text: text || "" }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "couldn't start"); }); })
+      .then(function () { CL.gen++; CL.busy = true; paintClaude(); if (DATA) render(); return claudePoll(); })
+      .catch(function (e) { st.textContent = e.message; st.classList.add("is-err"); });
+  }
+  function openClaude() {
+    openOverlay("claude");
+    paintClaude();
+    var inp = $("#cl-input"); if (!CL.busy) inp.focus();
+    claudePoll();
+  }
+  // replies are plain text with a little markdown: paragraphs, **bold**, `code`, and - lists
+  function clText(t) {
+    return esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>")
+      .split(/\n{2,}/).map(function (p) { return "<p>" + p.replace(/\n/g, "<br>") + "</p>"; }).join("");
+  }
+  function paintClaude() {
+    var log = $("#cl-log");
+    if (!log) return;
+    var html = "", tools = [];
+    function flush() { if (tools.length) { html += '<div class="cl-tools">' + tools.map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("") + "</div>"; tools = []; } }
+    CL.events.forEach(function (e) {
+      if (e.kind === "tool") return tools.push(e.text);
+      flush();
+      if (e.kind === "you") html += '<div class="cl-msg cl-you">' + clText(e.text) + "</div>";
+      else if (e.kind === "text") html += '<div class="cl-msg cl-claude">' + clText(e.text) + "</div>";
+      else html += '<div class="cl-note cl-' + e.kind + '">' + esc(e.text) + "</div>";
+    });
+    flush();
+    if (!CL.events.length) html = '<div class="cl-empty">' + (claudeOK()
+      ? "Nothing here yet. Try “what should I work on tonight?”, or press <b>Grade my inbox</b>."
+      : "Claude Code isn't installed on this computer, or isn't on the PATH, so the page can't run it. Install it from <a href=\"https://claude.com/claude-code\" target=\"_blank\" rel=\"noopener\">claude.com/claude-code</a>, sign in once in a terminal, then restart the dashboard.") + "</div>";
+    if (CL.busy) html += '<div class="cl-working"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Claude is working…</div>';
+    var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+    log.innerHTML = html;
+    if (stick) log.scrollTop = log.scrollHeight;
+    $("#cl-send").disabled = CL.busy || !claudeOK();
+    $("#cl-grade").disabled = CL.busy || !claudeOK();
+    $("#cl-input").disabled = !claudeOK();
+    $("#cl-stop").hidden = !CL.busy;
+    $("#cl-new").disabled = CL.busy || !CL.events.length;
+    var st = $("#cl-status"); if (!st.classList.contains("is-err")) st.textContent = "";
+    // the top bar: the Claude button, and a grade button while something waits
+    $("#btn-claude").hidden = !claudeOK();
+    $("#btn-claude").classList.toggle("is-busy", CL.busy);
+    $("#btn-note").hidden = claudeOK();
+    var g = $("#btn-grade"), n = pendingCount();
+    g.hidden = !claudeOK() || (!n && !CL.busy);
+    g.disabled = CL.busy;
+    g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + " <span class=\"hide-sm\">waiting</span>";
+  }
+
+  function openNewTopic() {
+    var body = $("#nt-body");
+    body.innerHTML = claudeOK()
+      ? '<p class="nt-intro">Say it in your own words. Claude asks a few questions in the chat, then sets up the first lessons, and the topic appears on this page.</p>' +
+        '<label class="nt-field"><span>What, and why?</span><textarea id="nt-what" rows="3" maxlength="2000" placeholder="Spanish, for a move to Madrid next spring" required></textarea></label>' +
+        '<label class="nt-field"><span>Anything Claude should know? <small>optional</small></span><textarea id="nt-more" rows="2" maxlength="2000" placeholder="how much time you have, what you know already, a deadline"></textarea></label>' +
+        '<p class="form-error" id="nt-error" hidden></p>' +
+        '<div class="sub-buttons"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Start with Claude</button></div>'
+      : '<p class="nt-intro">Starting a topic needs Claude Code on this computer. Install it from <a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a> and sign in once; then this button does it all here. Until then, in a terminal:</p>' +
+        "<pre><code>cd " + esc((DATA && DATA.server && DATA.server.vault) || "your-vault") + " && claude\n&gt; /teach what you want to learn</code></pre>" +
+        '<div class="sub-buttons"><button class="btn btn-primary" type="button" data-close>OK</button></div>';
+    openOverlay("newtopic");
+    var w = $("#nt-what"); if (w) w.focus();
+  }
+  $("#nt-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var what = ($("#nt-what") || {}).value || "", more = ($("#nt-more") || {}).value || "";
+    if (!what.trim()) { var e = $("#nt-error"); e.textContent = "Say what you want to learn first."; e.hidden = false; return; }
+    closeOverlay($("#newtopic"));
+    claudeSend("topic", what.trim() + (more.trim() ? "\nMore about me: " + more.trim() : ""));
+  });
+  $("#cl-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var inp = $("#cl-input"), text = inp.value.trim();
+    if (!text || CL.busy) return;
+    inp.value = ""; $("#cl-status").classList.remove("is-err");
+    claudeSend("chat", text);
+  });
+  $("#cl-input").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); $("#cl-form").requestSubmit(); }
+  });
+  $("#cl-grade").addEventListener("click", function () { $("#cl-status").classList.remove("is-err"); claudeSend("grade"); });
+  $("#cl-stop").addEventListener("click", function () { fetch("/api/claude/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).then(claudePoll); });
+  $("#cl-new").addEventListener("click", function () {
+    // forget locally first, so a reply landing late can't wipe a message sent right after
+    CL.gen++; CL.events = []; CL.next = 0; paintClaude(); $("#cl-input").focus();
+    fetch("/api/claude/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  });
+  $("#btn-claude").addEventListener("click", openClaude);
+  $("#btn-grade").addEventListener("click", function () { claudeSend("grade"); });
+  $("#btn-topic").addEventListener("click", openNewTopic);
+
   // a soundscape chip in the jukebox: saved like any setting, keeps playing if it was
   function switchScape(id) {
     if (!DATA || !DATA.config || id === musicScape()) return;
@@ -2279,6 +2412,7 @@
         DATA = json;
         lastStamp = stamp;
         render();
+        paintClaude();
         if (changed) toast("<span>✦</span><span><b>Claude updated your dashboard.</b> Take a look at what's next.</span>", 6000);
         if (readJSON(UNSENT_KEY)) flushUnsent();
         checkProofs();
@@ -2296,8 +2430,10 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-newtopic]");
     if (!el) return;
+    if (el.dataset.claude) return claudeSend(el.dataset.claude);
+    if (el.hasAttribute("data-newtopic")) return openNewTopic();
     if (el.dataset.settings != null) return openSettings(el.dataset.settings);
     if (el.hasAttribute("data-drink")) return drinkWater();
     if (el.hasAttribute("data-note")) return openNote();
@@ -2351,19 +2487,22 @@
     if (celebrateNext) showCelebration();
   });
 
-  // deep links: #submit=<task-id>, #note, #help, #settings, #settings=<section>
+  // deep links: #submit=<task-id>, #note, #help, #settings, #settings=<section>, #claude, #newtopic
   function followHash() {
     var h = location.hash.slice(1);
     if (!h || !DATA || DATA.error) return;
     if (h.indexOf("submit=") === 0) openSubmit(decodeURIComponent(h.slice(7)));
     else if (h === "note") openNote();
+    else if (h === "claude") openClaude();
+    else if (h === "newtopic") openNewTopic();
     else if (h === "help") openHelp();
     else if (h === "settings" || h.indexOf("settings=") === 0) openSettings(h.slice(9));
     history.replaceState(null, "", location.pathname + location.search);
   }
   window.addEventListener("hashchange", followHash);
 
-  load().then(function () {
+  Promise.all([claudePoll(), load()]).then(function () {
+    if (claudeOK()) render();
     resumeBlock();
     if (location.hash) return followHash();
     if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding();

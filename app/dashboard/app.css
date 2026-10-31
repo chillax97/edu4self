@@ -285,6 +285,8 @@ main { padding-top: 28px; padding-bottom: 40px; }
   display: flex; gap: 14px; align-items: center; padding: 16px 18px; border-radius: 14px;
   border: 1.5px dashed var(--line-2); color: var(--ink-2); font-size: 14px;
 }
+button.add-topic { width: 100%; background: none; font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+button.add-topic:hover { border-color: var(--topic); background: color-mix(in srgb, var(--topic) 5%, transparent); }
 .add-topic .plus { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--bg-2); font-size: 20px; color: var(--muted); }
 
 /* ------------------------------------------------ library */
@@ -565,6 +567,45 @@ textarea:focus { outline: none; border-color: var(--topic); box-shadow: 0 0 0 4p
 .faq details[open] summary::after { content: "–"; }
 .faq p { margin: 0 0 12px; font-size: 13.5px; color: var(--ink-2); }
 .faq pre { margin: 0 0 12px; font-size: 12px; }
+
+/* Claude, in the page: a chat drawer and the new topic dialog */
+.cl-drawer { display: flex; flex-direction: column; width: min(520px, 100vw); padding-bottom: 18px; overflow: hidden; }
+.cl-head-actions { display: flex; gap: .4rem; align-items: center; }
+.cl-intro { margin: 0 0 12px; font-size: 13.5px; color: var(--muted); }
+.cl-log { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px 12px; min-height: 0; }
+.cl-msg { max-width: 92%; padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.cl-msg p { margin: 0 0 8px; } .cl-msg p:last-child { margin: 0; }
+.cl-msg code { font: 12.5px var(--mono); padding: 1px 4px; border-radius: 5px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.cl-you { align-self: flex-end; background: var(--topic); color: #fff; border-bottom-right-radius: 6px; }
+.cl-you code { background: rgba(255,255,255,.2); }
+.cl-claude { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--line); border-bottom-left-radius: 6px; }
+.cl-tools { display: flex; flex-direction: column; gap: 2px; padding: 0 6px; font: 12px/1.45 var(--mono); color: var(--muted); }
+.cl-tools span::before { content: "· "; }
+.cl-note { align-self: center; font-size: 12px; color: var(--muted); padding: 2px 10px; border-radius: 99px; background: var(--surface-2); }
+.cl-check { color: var(--lesson); }
+.cl-error { color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--surface)); border-radius: 10px; align-self: stretch; text-align: left; padding: 8px 12px; font-size: 13px; }
+.cl-empty { margin: auto 0; padding: 18px; border-radius: 14px; border: 1.5px dashed var(--line-2); color: var(--ink-2); font-size: 14px; text-align: center; }
+.cl-working { display: flex; align-items: center; gap: .5rem; font-size: 13px; color: var(--muted); padding: 2px 6px; }
+.cl-dots { display: inline-flex; gap: 3px; }
+.cl-dots i { width: 6px; height: 6px; border-radius: 99px; background: var(--topic); animation: cl-dot 1s infinite ease-in-out; }
+.cl-dots i:nth-child(2) { animation-delay: .15s; } .cl-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes cl-dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+.cl-form { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px; }
+.cl-form textarea { font-family: var(--sans); font-size: 14.5px; max-height: 40vh; }
+.cl-actions { display: flex; gap: .4rem; align-items: center; }
+.cl-status { flex: 1; font-size: 12.5px; color: var(--muted); }
+.cl-status.is-err { color: var(--red); font-weight: 600; }
+#btn-claude.is-busy { border-color: var(--topic); color: var(--topic); }
+.nt-dialog { padding: 26px 26px 22px; }
+.nt-dialog h2 { font: 600 26px/1.15 var(--serif); letter-spacing: -.02em; margin: 14px 0 8px; }
+.nt-intro { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
+.nt-field { display: grid; gap: 6px; margin-bottom: 12px; font: 600 13px/1.3 var(--sans); }
+.nt-field small { font-weight: 400; color: var(--muted); }
+.nt-field textarea { font-family: var(--sans); font-size: 14.5px; }
+.nt-dialog .form-error { margin: 0 0 10px; }
+.nt-dialog .sub-buttons { justify-content: flex-end; margin-top: 6px; }
+.nt-dialog pre { margin: 0 0 16px; }
+@media (max-width: 700px) { .cl-drawer { width: 100vw; padding: 16px 16px 12px; } .cl-actions { flex-wrap: wrap; } }
 
 /* toast */
 .toast {
