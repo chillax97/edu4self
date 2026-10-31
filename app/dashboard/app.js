@@ -2177,9 +2177,14 @@
   var setDraft = null;
 
   function openSettings(section) {
-    fetch("/api/config", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    Promise.all([
+      fetch("/api/config", { cache: "no-store" }).then(function (r) { return r.json(); }),
+      fetch("/api/themes", { cache: "no-store" }).then(function (r) { return r.json(); }).catch(function () { return { themes: [] }; })
+    ]).then(function (both) {
+      var j = both[0];
       setDraft = JSON.parse(JSON.stringify(j.config));
       setDraft.__defaults = j.defaults;
+      setRooms = both[1].themes || [];
       paintSettings(j.error);
       openOverlay("settings");
       // focus now, not on a timer: a delayed focus steals the caret from whatever you started typing in
@@ -2198,6 +2203,17 @@
       return '<option value="' + c + '"' + (c === val ? " selected" : "") + ">" + c + "</option>";
     }).join("") + '<option value="custom"' + (custom ? " selected" : "") + ">custom…</option></select>" +
       '<input type="color" ' + attr + ' data-color-hex value="' + (custom ? val : "#888888") + '"' + (custom ? "" : " hidden") + ' aria-label="Custom colour"></span>';
+  }
+
+  var setRooms = [];
+  function roomPicks(c) {
+    return setRooms.map(function (t) {
+      var bad = t.errors && t.errors.length;
+      return '<label class="set-pick' + (bad ? " set-bad" : "") + '"><input type="radio" name="set-theme" value="' + esc(t.id) + '"' +
+        (c.theme === t.id ? " checked" : "") + (bad ? " disabled" : "") + "><b>" + esc((t.icon ? t.icon + " " : "") + t.name) + "</b><small>" +
+        (bad ? "Can't open: " + esc(t.errors[0]) + (t.errors.length > 1 ? " (+" + (t.errors.length - 1) + " more, run <code>edu4self check</code>)" : "")
+             : esc(t.about || "") + (t.builtin ? "" : " <i>yours</i>")) + "</small></label>";
+    }).join("");
   }
 
   function paintSettings(err) {
@@ -2227,8 +2243,14 @@
       '<h3 id="set-you">You</h3>' +
       fieldRow("Your name", '<input type="text" id="set-name" maxlength="60" value="' + esc(c.name) + '" placeholder="' + esc((DATA && DATA.state && DATA.state.learner) || "there") + '">', "How the dashboard greets you.") +
       '<div class="set-field"><span class="field-label">Default look</span><div class="set-seg" role="radiogroup">' +
-        ["bar", "classic"].map(function (v) { return '<label><input type="radio" name="set-view" value="' + v + '"' + (c.view === v ? " checked" : "") + "> " + (v === "bar" ? "🍸 The bar" : "☰ Classic") + "</label>"; }).join("") +
+        ["bar", "classic"].map(function (v) { return '<label><input type="radio" name="set-view" value="' + v + '"' + (c.view === v ? " checked" : "") + "> " + (v === "bar" ? "✦ Your room" : "☰ Classic") + "</label>"; }).join("") +
       '</div><small class="set-hint">The button at the top still switches; each browser remembers its last choice.</small></div>' +
+
+      '<h3 id="set-room">Room</h3>' +
+      '<p class="set-hint">Where you study. Each room has its own layout, colours, voices and jokes; your goals, blocks and lessons stay the same. ' +
+        'To make your own, ask Claude for one (it follows <code>docs/THEMES.md</code>).</p>' +
+      '<div class="set-rooms" role="radiogroup" aria-label="Room">' + roomPicks(c) + "</div>" +
+      '<label class="set-check"><input type="checkbox" id="set-theme-lessons"' + (c.theme_lessons !== false ? " checked" : "") + "> Lessons wear the room's look (off: the plain default lesson pages)</label>" +
 
       '<h3 id="set-goals">Goals</h3>' +
       '<div class="set-two">' +
@@ -2286,10 +2308,10 @@
       "</div>" +
       '<label class="set-check"><input type="checkbox" id="set-mu-auto"' + (m.autoplay ? " checked" : "") + "> Start playing when the bar opens (browsers still need one click first)</label>" +
 
-      '<h3 id="set-bar">The bar</h3>' +
+      '<h3 id="set-bar">Sign, jokes and voices</h3>' +
       fieldRow("Names on the neon sign", '<textarea id="set-names" rows="5">' + esc(c.bar.names.map(function (n) { return n[0] + (n[1] ? " | " + n[1] : ""); }).join("\n")) + "</textarea>",
-        "One per line: <code>Name | tagline</code>. Click the sign in the bar to cycle through them.") +
-      '<label class="set-check"><input type="checkbox" id="set-gags"' + (c.bar.gags ? " checked" : "") + "> Bar jokes (a new one every 40 minutes)</label>" +
+        "One per line: <code>Name | tagline</code>. Click the sign in the bar to cycle through them. Other rooms bring their own names.") +
+      '<label class="set-check"><input type="checkbox" id="set-gags"' + (c.bar.gags ? " checked" : "") + "> Room jokes (a new one every 40 minutes)</label>" +
       fieldRow("Your own lines", '<textarea id="set-lines" rows="4" placeholder="regular: The coffee machine has been broken since the last exam.">' + esc(c.bar.lines.map(function (l) { return l.voice + ": " + l.text; }).join("\n")) + "</textarea>",
         "One per line, <code>voice: text</code>. They rotate in with the jokes. Voices: " + voices.map(function (v) { return "<code>" + v + "</code>"; }).join(" ") + ".") +
       '<div class="set-field"><span class="field-label">Voices</span><div class="set-voices">' + voiceRows + '</div><small class="set-hint">Rename any voice or change its colour. Leave a name blank for the default.</small></div>' +
@@ -2305,6 +2327,8 @@
     var c = setDraft;
     c.name = $("#set-name").value;
     var view = document.querySelector('input[name="set-view"]:checked'); if (view) c.view = view.value;
+    var room = document.querySelector('input[name="set-theme"]:checked'); if (room) c.theme = room.value;
+    c.theme_lessons = $("#set-theme-lessons").checked;
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
     c.goals.week_days = Math.round(Number($("#set-week").value));
     c.blocks.presets = [].map.call(document.querySelectorAll("[data-preset]"), function (i) { return Math.round(Number(i.value)); }).filter(function (v) { return v > 0; });
