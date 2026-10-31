@@ -22,6 +22,13 @@ next to the font files. The files are unmodified; the CSS gives them local famil
 | [IBM Plex Mono](https://github.com/IBM/plex) | IBM | bar numbers and small print |
 | [Monoton](https://fonts.google.com/specimen/Monoton) | Vernon Adams | the neon sign |
 
+## Radio
+
+The jukebox lists four channels of [Radio Paradise](https://radioparadise.com), a listener-supported,
+ad-free station founded by Bill and Rebecca Goldsmith, which publishes its stream addresses for other
+players. edu4self links to the streams; it doesn't copy or host anything. If it keeps you company,
+consider [supporting them](https://radioparadise.com).
+
 ## Ideas
 
 - **Learning research.** Robert A. Bjork and Elizabeth L. Bjork (desirable difficulties; storage vs
