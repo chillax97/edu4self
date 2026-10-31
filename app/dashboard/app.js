@@ -80,11 +80,14 @@
       if (!BLOCKS[pick.block]) pick.block = b.kinds[0].id;
     }
     if (!pick.touched && PRESETS.indexOf(pick.minutes) < 0) pick.minutes = PRESETS[Math.min(1, PRESETS.length - 1)];
-    if (c.bar && c.bar.names && c.bar.names.length) BAR_NAMES = c.bar.names;
+    var tm = THEME ? THEME.meta : null;
+    // the bar's names are the learner's (Settings → The bar); other rooms bring their own
+    BAR_NAMES = (!tm || tm.id === "bar") && c.bar && c.bar.names && c.bar.names.length ? c.bar.names
+      : tm && tm.names && tm.names.length ? tm.names : [[tm ? tm.name : "The bar", ""]];
     Object.keys(VOICES).forEach(function (id) {
-      var o = (c.bar && c.bar.voices && c.bar.voices[id]) || {};
-      VOICES[id].name = o.name || VOICE_DEFAULTS[id].name;
-      VOICES[id].c = o.color || VOICE_DEFAULTS[id].c;
+      var o = (c.bar && c.bar.voices && c.bar.voices[id]) || {}, t = (tm && tm.voices && tm.voices[id]) || {};
+      VOICES[id].name = o.name || t.name || VOICE_DEFAULTS[id].name;
+      VOICES[id].c = o.color || t.color || VOICE_DEFAULTS[id].c;
     });
     var port = DATA && DATA.server && DATA.server.port;
     if (port) { var fp = $("#footer-port"); if (fp) fp.textContent = "127.0.0.1:" + port; }
@@ -144,6 +147,7 @@
     var away = idleDays();
 
     if (isBar()) {
+      if (!THEME || THEME.meta.id !== wantTheme()) { ensureTheme(); if (!THEME) return; }
       app.innerHTML = renderBar(hero, topics, live);
       if (topics[0]) document.documentElement.style.setProperty("--topic", topics[0].color);
       mountBlockCard();
@@ -1299,8 +1303,60 @@
     if (bar && active && active.water) bar.style.width = (100 * ((Date.now() - active.start) % (active.water * 60000)) / (active.water * 60000)).toFixed(1) + "%";
   }
 
+  // ---------------------------------------------------------------- rooms (themes)
+  // The room view is drawn from a theme: app/dashboard/themes/<id>/ or <vault>/themes/<id>/. The server
+  // checks and cleans it (app/themes.py); here its layout gets its slots filled, its CSS is added, and
+  // its palette, fonts and words are applied. A theme that fails its check falls back to the bar.
+  var THEME = null, THEME_WANT = null, THEME_ERR = null;
+  var FONT = { sans: "var(--sans)", serif: '"Bar Baskerville", Georgia, serif', mono: '"Bar Plex", ui-monospace, Menlo, monospace',
+    head: '"Bar Oswald", "Avenir Next Condensed", sans-serif', neon: '"Bar Neon", "Bar Oswald", sans-serif' };
+  var PALETTE_VARS = { bg: "--bg", bg2: "--bg-2", surface: "--surface", surface2: "--surface-2", ink: "--ink", ink2: "--ink-2",
+    muted: "--muted", line: "--line", line2: "--line-2", accent: "--bar-amber", accent2: "--bar-cream", accent_ink: "--accent-ink" };
+  function wantTheme() { return THEME_WANT || cfg().theme || "bar"; }
+  function W(k) { return (THEME && THEME.meta.words[k]) || k; }
+  function LINE(k, text) { return (THEME && THEME.meta.lines && THEME.meta.lines[k]) || text; }
+  var themeLoading = null;
+  function fetchTheme(id) {
+    return fetch("/api/theme?id=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok) { var e = new Error(j.error || "theme failed"); e.errors = j.errors || []; throw e; } return j; });
+    });
+  }
+  function ensureTheme() {
+    var id = wantTheme();
+    if (themeLoading === id) return;
+    themeLoading = id;
+    fetchTheme(id).catch(function (e) {
+      THEME_ERR = { id: id, errors: e.errors && e.errors.length ? e.errors : [e.message] };
+      return id === "bar" ? null : fetchTheme("bar");
+    }).then(function (t) {
+      themeLoading = null;
+      if (!t) return;
+      if (t.meta.id === id) THEME_ERR = null;
+      applyTheme(t);
+      if (t.meta.id !== id) THEME_WANT = t.meta.id;   // fell back: stop asking for the broken one
+      if (DATA) render();
+    });
+  }
+  function applyTheme(t) {
+    THEME = t;
+    var css = $("#theme-css"), vars = $("#theme-vars");
+    if (!css) { css = document.createElement("style"); css.id = "theme-css"; document.head.appendChild(css); }
+    if (!vars) { vars = document.createElement("style"); vars.id = "theme-vars"; document.head.appendChild(vars); }
+    css.textContent = t.css;
+    var m = t.meta, p = m.palette || {}, f = m.fonts || {}, decl = [];
+    Object.keys(p).forEach(function (k) { if (PALETTE_VARS[k]) decl.push(PALETTE_VARS[k] + ":" + p[k]); });
+    if (f.head) decl.push("--bx-head:" + FONT[f.head]);
+    if (f.body) decl.push("--serif:" + FONT[f.body]);
+    if (f.sign) decl.push("--bx-sign:" + FONT[f.sign]);
+    decl.push("color-scheme:" + (m.dark === false ? "light" : "dark"));
+    if (m.backdrop) decl.push("background:" + m.backdrop);
+    vars.textContent = "body.v-bar{" + decl.join(";") + "}";
+    document.body.dataset.theme = m.id;
+    applyConfig();
+  }
+
   // ---------------------------------------------------------------- bar view
-  // A second way to draw the same data: a bar where your skills talk. Classic stays as it was.
+  // A second way to draw the same data: a room where your skills talk. Classic stays as it was.
   var VIEW_KEY = "edu.view.v1", ROOM_KEY = "edu.bar.room.v1", NAME_KEY = "edu.bar.name.v1";
   var BAR_NAMES = [   // Settings → The bar → Names
     ["Cache Miss", "nobody remembers your name"],
@@ -1352,42 +1408,33 @@
     return { n: shipped + 1, etched: full - shipped * DIE_TILES, shipped: shipped };
   }
 
-  function statsHTML() {
-    var t = tonight(), pips = "", week = "";
+  function tonightHTML() {
+    var t = tonight(), pips = "";
     for (var i = 0; i < DAY_GOAL_MIN / 20; i++) pips += '<i class="' + (t.mins >= (i + 1) * 20 ? "on" : t.mins > i * 20 ? "half" : "") + '"></i>';
+    return '<div class="bx-k">' + esc(W("tonight")) + '</div><div class="bx-pips h">' + pips + '</div>' +
+      '<div class="bx-mono">' + t.mins + " of " + DAY_GOAL_MIN + " min" + (t.mins >= DAY_GOAL_MIN ? " ✓" : "") + "</div>";
+  }
+  function weekHTML() {
+    var t = tonight(), week = "";
     for (var j = 0; j < 7; j++) {
       var d = new Date(t.monday); d.setDate(t.monday.getDate() + j);
       var k = dayKey(d);
       week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : "") + '" title="' + k + '">' + "MTWTFSS"[j] + "</i>";
     }
-    return '<div><div class="bx-k">Fuel · tonight</div><div class="bx-pips h">' + pips + '</div>' +
-        '<div class="bx-mono">' + t.mins + " of " + DAY_GOAL_MIN + " min" + (t.mins >= DAY_GOAL_MIN ? " ✓" : "") + '</div></div>' +
-      '<div><div class="bx-k">Streak · this week</div><div class="bx-pips m">' + week + '</div>' +
-        '<div class="bx-mono">' + t.hit + " of " + WEEK_GOAL_DAYS + " nights" + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "") + "</div></div>";
+    return '<div class="bx-k">' + esc(W("week")) + '</div><div class="bx-pips m">' + week + '</div>' +
+      '<div class="bx-mono">' + t.hit + " of " + WEEK_GOAL_DAYS + " " + esc(W("nights")) + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "") + "</div>";
   }
 
   function cabinetHTML() {
     var d = dieNow();
-    return '<div class="bx-k">The die case · die #' + d.n + '</div>' +
+    return '<div class="bx-k">' + esc(W("die_case")) + " · " + esc(W("die")) + " #" + d.n + '</div>' +
       '<div class="bx-cab-row"><b class="bx-num">' + d.etched + "<small> / " + DIE_TILES + "</small></b>" + dieHTML(allBlocks(), false) + "</div>" +
-      '<div class="bx-mono">' + d.etched + " of " + DIE_TILES + " · a slot per " + TILE_MIN + " min · " + plural(d.shipped, "die") + " shipped</div>";
+      '<div class="bx-mono">' + d.etched + " of " + DIE_TILES + " · a slot per " + TILE_MIN + " min · " + d.shipped + " " + esc(W(d.shipped === 1 ? "die" : "dies")) + " " + esc(W("shipped")) + "</div>";
   }
 
-  function sceneHTML() {
+  function glassHTML() {
     var owed = active && (active.served || 0) > (active.drunk || 0);
-    function bottles(top, list) {
-      return '<div class="bx-bottles" style="top:' + top + 'px">' + list.map(function (b) { return '<i style="height:' + b[0] + "px;background:" + b[1] + '"></i>'; }).join("") + "</div>";
-    }
-    return '<div class="bx-scene">' +
-      '<i class="bx-shelf" style="top:58px"></i><i class="bx-shelf" style="top:112px"></i>' +
-      bottles(18, [[40, "#3c8d5a"], [32, "#b5651d"], [38, "#7b2d3f"], [28, "#d9b44a"], [40, "#2f5d9a"], [34, "#6a3d8f"]]) +
-      bottles(76, [[34, "#b5651d"], [28, "#3c8d5a"], [36, "#d9b44a"], [24, "#7b2d3f"]]) +
-      '<div class="bx-tender"><i class="hd"></i><i class="bd"></i><i class="rag"></i></div>' +
-      '<span class="bx-sign">' + (active ? "ON AIR" : "OPEN") + '</span>' +
-      '<span class="bx-wclock" data-bx-wclock>' + esc(active ? clock(active.end - Date.now()) : hhmm(Date.now())) + "</span>" +
-      '<i class="bx-counter"></i>' +
-      '<button class="bx-glass' + (owed ? " full" : "") + '" type="button" data-drink aria-label="' + (owed ? "A glass of water. Click once you've drunk it." : "An empty glass") + '"></button>' +
-      "</div>";
+    return '<button class="bx-glass' + (owed ? " full" : "") + '" type="button" data-drink aria-label="' + (owed ? "A " + esc(W("glass")) + " of water. Click once you've drunk it." : "An empty " + esc(W("glass"))) + '"></button>';
   }
 
   // The active milestone in one sentence: steps done, and when you land at your pace
@@ -1444,32 +1491,32 @@
       if (el < 3) add(90, "volition", "Clock's running. The first five minutes are the hardest, and you're in them.", "a-start");
       else if (left < 5) add(92, "volition", "Under five minutes left. Don't touch your phone now. You've come this far.", "a-end");
       else if (el / active.minutes >= 0.45 && el / active.minutes < 0.6) add(88, "logic", "Halfway. About " + Math.round(left) + " minutes to go.", "a-half");
-      if (active.block === "play") add(80, "regular", "A play block. The regular at the end of the bar raises his glass. Fun is on the schedule too.", "a-play");
+      if (active.block === "play") add(80, "regular", LINE("play", "A play block. The regular at the end of the bar raises his glass. Fun is on the schedule too."), "a-play");
       if (active.block === "practice") add(80, "encyclopedia", "Practice hour. Brute force first, then make it good. Nobody gets it clean on the first try.", "a-practice");
       if (Math.floor((S.total + active.minutes) / (DIE_TILES * TILE_MIN)) > Math.floor(S.total / (DIE_TILES * TILE_MIN)))
         add(86, "gpu", "Finish this block and die #" + d.n + " ships. Don't stop early.", "a-ship");
       var owedFor = active.water && (active.served || 0) > (active.drunk || 0) ? el - (active.served || 0) * active.water : 0;
-      if (owedFor > 5) add(91, "physical", "There's still a glass on the bar. It's getting warm. So is the GPU.", "a-warm");
+      if (owedFor > 5) add(91, "physical", "There's still a " + W("glass") + " on " + W("counter") + ". It's getting warm.", "a-warm");
     } else if (S.lastEnd && Date.now() - S.lastEnd < 20 * 60000) {
       add(65, "gpu", "You stopped " + Math.max(1, Math.round((Date.now() - S.lastEnd) / 60000)) + " minutes ago. The die is still warm. Another 25?", "warm-die");
     }
     if (S.best && S.todayMins > S.best) add(85, "volition", "New record: " + hm(S.todayMins) + " in one day. The old best was " + hm(S.best) + ".", "record");
     var dates = {
-      "10-31": ["regular", "Halloween. Someone came dressed as a KV cache. Twice the size anyone expected."],
-      "12-31": ["bartender", "Last night of the year. Close the die, not just the year."],
-      "01-01": ["bartender", "New year. Same bar. The die doesn't reset."],
-      "02-14": ["regular", "Valentine's Day. The regular says attention is all you need. He's been single since 2017."]
+      "10-31": ["regular", LINE("halloween", "Halloween. Someone came dressed as a KV cache. Twice the size anyone expected.")],
+      "12-31": ["bartender", LINE("nye", "Last night of the year. Close the die, not just the year.")],
+      "01-01": ["bartender", LINE("newyear", "New year. Same bar. The die doesn't reset.")],
+      "02-14": ["regular", LINE("valentine", "Valentine's Day. The regular says attention is all you need. He's been single since 2017.")]
     };
     if (dates[md]) add(80, dates[md][0], dates[md][1], "date");
     else if (now.getDate() === 1) add(60, "encyclopedia", "First of the month. Whatever last month was, this one has a blank page.", "month");
     actionableTasks().forEach(function (e) {
       var p = pendingFor(e.task.id);
       var days = p ? Math.floor((Date.now() - new Date(p.ts).getTime()) / 864e5) : 0;
-      if (days >= 1) add(75, "bartender", (e.task.label || e.task.title) + " has been on the counter for " + plural(days, "day") + (claudeOK() ? ". Grade it. I'm starting to take it personally." : '. Say "check my inbox". I\'m starting to take it personally.'), "pend-" + e.task.id);
+      if (days >= 1) add(75, "bartender", (e.task.label || e.task.title) + " has been on " + W("counter") + " for " + plural(days, "day") + (claudeOK() ? ". Grade it. I'm starting to take it personally." : '. Say "check my inbox". I\'m starting to take it personally.'), "pend-" + e.task.id);
     });
     if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
     else if (S.streak >= 2) add(70, "volition", S.streak + " days in a row with a block. Don't look down.", "streak");
-    if (t.glasses >= 4) add(60, "physical", t.glasses + " glasses tonight. You're better cooled than most GPUs in prod.", "glasses");
+    if (t.glasses >= 4) add(60, "physical", t.glasses + " " + W("glasses") + " tonight. You're better cooled than most GPUs in prod.", "glasses");
     if (S.todayMins >= 240) add(55, "physical", hm(S.todayMins) + " today. Stand up, roll your shoulders, look at something farther away than the screen.", "heavy");
     if (hr >= 20 && S.todayMins && Object.keys(S.types).every(function (k) { return FUN_BLOCKS[k]; }))
       add(52, "critic", "Today was all " + Object.keys(S.types).map(blockLabel).join(" and ") + ". Fair. One lesson block would make the die a little prouder.", "only-fun");
@@ -1477,13 +1524,13 @@
       : hr < 12 && hr >= 9 ? ["logic", "Morning brain. Best hours of the day for new material, worst hours for scrolling."]
       : hr >= 12 && hr < 14 ? ["physical", "Lunch hour. Eat something that isn't caffeine."]
       : hr >= 14 && hr < 17 ? ["physical", "Afternoon slump hours. Twenty-five minutes of focus beats them better than coffee does."]
-      : hr >= 17 && hr < 21 ? ["regular", "Evening. The bar fills up around now. Nobody else here brought homework."]
+      : hr >= 17 && hr < 21 ? ["regular", LINE("evening", "Evening. The bar fills up around now. Nobody else here brought homework.")]
       : hr >= 21 ? ["volition", "The good hours. Everyone else is scrolling."]
       : hr < 2 ? ["physical", "Past midnight. The die doesn't care what time it is. Your memory does: sleep is when it saves."]
       : ["critic", "It's " + hhmm(Date.now()) + ". One block and bed, or just bed. Not scrolling."];
     add(50, tod[0], tod[1], "tod");
     if (wd === 1 && t.hit <= 1) add(45, "encyclopedia", "Monday. The week is a blank die. Etch the first tile.", "monday");
-    if (wd === 5 && hr >= 18) add(46, "regular", "Friday night, and you're at a bar studying. The regulars respect it. Quietly.", "friday");
+    if (wd === 5 && hr >= 18) add(46, "regular", LINE("friday", "Friday night, and you're at a bar studying. The regulars respect it. Quietly."), "friday");
     if ((wd === 6 || wd === 0) && hr < 18) add(44, "regular", "Weekend. Nobody is grading speed today.", "weekend");
     if (wd === 0 && hr >= 12 && t.hit < WEEK_GOAL_DAYS) add(73, "volition", "Sunday. " + t.hit + " of " + WEEK_GOAL_DAYS + " nights. The week closes at midnight.", "sunday");
     var proofs = [];
@@ -1493,33 +1540,15 @@
     if (lastProof !== null && lastProof <= 1) add(40, "nostalgia", "Proof landed " + (lastProof ? "yesterday" : "today") + ". Ride it.", "proof-new");
     else if (lastProof !== null && lastProof > 14) add(35, "critic", lastProof + " days since the last proof. The next submit fixes that.", "proof-old");
     var graded = DATA.state.updated ? daysSince(DATA.state.updated.slice(0, 10)) : 0;
-    if (graded > 7) add(30, "bartender", "I haven't graded anything in " + graded + " days. Not mad. Just polishing glasses.", "silent");
+    if (graded > 7) add(30, "bartender", LINE("silent", "I haven't graded anything in {days} days. Not mad. Just polishing glasses.").replace("{days}", graded), "silent");
     if (hero && S.heroMins >= 100) add(42, "logic", "You've put " + hm(S.heroMins) + " into " + (hero.task.label || hero.task.title) + " so far. It's going in, even when it doesn't feel like it.", "hero-time");
     if (hero && hero.task.kind === "probe") add(41, "logic", 'It\'s a probe: it measures, it doesn\'t judge. "I don\'t know" is a real answer.', "probe");
     if (music && !music.paused && music.currentTime > 3600) add(25, "jukebox", (musicTitle() || "This track") + ", " + Math.floor(music.currentTime / 3600) + " h " + Math.floor(music.currentTime % 3600 / 60) + " min in. You've been in it longer than some people stay at jobs.", "music");
-    else if (music && music.paused && musicPrefs().on === false) add(24, "jukebox", "The jukebox is quiet. Press play, or enjoy the silence like a monk.", "music");
-    else if (!musicPlayable() && hr >= 18) add(23, "jukebox", "No tape in the jukebox. Settings → Music has a soundscape, radio, or your own file.", "music");
+    else if (music && music.paused && musicPrefs().on === false) add(24, "jukebox", LINE("music_quiet", "The jukebox is quiet. Press play, or enjoy the silence like a monk."), "music");
+    else if (!musicPlayable() && hr >= 18) add(23, "jukebox", LINE("music_none", "No tape in the jukebox.") + " Settings → Music has a soundscape, radio, or your own file.", "music");
     if (S.total >= 600) add(20, "encyclopedia", hm(S.total) + " of focus logged since " + shortDate(new Date(S.first)) + ".", "lifetime");
     return O.sort(function (a, b) { return b[0] - a[0]; });
   }
-
-  // Bar gags, a new one every 40 minutes
-  var FLAVOR = [
-    ["regular", "A regular at the end of the bar insists attention is all you need. Nobody has the heart to tell him about the MLP."],
-    ["regular", "Someone scratched O(n²) into the counter. Underneath, smaller: \"but n is small\"."],
-    ["bartender", "polishes a glass that's already clean. Like rereading a problem you already solved."],
-    ["regular", "A coaster reads: SOFTMAX RESPONSIBLY."],
-    ["jukebox", "The jukebox plays one song on loop. Nobody has ever complained."],
-    ["regular", "A man in the corner has been on the same LeetCode problem since 2019. He says he's close."],
-    ["bartender", "Behind the bar hangs a framed receipt: one H100, rented by the hour, never returned."],
-    ["regular", "Someone left a napkin with 2 × L × n × h × d × b on it. The 2 is circled three times."],
-    ["regular", "House rule by the door: no gradients after midnight. Ignored nightly."],
-    ["bartender", "says the secret ingredient is the residual connection. He says that about everything."],
-    ["jukebox", "The neon sign buzzes in B-flat. Everyone in here is in B-flat."],
-    ["regular", "Two regulars argue about tabs versus spaces. The bartender serves them both water."],
-    ["regular", "A patron asks if you've tried turning it off and on again. You have. It was a cache problem."],
-    ["bartender", "keeps a jar labelled DROPPED FACTORS OF TWO. It's nearly full."]
-  ];
 
   // Every line comes from real data or from Claude's notes. [voice, html, small print, id]
   function barLines(hero) {
@@ -1543,8 +1572,9 @@
     } else L.push(["logic", claudeOK() ? "Nothing waiting on you. Grade your inbox, or start a new topic." : 'Nothing waiting on you. Tell Claude <b>"check my inbox"</b> and it lines up the next thing.', null, "logic"]);
 
     var togo = DIE_TILES - d.etched;
-    L.push(["gpu", !d.etched ? (d.shipped ? "Die #" + d.n + " is blank. The last one shipped. This one wants its first tile." : "The die is blank. One 25-minute block etches the first tile.")
-      : "Die #" + d.n + (togo <= 4 ? " is warm: " : " sits at ") + d.etched + " of " + DIE_TILES + ". " + cap(NUM_WORDS[togo]) + " more " + (togo === 1 ? "tile" : "tiles") + (togo <= 4 ? " and it ships." : " and it wakes up."), null, "gpu"]);
+    var dn = cap(W("die")) + " #" + d.n;
+    L.push(["gpu", !d.etched ? (d.shipped ? dn + " is blank. The last one " + W("shipped") + ". This one wants its first " + W("tile") + "." : "The " + W("die") + " is blank. One 25-minute block adds the first " + W("tile") + ".")
+      : dn + (togo <= 4 ? " is warm: " : " sits at ") + d.etched + " of " + DIE_TILES + ". " + cap(NUM_WORDS[togo]) + " more " + W(togo === 1 ? "tile" : "tiles") + (togo <= 4 ? " and it's done." : " to go."), null, "gpu"]);
 
     var shown = {};
     occasionLines(hero, S, t, d).forEach(function (o) {
@@ -1554,7 +1584,7 @@
     });
 
     if (active && active.water) L.push(["physical", '<span data-water-text>' + esc(waterText()) + "</span>", null, "water"]);
-    else if (t.glasses && t.glasses < 4) L.push(["physical", plural(t.glasses, "glass", "glasses") + " of water tonight. Your neurons noticed.", null, "water"]);
+    else if (t.glasses && t.glasses < 4) L.push(["physical", t.glasses + " " + W(t.glasses === 1 ? "glass" : "glasses") + " of water tonight. Your neurons noticed.", null, "water"]);
 
     var enc = finishSentence((st.topics || [])[0]);
     var side = actionableTasks().filter(function (e) { return e.task.status === "todo" && (!hero || e.task.id !== hero.task.id) && !pendingFor(e.task.id); });
@@ -1563,7 +1593,7 @@
 
     var past = pastProof();
     if (past) L.push(["nostalgia", esc(past), null, "nostalgia"]);
-    var pool = (cfg().bar && cfg().bar.gags === false ? [] : FLAVOR).concat(((cfg().bar && cfg().bar.lines) || []).map(function (l) { return [l.voice, l.text]; }));
+    var pool = (cfg().bar && cfg().bar.gags === false ? [] : (THEME && THEME.meta.gags) || []).concat(((cfg().bar && cfg().bar.lines) || []).map(function (l) { return [l.voice, l.text]; }));
     if (pool.length) {
       var fi = Math.floor(Date.now() / (40 * 60000)) % pool.length;
       if (VOICES[pool[fi][0]]) L.push([pool[fi][0], esc(pool[fi][1]), null, "flavor-" + fi + "-" + pool.length]);
@@ -1580,12 +1610,12 @@
   }
 
   function barJob(hero) {
-    if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">The job</div><h2>Nothing waiting on you.</h2><p>' +
+    if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">' + esc(W("job")) + '</div><h2>Nothing waiting on you.</h2><p>' +
       (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
         : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.') + "</p></div>";
     var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id);
     return '<div class="bx-job" style="--c:var(--' + (KIND[t.kind] ? t.kind : "lesson") + ')">' +
-      '<div class="bx-k">The job · ' + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
+      '<div class="bx-k">' + esc(W("job")) + " · " + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
       "<h2>" + (t.label ? '<span class="bx-label">' + esc(t.label) + "</span>" : "") + esc(t.title) + "</h2>" +
       (t.why ? "<p>" + esc(t.why) + "</p>" : "") +
       '<div class="bx-meta">' + (t.effort ? "<span>◷ " + esc(t.effort) + "</span>" : "") +
@@ -1619,9 +1649,10 @@
       if (x.href) { var h2 = resolveHref(x.href); act('<a class="bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>"); }
       if (x.submit) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
     });
-    act('<button class="bx-r" type="button" data-note>"Leave a note for the bartender."' + chk("it goes to Claude") + "</button>");
-    act('<button class="bx-r" type="button" data-help="all">"How does this place work?"</button>');
-    act('<button class="bx-r" type="button" data-room="back">"What\'s in the back room?"' + chk("milestones, proof, skills, library, your cluster") + "</button>");
+    if (claudeOK()) act('<button class="bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
+    else act('<button class="bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
+    act('<button class="bx-r" type="button" data-help="all">"' + esc(W("how")) + '"</button>');
+    act('<button class="bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, your cluster") + "</button>");
     return R.join("");
   }
 
@@ -1638,53 +1669,55 @@
   function renderBar(hero, topics, live) {
     var nm = barName(), room = barRoom();
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
-      '<button type="button" data-room="front" aria-pressed="' + (room === "front") + '">🍸 The bar</button>' +
-      '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">🗝 The back room</button></div>';
-    var neon = '<button class="bx-neon" type="button" data-barname title="Click to rename the bar">' + esc(nm[0]) + "<small>" + esc(nm[1]) + "</small></button>";
+      '<button type="button" data-room="front" aria-pressed="' + (room === "front") + '">' + esc(W("front_icon")) + " " + esc(W("front")) + "</button>" +
+      '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">' + esc(W("back_icon")) + " " + esc(W("back")) + "</button></div>";
+    var neon = '<button class="bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + (nm[1] ? "<small>" + esc(nm[1]) + "</small>" : "") + "</button>";
     if (room === "back") {
       var list = allBlocks();
-      return '<div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
+      return '<div class="room t-' + esc(THEME.meta.id) + ' is-back"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
         '<div class="bx-back">' +
           (list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "") +
           live.map(renderMilestones).join("") + renderGates(live) +
           live.map(renderEvidence).join("") + live.map(renderSkills).join("") +
           topics.map(renderTopic).join("") + renderLinked() +
-        '</div></div>';
+        '</div></div></div>';
     }
     var locked = actionableTasks().filter(function (e) { return e.task.status === "locked"; });
-    var doors = locked.length ? '<div class="bx-doors"><div class="bx-k">Doors that won\'t open yet · ' + locked.length + "</div><ul>" +
-      locked.map(function (e) { return "<li><b>" + esc(e.task.label ? e.task.label + ": " : "") + esc(e.task.title) + '</b><span class="bx-chk">' + esc(e.task.unlock || "Locked") + "</span></li>"; }).join("") +
-      "</ul></div>" : "";
-    var clockStrip = active ? '<div class="bx-clock" id="bx-clock" style="--c:' + blockColor(active.block) + '"><b data-bx-time>' + esc(clock(active.end - Date.now())) + "</b>" +
-      '<div><div class="bx-mono">' + esc(blockLabel(active.block)) + (active.task && findTask(active.task) ? " · " + esc(findTask(active.task).task.label || findTask(active.task).task.title) : "") + " · ends " + esc(hhmm(active.end)) + "</div>" +
-      (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "";
-    return '<div class="bx">' +
-      '<aside class="bx-left">' + neon +
-        '<div class="bx-stats" id="bx-stats">' + statsHTML() + "</div>" +
-        '<div class="bx-cab" id="bx-cab">' + cabinetHTML() + "</div>" +
-        '<div id="bx-scene">' + sceneHTML() + "</div>" +
-        renderFinishLine(topics[0]) + doors +
-      "</aside>" +
-      '<section class="bx-mid">' + tabs + clockStrip +
-        '<div class="bx-log">' + barLines2HTML(hero) + "</div>" +
-        barJob(hero) +
-        '<ol class="bx-replies">' + barReplies(hero) + "</ol>" +
-        '<p class="bx-keys">Press <kbd>1</kbd>–<kbd>9</kbd> to reply.</p>' +
-      "</section>" +
-      '<aside class="bx-right"><div class="bx-juke"><div class="bx-vinyl" aria-hidden="true"></div><div class="bx-k bx-juke-k">The jukebox · focus block</div><div id="blk-slot"></div></div><div id="bx-music-slot"></div></aside>' +
-      "</div>";
+    var fill = {
+      name: neon, rooms: tabs,
+      tonight: tonightHTML(), week: weekHTML(), die: cabinetHTML(),
+      sign: esc(W(active ? "sign_busy" : "sign_open")),
+      clock: esc(active ? clock(active.end - Date.now()) : hhmm(Date.now())),
+      water: glassHTML(),
+      finish: renderFinishLine(topics[0]),
+      doors: locked.length ? '<div class="bx-doors"><div class="bx-k">' + esc(W("doors")) + " · " + locked.length + "</div><ul>" +
+        locked.map(function (e) { return "<li><b>" + esc(e.task.label ? e.task.label + ": " : "") + esc(e.task.title) + '</b><span class="bx-chk">' + esc(e.task.unlock || "Locked") + "</span></li>"; }).join("") +
+        "</ul></div>" : "",
+      timer: active ? '<div class="bx-clock" id="bx-clock" style="--c:' + blockColor(active.block) + '"><b data-bx-time>' + esc(clock(active.end - Date.now())) + "</b>" +
+        '<div><div class="bx-mono">' + esc(blockLabel(active.block)) + (active.task && findTask(active.task) ? " · " + esc(findTask(active.task).task.label || findTask(active.task).task.title) : "") + " · ends " + esc(hhmm(active.end)) + "</div>" +
+        (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "",
+      voices: barLines2HTML(hero), job: barJob(hero), replies: barReplies(hero),
+      keys: "Press <kbd>1</kbd>–<kbd>9</kbd> to reply.",
+      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: ""
+    };
+    var tpl = document.createElement("template");
+    tpl.innerHTML = THEME.layout;   // cleaned by the server: no scripts, handlers, links or ids
+    tpl.content.querySelectorAll("[data-slot]").forEach(function (el) { el.innerHTML = fill[el.dataset.slot] || ""; });
+    var box = document.createElement("div");
+    box.appendChild(tpl.content);
+    return '<div class="room t-' + esc(THEME.meta.id) + '">' + box.innerHTML + "</div>";
   }
 
   // cheap refresh of the parts that change between polls, without redrawing the room
   function paintBarBits() {
-    if (!isBar()) return;
-    var s = $("#bx-stats"); if (s) s.innerHTML = statsHTML();
-    var c = $("#bx-cab"); if (c) c.innerHTML = cabinetHTML();
+    if (!isBar() || !THEME) return;
+    var parts = { tonight: tonightHTML, week: weekHTML, die: cabinetHTML };
+    Object.keys(parts).forEach(function (k) { var el = $('.room [data-slot="' + k + '"]'); if (el) el.innerHTML = parts[k](); });
   }
 
   function barTick() {
     if (!isBar()) return;
-    var wc = $("[data-bx-wclock]");
+    var wc = $('.room [data-slot="clock"]');
     if (!active) { if (wc) wc.textContent = hhmm(Date.now()); return; }
     var t = clock(active.end - Date.now());
     if (wc) wc.textContent = t;
@@ -1693,7 +1726,7 @@
 
   function paintViewButton() {
     var b = $("#btn-view");
-    if (b) b.innerHTML = isBar() ? '☰ <span class="hide-sm">Classic view</span>' : '🍸 <span class="hide-sm">Bar view</span>';
+    if (b) b.innerHTML = isBar() ? '☰ <span class="hide-sm">Classic view</span>' : esc(THEME ? W("front_icon") : "🍸") + ' <span class="hide-sm">' + esc(THEME ? W("view") : "Room view") + "</span>";
   }
 
   document.addEventListener("keydown", function (ev) {
@@ -2430,9 +2463,10 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-newtopic]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic]");
     if (!el) return;
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
+    if (el.hasAttribute("data-claude-open")) return openClaude();
     if (el.hasAttribute("data-newtopic")) return openNewTopic();
     if (el.dataset.settings != null) return openSettings(el.dataset.settings);
     if (el.hasAttribute("data-drink")) return drinkWater();

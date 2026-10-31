@@ -1,0 +1,94 @@
+{
+  "name": "The bar",
+  "icon": "🍸",
+  "about": "A dim bar where your skills talk about tonight's work. A jukebox, a bartender, a neon sign.",
+  "dark": true,
+  "scape": "night",
+  "fonts": {
+    "head": "head",
+    "body": "serif",
+    "sign": "neon"
+  },
+  "words": {},
+  "voices": {},
+  "names": [
+    [
+      "Cache Miss",
+      "nobody remembers your name"
+    ],
+    [
+      "The Last Token",
+      "last call, every step"
+    ],
+    [
+      "Bad Tokens",
+      "loud, wrong, and proud of it"
+    ],
+    [
+      "Exploding Gradients",
+      "no ceiling, no mercy"
+    ],
+    [
+      "Dead Neurons",
+      "switched off since forever"
+    ]
+  ],
+  "gags": [
+    [
+      "regular",
+      "A regular at the end of the bar insists attention is all you need. Nobody has the heart to tell him about the MLP."
+    ],
+    [
+      "regular",
+      "Someone scratched O(n²) into the counter. Underneath, smaller: \"but n is small\"."
+    ],
+    [
+      "bartender",
+      "polishes a glass that's already clean. Like rereading a problem you already solved."
+    ],
+    [
+      "regular",
+      "A coaster reads: SOFTMAX RESPONSIBLY."
+    ],
+    [
+      "jukebox",
+      "The jukebox plays one song on loop. Nobody has ever complained."
+    ],
+    [
+      "regular",
+      "A man in the corner has been on the same LeetCode problem since 2019. He says he's close."
+    ],
+    [
+      "bartender",
+      "Behind the bar hangs a framed receipt: one H100, rented by the hour, never returned."
+    ],
+    [
+      "regular",
+      "Someone left a napkin with 2 × L × n × h × d × b on it. The 2 is circled three times."
+    ],
+    [
+      "regular",
+      "House rule by the door: no gradients after midnight. Ignored nightly."
+    ],
+    [
+      "bartender",
+      "says the secret ingredient is the residual connection. He says that about everything."
+    ],
+    [
+      "jukebox",
+      "The neon sign buzzes in B-flat. Everyone in here is in B-flat."
+    ],
+    [
+      "regular",
+      "Two regulars argue about tabs versus spaces. The bartender serves them both water."
+    ],
+    [
+      "regular",
+      "A patron asks if you've tried turning it off and on again. You have. It was a cache problem."
+    ],
+    [
+      "bartender",
+      "keeps a jar labelled DROPPED FACTORS OF TWO. It's nearly full."
+    ]
+  ]
+}

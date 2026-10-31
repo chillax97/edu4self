@@ -1,0 +1,37 @@
+<!-- The bar: three columns. Left the sign, tonight, the die and the back bar; middle the talk and
+     the job; right the jukebox. Every data-slot is filled by the engine. -->
+<div class="bx">
+  <aside class="bx-left">
+    <div data-slot="name"></div>
+    <div class="bx-stats"><div data-slot="tonight"></div><div data-slot="week"></div></div>
+    <div class="bx-cab" data-slot="die"></div>
+    <div class="bx-scene">
+      <i class="bx-shelf bx-shelf-1"></i><i class="bx-shelf bx-shelf-2"></i>
+      <div class="bx-bottles bx-bottles-1"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="bx-bottles bx-bottles-2"><i></i><i></i><i></i><i></i></div>
+      <div class="bx-tender"><i class="hd"></i><i class="bd"></i><i class="rag"></i></div>
+      <span class="bx-sign" data-slot="sign"></span>
+      <span class="bx-wclock" data-slot="clock"></span>
+      <i class="bx-counter"></i>
+      <span data-slot="water"></span>
+    </div>
+    <div data-slot="finish"></div>
+    <div data-slot="doors"></div>
+  </aside>
+  <section class="bx-mid">
+    <div data-slot="rooms"></div>
+    <div data-slot="timer"></div>
+    <div class="bx-log" data-slot="voices"></div>
+    <div data-slot="job"></div>
+    <ol class="bx-replies" data-slot="replies"></ol>
+    <p class="bx-keys" data-slot="keys"></p>
+  </section>
+  <aside class="bx-right">
+    <div class="bx-juke">
+      <div class="bx-vinyl" aria-hidden="true"></div>
+      <div class="bx-k bx-juke-k">The jukebox · focus block</div>
+      <div data-slot="block"></div>
+    </div>
+    <div data-slot="music"></div>
+  </aside>
+</div>

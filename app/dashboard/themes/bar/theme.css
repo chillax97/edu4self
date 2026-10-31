@@ -1,0 +1,16 @@
+/* The bar is the engine's default look (app.css, the .bx-* rules), so it needs nothing here except
+   the bottle colours, which used to be inline styles. */
+.room .bx-shelf-1 { top: 58px; }
+.room .bx-shelf-2 { top: 112px; }
+.room .bx-bottles-1 { top: 18px; }
+.room .bx-bottles-2 { top: 76px; }
+.room .bx-bottles-1 i:nth-child(1) { height: 40px; background: #3c8d5a; }
+.room .bx-bottles-1 i:nth-child(2) { height: 32px; background: #b5651d; }
+.room .bx-bottles-1 i:nth-child(3) { height: 38px; background: #7b2d3f; }
+.room .bx-bottles-1 i:nth-child(4) { height: 28px; background: #d9b44a; }
+.room .bx-bottles-1 i:nth-child(5) { height: 40px; background: #2f5d9a; }
+.room .bx-bottles-1 i:nth-child(6) { height: 34px; background: #6a3d8f; }
+.room .bx-bottles-2 i:nth-child(1) { height: 34px; background: #b5651d; }
+.room .bx-bottles-2 i:nth-child(2) { height: 28px; background: #3c8d5a; }
+.room .bx-bottles-2 i:nth-child(3) { height: 36px; background: #d9b44a; }
+.room .bx-bottles-2 i:nth-child(4) { height: 24px; background: #7b2d3f; }
