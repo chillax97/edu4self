@@ -6,6 +6,11 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Trophies. Meeting your daily goal adds a trophy to a pile on your shelf, drawn by your room (a
+  bottle cap, a book, a mission patch). Weekly goals and finished dice add their own, each with a
+  card to print and a small gift Claude makes from what you proved. Trophies keep the look of the
+  room they were won in, so a shelf can mix rooms. Past history is awarded once, quietly. Rooms
+  define their trophies in `theme.json` (see `docs/THEMES.md`).
 - Rooms. Pick where you study in Settings: the bar, the library, the space station, the night train
   or the tea house. Each has its own layout, colours, characters, jokes and sound, and lessons take
   its look (Settings turns that off). Make your own in `<vault>/themes/`, or ask Claude to:

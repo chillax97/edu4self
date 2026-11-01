@@ -41,6 +41,14 @@ To make a room, or change a built-in one, see [THEMES.md](THEMES.md). A room in 
 a built-in's id replaces it. If the chosen room is broken or missing, the bar shows instead and
 `./edu4self check` says why.
 
+### Trophies
+
+Nothing to set: they follow your goals. A day that reaches **Focused minutes a day** adds a trophy
+to a pile on your shelf, a week with blocks on **Days a week** days adds a week trophy, and every 10
+focused hours finishes a die. Weeks and dice have a card to print, and a gift Claude makes for you
+(if Claude Code is installed). They're stored in `_system/keepsakes.json`; delete that file and they
+are awarded again from your blocks, in the room you're in now.
+
 ### Kinds of block
 
 Each kind is `{"id": "practice", "label": "Practice", "color": "mock", "minutes": 60}`.

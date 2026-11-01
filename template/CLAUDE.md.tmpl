@@ -22,7 +22,8 @@ This folder is {{NAME}}'s learning vault. One folder per topic, each taught with
 - **A room** ("make it feel like a lighthouse"): build it in `themes/<id>/` by following
   `{{ENGINE}}/docs/THEMES.md` to its last step, then set `theme` in `config.json`. The check above
   validates rooms too.
-- Never write `_system/inbox.jsonl`, `_system/blocks.jsonl` or `_system/music/`.
+- Never write `_system/inbox.jsonl`, `_system/blocks.jsonl`, `_system/keepsakes.json` or `_system/music/`. The
+  server awards trophies itself; `gifts/` holds what Claude made for the learner when they won one.
 - To point the learner at a task, link it: `http://127.0.0.1:{{PORT}}/#submit=<task-id>`.
 - The example topic `how-learning-works/` can be deleted when the learner asks: remove the folder and
   its entry in `state.json`, then run the check.

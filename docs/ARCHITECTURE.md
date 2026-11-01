@@ -17,6 +17,7 @@ edu4self is three small programs around one folder of plain files.
 | server | `app/server.py` | serves the page, a JSON API, vault files and music; validates everything it writes |
 | page | `app/dashboard/index.html`, `app.js`, `app.css`, `fonts/` | renders state; submissions, blocks, Settings |
 | rooms | `app/themes.py`, `app/dashboard/themes/<id>/` | load, check and clean rooms (built-in and the vault's own) |
+| trophies | `app/keepsakes.py` | what the blocks have won (day, week, die), kept with the drawing of the room it was won in |
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |
 | CLI | `edu4self` | setup, init, serve, login service, check, doctor |
 | template | `template/` | what a new vault starts as, including the example topic |
@@ -32,6 +33,8 @@ _system/state.json     the tutor's view of the learner: topics, queue, milestone
 _system/inbox.jsonl    submissions and withdrawals (append-only)
 _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
+_system/keepsakes.json trophies won, with a copy of each one's drawing (server only)
+gifts/                 pages Claude made when a week or a die was won
 _system/music/         one audio file
 _system/logs/          service output (when installed)
 <topic>/               MISSION.md, lessons/*.html, probes/*.md, reference/*.html, learning-records/*.md, …
@@ -59,6 +62,7 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/api/themes` | | `{themes: [{id, name, icon, about, lessons, builtin, errors}], active}` |
 | GET | `/api/theme?id=` | | 200 `{meta, layout, css}`; 422 `{errors}` for a broken room; 404 |
 | GET | `/theme/lesson.css` | | the active room's lesson styles |
+| GET | `/card?id=` | | a printable card for one trophy, in its room's colours; 404 if unknown |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |
 | POST | `/api/music` | raw audio, `X-Filename` header | 201 `{config}`; 413 over 1 GB; 415 not audio |
 | GET | `/api/claude?since=N` | | `{available, busy, kind, conversation, events[N:], next}` |
@@ -131,6 +135,13 @@ Third threat: a room from someone else. Nothing in a room runs: `app/themes.py` 
 from an allow-list (no scripts, handlers, links, `src`, `style` or ids outside SVG), refuses CSS that
 loads anything or styles outside `.room`, and keeps only plain values from `theme.json`. The page is
 served with a CSP that runs only its own scripts.
+
+**Trophies.** The server awards them (`sync_keepsakes`) when a block is saved and when the state is
+read, so a changed goal or a first run catches up. The first run on a vault awards its history
+quietly. A week or a die won now gets a gift: a `claude -p` run fenced like grading (no shell, no web)
+that writes one file to `gifts/`, with nothing shown in the panel. One try per gift. The drawings in
+`keepsakes.json` are cleaned again every time they are sent to the page, and Claude runs can't edit
+that file.
 
 A terminal `claude` session uses your own permissions, not these. Grade shared material from the page. See [SECURITY.md](../SECURITY.md) to report a problem.
 

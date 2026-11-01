@@ -19,6 +19,11 @@ colours, characters, jokes and sound, and your lessons dress to match. Or descri
 [docs/THEMES.md](docs/THEMES.md). Everything else is yours to change too: your goals, block lengths,
 names, voices, music. All of it is in **⚙ Settings**, no terminal needed.
 
+Meeting your goals fills a shelf. Every day you hit your daily goal adds a trophy to a pile, drawn by
+the room you're in: a bottle cap in the bar, a book in the library. Weeks and finished dice get their
+own trophy and a card you can print, and Claude quietly makes you something from what you proved.
+Trophies keep the look of the room they were won in, so when you move rooms, your shelf comes along.
+
 | the bar | the library | the space station |
 |---|---|---|
 | ![The bar: a neon sign, the jukebox, the die case](docs/images/rooms/bar.png) | ![The library: an open book on the desk, voices in the margin](docs/images/rooms/library.png) | ![The space station: a viewport, the reactor core, the comms log](docs/images/rooms/space.png) |
@@ -155,6 +160,8 @@ edu4self/               the code (this repo)            ~/learn/                
   plugin/                 Claude Code skills              _system/config.json     your Settings
   docs/                   spec, protocol, customizing     _system/music/          your jukebox track
                                                           themes/                 rooms you made
+                                                          gifts/                  what Claude made you
+                                                          _system/keepsakes.json  your trophies
                                                           <topic>/                lessons, probes, records
 ```
 
