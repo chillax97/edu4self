@@ -244,6 +244,20 @@ def python_path():
     return os.path.abspath(p) if p else sys.executable
 
 
+def service_path():
+    """The PATH the service runs with. launchd and systemd start services with a bare PATH, so a server
+    started at login can't find `claude` (usually in ~/.local/bin or Homebrew) and the Claude panel stays
+    off. Bake in the PATH of the shell that ran install, with claude's own folder first."""
+    dirs = []
+    exe = shutil.which("claude")
+    if exe:
+        dirs.append(os.path.dirname(os.path.abspath(exe)))
+    for d in os.environ.get("PATH", "").split(os.pathsep) + ["/usr/local/bin", "/usr/bin", "/bin"]:
+        if d and os.path.isabs(d) and d not in dirs:
+            dirs.append(d)
+    return os.pathsep.join(dirs)
+
+
 def launchd_plist(vault, port):
     logs = os.path.join(vault, "_system", "logs")
     args = "".join("    <string>%s</string>\n" % xml(a) for a in
@@ -257,6 +271,11 @@ def launchd_plist(vault, port):
   <key>ProgramArguments</key>
   <array>
 %s  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>%s</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -273,7 +292,7 @@ def launchd_plist(vault, port):
   <string>Background</string>
 </dict>
 </plist>
-""" % (LABEL, args, xml(vault), xml(os.path.join(logs, "dashboard.log")), xml(os.path.join(logs, "dashboard.log"))))
+""" % (LABEL, args, xml(service_path()), xml(vault), xml(os.path.join(logs, "dashboard.log")), xml(os.path.join(logs, "dashboard.log"))))
 
 
 def xml(s):
@@ -287,13 +306,14 @@ Description=edu4self learning dashboard
 After=network.target
 
 [Service]
+Environment=%s
 ExecStart=%s %s --vault %s --port %d
 Restart=on-failure
 RestartSec=5
 
 [Install]
 WantedBy=default.target
-""" % (q(python_path()), q(os.path.join(APP, "server.py")), q(vault), port)
+""" % (q("PATH=" + service_path()), q(python_path()), q(os.path.join(APP, "server.py")), q(vault), port)
 
 
 def plist_path():

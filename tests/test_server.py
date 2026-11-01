@@ -3,6 +3,8 @@ import http.client
 import importlib.machinery
 import importlib.util
 import json
+import plistlib
+import re
 import os
 import shutil
 import socket
@@ -517,6 +519,28 @@ class CliTest(unittest.TestCase):
         self.assertIn("<string>4800</string>", plist)
         unit = cli.systemd_unit("/tmp/my vault", 4800)
         self.assertIn('--vault "/tmp/my vault" --port 4800', unit)
+
+    def test_service_can_find_claude(self):
+        # a service starts with a bare PATH; the files must carry the folder claude lives in
+        bin_dir = os.path.join(self.tmp, "my bin")
+        os.makedirs(bin_dir)
+        fake = os.path.join(bin_dir, "claude")
+        with open(fake, "w") as fh:
+            fh.write("#!/bin/sh\n")
+        os.chmod(fake, 0o755)
+        old = os.environ["PATH"]
+        os.environ["PATH"] = bin_dir + os.pathsep + old
+        try:
+            cli = load_cli()
+            plist = cli.launchd_plist("/tmp/v", 4800)
+            unit = cli.systemd_unit("/tmp/v", 4800)
+        finally:
+            os.environ["PATH"] = old
+        m = re.search(r"<key>PATH</key>\s*<string>([^<]*)</string>", plist)
+        self.assertTrue(m, plist)
+        self.assertEqual(m.group(1).split(os.pathsep)[0], bin_dir)
+        self.assertIn('Environment="PATH=%s' % bin_dir, unit)
+        plistlib.loads(plist.encode())   # still a valid plist
 
 
 class RepoTest(unittest.TestCase):

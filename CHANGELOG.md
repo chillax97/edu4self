@@ -39,6 +39,9 @@ versions follow [Semantic Versioning](https://semver.org).
   to break out.
 
 ### Fixed
+- `edu4self install`: the dashboard started at login can now find Claude Code. Services start
+  with a bare PATH, so the Claude panel and the Grade button stayed off; the service now carries
+  the PATH of the shell that ran install. Run `./edu4self install` again to pick this up.
 - The jukebox could throw when a track was changed or removed (the old player kept firing events).
 - `edu4self check` validates `config.json`. A bad file used to make the dashboard fall back to defaults
   silently while the check passed.
