@@ -27,13 +27,14 @@ import sys
 import threading
 import urllib.parse
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 APP = os.path.dirname(os.path.abspath(__file__))
 DASH = os.path.join(APP, "dashboard")
 THEMES_DIR = os.path.join(DASH, "themes")
 sys.path.insert(0, APP)
+import keepsakes  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
 import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
 
 # The dashboard page itself: scripts only from this server (so nothing in a theme can run), styles and
@@ -61,7 +62,7 @@ ALLOWED_ORIGINS = set()
 
 def configure(vault, port):
     """Point the server at a vault folder and a port."""
-    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS
+    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES
     ROOT = os.path.abspath(os.path.expanduser(vault))
     SYSTEM = os.path.join(ROOT, "_system")
     STATE = os.path.join(SYSTEM, "state.json")
@@ -69,6 +70,7 @@ def configure(vault, port):
     BLOCKS = os.path.join(SYSTEM, "blocks.jsonl")
     CONFIG = os.path.join(SYSTEM, "config.json")
     MUSIC_DIR = os.path.join(SYSTEM, "music")
+    KEEPSAKES = os.path.join(SYSTEM, "keepsakes.json")
     PORT = int(port)
     ALLOWED_HOSTS = {"127.0.0.1:%d" % PORT, "localhost:%d" % PORT}
     ALLOWED_ORIGINS = {"http://" + h for h in ALLOWED_HOSTS}
@@ -416,6 +418,7 @@ def api_state():
         mtime = datetime.fromtimestamp(os.path.getmtime(STATE)).astimezone().isoformat(timespec="seconds")
     except OSError:
         mtime = None
+    sync_keepsakes()
     entries = inbox_entries()
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     cfg, cfg_err = load_config()
@@ -428,6 +431,7 @@ def api_state():
         "blocks": [{k: e.get(k) for k in ("ts", "started", "block", "minutes", "task", "water_served", "water_drunk") if k in e}
                    for e in read_jsonl(BLOCKS)],
         "config": cfg,
+        "keepsakes": shelf_for_page(),
         "server": {"now": now_iso(), "state_mtime": mtime, "version": VERSION, "port": PORT,
                    "vault": os.path.basename(ROOT), "config_error": cfg_err},
     }
@@ -592,11 +596,11 @@ def claude_args(prompt, resume, kind="chat"):
     MCP servers listed in the vault are ignored, and local (unshared) settings files there too."""
     tools = ["Read(//%s/**)" % ENGINE.lstrip("/"), "Read(~/.claude/plugins/**)", "Read(~/.claude/skills/**)",
              "Skill", "TodoWrite"]
-    if kind != "grade":
+    if kind not in ("grade", "gift"):
         tools += ["WebSearch", "WebFetch"]
-    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json"]
+    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
-    if kind == "grade":
+    if kind in ("grade", "gift"):
         deny += ["WebSearch", "WebFetch"]
     args = [claude_bin(), "-p", prompt, "--output-format", "stream-json", "--verbose",
             "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
@@ -662,8 +666,12 @@ def claude_watch(proc, kind):
         except ValueError:
             continue
         with CLAUDE_LOCK:
-            if msg.get("session_id") and kind != "grade":
+            if msg.get("session_id") and kind not in ("grade", "gift"):
                 RUN["session"] = msg["session_id"]
+            if kind == "gift":   # a surprise: nothing shows in the panel while it's being made
+                if msg.get("type") == "result":
+                    result = msg
+                continue
             if msg.get("type") == "assistant":
                 for part in (msg.get("message") or {}).get("content") or []:
                     if part.get("type") == "text" and part.get("text", "").strip():
@@ -674,6 +682,8 @@ def claude_watch(proc, kind):
                 result = msg
     err = proc.stderr.read()
     code = proc.wait()
+    if kind == "gift":
+        return gift_done(code)
     with CLAUDE_LOCK:
         if result and not result.get("is_error") and code == 0:
             cost = result.get("total_cost_usd")
@@ -689,6 +699,7 @@ def claude_watch(proc, kind):
         lines = [l for l in check.stdout.strip().splitlines() if l.strip()]
         claude_event("check", ("Check OK" if check.returncode == 0 else "Check FAILED: " + " / ".join(lines[-3:])))
         RUN.update(proc=None, busy=False)
+    maybe_gift()   # a gift that waited for Claude to be free
 
 
 def claude_stop():
@@ -705,6 +716,160 @@ def claude_reset():
             return {"ok": False, "error": "busy"}
         RUN.update(session=None, events=[])
     return {"ok": True}
+
+
+# ---------------------------------------------------------------- trophies and gifts
+# keepsakes.py decides what was won; here we hand it the room's drawings, and when a week or a die is won
+# "now", ask Claude (fenced like grading: no shell, no web) to make the learner a small gift.
+
+def active_theme():
+    """(id, cleaned meta) of the room in use, or the bar if that room is missing or broken."""
+    tid = load_config()[0]["theme"]
+    for t in (tid, "bar"):
+        path = themes.folders(THEMES_DIR, ROOT).get(t)
+        if path:
+            loaded = themes.load(path, t)
+            if not loaded["errors"]:
+                return t, loaded["meta"]
+    return "bar", {"name": "The bar", "keepsakes": themes.DEFAULT_KEEPSAKES}
+
+
+def shelf_for_page():
+    """The trophies, with every drawing cleaned again on the way out: keepsakes.json is a file in the vault,
+    and the page draws these as markup, so nothing in it is trusted just because the server once wrote it."""
+    data = keepsakes.load(KEEPSAKES) or {"items": [], "art": {}}
+    art = {}
+    for key, svg in data["art"].items():
+        clean, errs = themes.clean_art(svg)
+        art[key] = "" if errs else clean
+    return {"items": data["items"], "art": art}
+
+
+def sync_keepsakes():
+    cfg = load_config()[0]
+    tid, meta = active_theme()
+    new = keepsakes.sync(KEEPSAKES, read_jsonl(BLOCKS), cfg["goals"]["day_minutes"], cfg["goals"]["week_days"],
+                         tid, meta["keepsakes"])
+    with CLAUDE_LOCK:
+        idle = not RUN["busy"]
+    data = keepsakes.load(KEEPSAKES) or {"items": []}
+    for i in data["items"]:
+        if i.get("gift") == "making" and idle:   # the server stopped mid-gift: nothing was made, try again
+            keepsakes.set_gift(KEEPSAKES, i["id"], "pending")
+    if idle and keepsakes.pending_gift(KEEPSAKES):
+        maybe_gift()
+    return new
+
+
+GIFT_PROMPT = """A surprise for the learner. They just {what}, studying in {room}. That earned them a {trophy}.
+Make them one small gift they'd enjoy, built from what they have actually proven: read _system/state.json
+(history entries with "evidence": true, the topics and their skills) and the topics' learning records.
+You choose the form: a short story set in {room} where their skills talk about what they learned, a
+one-page map of what they now know, a puzzle or quiz built from it, a poem, a printable reference card,
+or something better. Make it personal and specific, not generic praise.
+Write exactly one file: gifts/{id}.html (a self-contained page: inline CSS, no scripts, no links to
+other sites, no images from the web) or gifts/{id}.md. Keep it to about one screen. Change no other file.
+Finish with one short sentence saying what you made."""
+
+
+def maybe_gift():
+    """Start the oldest waiting gift if Claude is installed and free. Otherwise it keeps waiting."""
+    item = keepsakes.pending_gift(KEEPSAKES)
+    if not item or not claude_bin():
+        return False
+    tid, meta = active_theme()
+    what = ("met their goal for the week of %s" % item["date"] if item["kind"] == "week"
+            else "finished die #%d (another 10 focused hours)" % item["n"])
+    prompt = GIFT_PROMPT.format(what=what, room=meta.get("name", "their room"), trophy=item["name"], id=item["id"])
+    with CLAUDE_LOCK:
+        if RUN["busy"]:
+            return False
+        try:
+            proc = subprocess.Popen(claude_args(prompt, None, "gift"), cwd=ROOT, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        except OSError:
+            return False
+        RUN.update(proc=proc, busy=True, kind="gift", started=now_iso(), gift=item["id"])
+    keepsakes.set_gift(KEEPSAKES, item["id"], "making")
+    threading.Thread(target=claude_watch, args=(proc, "gift"), daemon=True).start()
+    return True
+
+
+def gift_done(code):
+    """Link the gift to its trophy, or give up on it (one try: a gift never costs twice)."""
+    item_id = RUN.get("gift")
+    found = None
+    for ext in (".html", ".md"):
+        rel = "gifts/%s%s" % (item_id, ext)
+        if os.path.isfile(os.path.join(ROOT, rel)):
+            found = rel
+    keepsakes.set_gift(KEEPSAKES, item_id, found or "none")
+    with CLAUDE_LOCK:
+        RUN.update(proc=None, busy=False, gift=None)
+    maybe_gift()
+
+
+def card_page(item_id):
+    """A printable card for one trophy, in the colours of the room it was won in."""
+    data = keepsakes.load(KEEPSAKES) or {"items": [], "art": {}}
+    item = next((i for i in data["items"] if i["id"] == item_id), None)
+    if not item:
+        return None
+    path = themes.folders(THEMES_DIR, ROOT).get(item["theme"])
+    meta = themes.load(path, item["theme"])["meta"] if path else {}
+    pal = dict({"bg": "#1a1411", "ink": "#f1e8da", "muted": "#b3a690", "accent": "#ffb36b", "line": "#3a2e26"},
+               **(meta.get("palette") or {}))
+    blocks = read_jsonl(BLOCKS)
+    try:
+        history = json.loads(read_text(STATE) or "{}").get("topics", [])
+    except ValueError:
+        history = []
+    d0 = datetime.fromisoformat(item["date"]).date()
+    if item["kind"] == "day":
+        start, end, title = d0, d0, "%s, %d %s" % (d0.strftime("%A"), d0.day, d0.strftime("%B %Y"))
+    elif item["kind"] == "week":
+        start, end = d0, d0 + timedelta(days=6)
+        title = "Week of %d %s" % (d0.day, d0.strftime("%B %Y"))
+    else:
+        prev = next((datetime.fromisoformat(i["date"]).date() for i in data["items"]
+                     if i["kind"] == "die" and i.get("n") == item["n"] - 1), None)
+        start, end, title = prev or date(1970, 1, 1), d0, "Die #%d · %d focused hours" % (item["n"], item["n"] * 10)
+    mins, days = 0, set()
+    for b in blocks:
+        t = keepsakes.local_dt(b.get("ts") or b.get("started") or "")
+        if t and start <= t.date() <= end and isinstance(b.get("minutes"), int):
+            mins += b["minutes"]
+            days.add(t.date())
+    proven = []
+    for topic in history if isinstance(history, list) else []:
+        for h in topic.get("history") or []:
+            try:
+                hd = datetime.fromisoformat(str(h.get("date"))[:10]).date()
+            except ValueError:
+                continue
+            if h.get("evidence") and start <= hd <= end:
+                proven.append(h.get("title") or "")
+    e = html.escape
+    facts = "%d focused minutes over %d day%s" % (mins, len(days), "" if len(days) == 1 else "s")
+    rows = "".join("<li>%s</li>" % e(p) for p in proven[:12]) or "<li class=dim>Nothing graded in this stretch. The minutes still count.</li>"
+    art = data["art"].get(item["art"], "")
+    return ("<!doctype html><html lang=en><head><meta charset=utf-8><title>%(title)s</title>"
+            "<meta name=viewport content='width=device-width,initial-scale=1'>"
+            "<style>body{margin:0;background:#ddd;font:16px/1.5 Georgia,serif;display:grid;place-items:center;min-height:100vh}"
+            ".card{width:148mm;min-height:100mm;box-sizing:border-box;padding:12mm 13mm;background:%(bg)s;color:%(ink)s;"
+            "border:3px double %(accent)s;border-radius:6px;display:grid;grid-template-columns:1fr 34mm;gap:8mm}"
+            ".k{font:600 11px ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;color:%(accent)s}"
+            "h1{font-size:24px;margin:4px 0 6px}p{margin:0 0 8px}.dim{color:%(muted)s}ul{margin:6px 0 0;padding-left:18px}"
+            ".art svg{width:100%%;height:auto}.foot{grid-column:1/-1;border-top:1px solid %(line)s;padding-top:6px;font-size:12px;color:%(muted)s}"
+            "button{position:fixed;top:14px;right:14px;font:inherit;padding:6px 14px;cursor:pointer}"
+            "@media print{body{background:none}button{display:none}.card{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>"
+            "<script src=/card.js defer></script></head><body><button type=button data-print>Print</button>"
+            "<div class=card><div><div class=k>%(room)s · %(trophy)s</div><h1>%(title)s</h1><p>%(facts)s</p>"
+            "<div class=k>Proven</div><ul>%(rows)s</ul></div><div class=art>%(art)s</div>"
+            "<div class=foot>%(learner)s · won %(won)s · edu4self</div></div></body></html>") % dict(
+        title=e(title), bg=pal["bg"], ink=pal["ink"], muted=pal["muted"], accent=pal["accent"], line=pal["line"],
+        room=e(meta.get("name") or item["theme"]), trophy=e(item["name"]), facts=e(facts), rows=rows, art=art,
+        learner=e(load_config()[0]["name"] or "you"), won=e(item["date"]))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -821,6 +986,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_text("text/css; charset=utf-8", active_lesson_css())
         if route == "/api/state":
             return self.send_json(200, api_state())
+        if route == "/card":
+            page = card_page(urllib.parse.parse_qs(parsed.query).get("id", [""])[0])
+            if page is None:
+                return self.send_error(404)
+            return self.send_text("text/html; charset=utf-8", page.encode("utf-8"), {"Content-Security-Policy": PAGE_CSP})
         if route == "/favicon.ico":
             return self.send_file(os.path.join(DASH, "favicon.svg"))
         if route == "/api/health":
@@ -926,7 +1096,9 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as exc:
                 return self.send_json(400, {"error": str(exc)})
             added = append_block(entry)
-            return self.send_json(201 if added else 200, {"ok": True, "duplicate": not added})
+            new = sync_keepsakes() if added else []
+            return self.send_json(201 if added else 200, {"ok": True, "duplicate": not added,
+                                                          "keepsakes": [i["id"] for i in new]})
         return self.send_json(404, {"error": "no such endpoint"})
 
     def post_config(self, body):

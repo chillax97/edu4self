@@ -90,7 +90,7 @@ class ServerTest(unittest.TestCase):
     def test_state_has_everything_the_page_needs(self):
         code, d, _ = self.req("GET", "/api/state")
         self.assertEqual(code, 200)
-        self.assertEqual(set(d), {"state", "derived", "inbox", "blocks", "config", "server"})
+        self.assertEqual(set(d), {"state", "derived", "inbox", "blocks", "config", "keepsakes", "server"})
         self.assertEqual(d["state"]["learner"], "Tester")   # config.json's name may have been reset by another test
         self.assertEqual(d["server"]["port"], self.port)
         self.assertEqual(d["derived"]["topics"]["how-learning-works"]["stats"]["lessons"], 1)

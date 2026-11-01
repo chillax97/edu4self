@@ -3,7 +3,7 @@
 
 It records its arguments and working folder to $FAKE_CLAUDE_LOG, and acts out a tiny part of the job:
 for "check my inbox" it marks every pending inbox entry as processed in state.json, the way the real
-tutor would. FAKE_CLAUDE_SLEEP makes it slow, to test the "one run at a time" rule.
+tutor would, and for a gift it writes gifts/<id>.html. FAKE_CLAUDE_SLEEP makes it slow, to test the "one run at a time" rule.
 """
 import json
 import os
@@ -43,6 +43,13 @@ if "check my inbox" in prompt:
         json.dump(state, fh, indent=1)
     say({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": os.path.abspath(path)}}]}})
     say({"type": "assistant", "message": {"content": [{"type": "text", "text": "Graded %d submission(s)." % len(ids)}]}})
+elif "A surprise for the learner" in prompt:
+    import re
+    gid = re.search(r"gifts/([A-Za-z0-9-]+)\.html", prompt).group(1)
+    os.makedirs("gifts", exist_ok=True)
+    with open(os.path.join("gifts", gid + ".html"), "w") as fh:
+        fh.write("<!doctype html><title>A gift</title><p>A map of what you know.</p>")
+    say({"type": "assistant", "message": {"content": [{"type": "text", "text": "I made you a map."}]}})
 else:
     say({"type": "assistant", "message": {"content": [{"type": "text", "text": "You said: " + prompt[-200:]}]}})
 
