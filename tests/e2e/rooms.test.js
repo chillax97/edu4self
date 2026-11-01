@@ -66,6 +66,8 @@ before(async () => {
   const st = readJSON(path.join(v.vault, "_system", "state.json")), m = st.topics[0].milestones[0];
   m.steps[0].done = true;
   fs.writeFileSync(path.join(v.vault, "_system", "state.json"), JSON.stringify(st));
+  // goals the history above meets, so every room's shelf has trophies on it for the checks below
+  fs.writeFileSync(cfgPath, JSON.stringify({ goals: { day_minutes: 45, week_days: 2 } }));
   server = await startServer(v, await freePort());
   browser = await launch();
 });
@@ -89,6 +91,7 @@ for (const id of ROOMS) {
       for (const slot of REQUIRED) {
         assert.ok(await page.$(`.room [data-slot="${slot}"]`), `${id} has its ${slot} slot`);
       }
+      assert.ok(await page.$('.room [data-slot="shelf"] .ks-pile'), `${id} shows its shelf of trophies`);
       const job = await page.$eval('.room [data-slot="job"]', (e) => e.innerText.trim());
       assert.ok(job.length > 0, "the job line says something");
       assert.ok(await page.$('.room [data-slot="timer"] .bx-clock'), "the running block shows its timer");
