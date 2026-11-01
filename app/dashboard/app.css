@@ -924,6 +924,8 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .ks-row > * { flex: none; padding: 0 9px; border-bottom: 7px solid var(--ks-wood, var(--line-2)); box-shadow: 0 4px 0 color-mix(in srgb, var(--ks-wood, var(--line-2)) 50%, #000); }
 .ks-pile { position: relative; box-sizing: content-box; }
 .ks-i { position: absolute; display: block; transform-origin: 50% 100%; line-height: 0; }
+a.ks-i { padding: 0; margin: 0; border: 0; background: none; box-sizing: border-box; transition: translate .15s ease; }   /* rooms pad their links; a trophy is just its drawing */
+a.ks-i:hover, a.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .ks-i svg, .ks-art svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
 .ks-one { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; padding-bottom: 2px !important; }
 .ks-art { display: block; line-height: 0; transition: transform .15s ease; }

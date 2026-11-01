@@ -1695,20 +1695,24 @@
     return it.kind === "day" ? d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }) + (it.minutes ? " · " + it.minutes + " min" : "")
       : it.kind === "week" ? "week of " + d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "#" + it.n + " · " + d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   }
-  // one pile of day trophies: up to ten copies of the same drawing, placed by the room's stack style
+  // one pile of trophies: up to ten copies of the same drawing, placed by the room's stack style. Days
+  // and dice both pile up; a die in the pile is also the link to its printable card.
   function ksPile(group, art, isNew) {
     var stack = group[0].stack, box = ksBox(art), n = group.length;
-    var W = stack === "fan" ? 34 : stack === "heap" ? 26 : 40, h = W * box.h / box.w, items = "", wide = W, tall = h;
+    if (stack === "pile" && box.h > box.w * 1.1) stack = "row";   // a tall thing can't pile straight up; it stands
+    var W = stack === "fan" ? 34 : stack === "heap" ? 26 : stack === "row" ? Math.min(40, 50 * box.w / box.h) : 40, h = W * box.h / box.w, items = "", wide = W, tall = h;
     group.forEach(function (it, i) {
       var x, y, r;
       if (stack === "fan") { x = i * 5; y = i * 3; r = -12 + (i * 7) % 24; }
+      else if (stack === "row") { x = i * (W + 3); y = 0; r = ((i * 53) % 5 - 2) * 0.7; }
       else if (stack === "heap") {   // rows of 4, 3, 2, 1, each row resting in the dips of the one below
         var row = i < 4 ? 0 : i < 7 ? 1 : i < 9 ? 2 : 3, col = i - [0, 4, 7, 9][row];
         x = row * W * 0.42 + col * W * 0.84; y = row * h * 0.62; r = (i * 47) % 50 - 25;
       } else { x = ((i * 37) % 5) - 2; y = i * h * 0.86; r = ((i * 53) % 5 - 2) * 0.9; }
       wide = Math.max(wide, x + W); tall = Math.max(tall, y + h);
-      items += '<span class="ks-i' + (isNew[it.id] ? " is-new" : "") + '" style="left:' + x.toFixed(1) + "px;bottom:" + y.toFixed(1) + "px;width:" + W + "px;transform:rotate(" + r.toFixed(1) + 'deg)" title="' +
-        esc(cap(it.name) + " · " + ksWhen(it)) + '">' + art + "</span>";
+      var tag = it.kind === "day" ? "span" : "a", link = tag === "a" ? ' href="/card?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener"' : "";
+      items += "<" + tag + link + ' class="ks-i' + (isNew[it.id] ? " is-new" : "") + '" style="left:' + x.toFixed(1) + "px;bottom:" + y.toFixed(1) + "px;width:" + W + "px;transform:rotate(" + r.toFixed(1) + 'deg)" title="' +
+        esc(cap(it.name) + " · " + ksWhen(it) + (tag === "a" ? " · print the card" : "")) + '">' + art + "</" + tag + ">";
     });
     return '<div class="ks-pile ks-' + esc(stack) + '" style="width:' + Math.ceil(wide + 4) + "px;height:" + Math.ceil(tall + 6) + 'px" role="img" aria-label="' +
       esc(n + " " + (n === 1 ? group[0].name : group[0].plural)) + '">' + items + "</div>";
@@ -1731,17 +1735,20 @@
       var key = it.kind + ":" + it.name;
       if (!counts[key]) { counts[key] = { n: 0, it: it }; order.push(key); }
       counts[key].n++;
-      if (it.kind !== "day") return;
+      if (it.kind === "week") return;
       var g = byArt[it.art];
-      if (!g || g.length >= KS_PILE) { g = byArt[it.art] = []; groups.push({ art: it.art, list: g }); }
+      if (!g || g.length >= KS_PILE) { g = byArt[it.art] = []; groups.push({ kind: it.kind, art: it.art, list: g }); }
       g.push(it);
     });
-    var piles = groups.map(function (g) { return ksPile(g.list, K.art[g.art] || "", isNew); }).join("");
+    var piles = function (kind) { return groups.filter(function (g) { return g.kind === kind; }).map(function (g) { return ksPile(g.list, K.art[g.art] || "", isNew); }).join(""); };
+    // the newest die's gift sits beside the pile; every gift is also linked from its own card
+    var dieGift = items.filter(function (it) { return it.kind === "die" && /^gifts\//.test(it.gift || ""); }).pop();
+    var dice = piles("die") + (dieGift ? '<div class="ks-one"><a class="ks-gift" href="/vault/' + esc(dieGift.gift) + '" target="_blank" rel="noopener">a gift</a></div>' : "");
     var standing = function (kind) { return items.filter(function (it) { return it.kind === kind; }).map(function (it) { return ksStanding(it, K.art[it.art] || "", isNew); }).join(""); };
     var sum = order.map(function (k) { var c = counts[k]; return c.n + " " + (c.n === 1 ? c.it.name : c.it.plural); }).join(" · ");
-    // three shelves, like a bookcase: the piles of days, then the weeks, then the dice. Each object brings
-    // its own stretch of plank, so a shelf that wraps on a narrow screen still has wood under every row.
-    var shelves = [piles, standing("week"), standing("die")].filter(Boolean).map(function (row) { return '<div class="ks-row">' + row + "</div>"; }).join("");
+    // three shelves, like a bookcase: the piles of days, then the weeks, then the piles of dice. Each object
+    // brings its own stretch of plank, so a shelf that wraps on a narrow screen still has wood under every row.
+    var shelves = [piles("day"), standing("week"), dice].filter(Boolean).map(function (row) { return '<div class="ks-row">' + row + "</div>"; }).join("");
     return '<div class="ks-shelf">' + shelves + '<p class="ks-sum">' + esc(sum) + "</p></div>";
   }
   // after a paint: say hello to anything new, then remember it. The first visit ever only remembers.

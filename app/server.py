@@ -853,6 +853,8 @@ def card_page(item_id):
     facts = "%d focused minutes over %d day%s" % (mins, len(days), "" if len(days) == 1 else "s")
     rows = "".join("<li>%s</li>" % e(p) for p in proven[:12]) or "<li class=dim>Nothing graded in this stretch. The minutes still count.</li>"
     art = data["art"].get(item["art"], "")
+    gift = item.get("gift") or ""
+    gift = "<p><a href='/vault/%s'>Open the gift Claude made for this</a></p>" % e(gift) if gift.startswith("gifts/") and ".." not in gift else ""
     return ("<!doctype html><html lang=en><head><meta charset=utf-8><title>%(title)s</title>"
             "<meta name=viewport content='width=device-width,initial-scale=1'>"
             "<style>body{margin:0;background:#ddd;font:16px/1.5 Georgia,serif;display:grid;place-items:center;min-height:100vh}"
@@ -865,10 +867,10 @@ def card_page(item_id):
             "@media print{body{background:none}button{display:none}.card{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>"
             "<script src=/card.js defer></script></head><body><button type=button data-print>Print</button>"
             "<div class=card><div><div class=k>%(room)s · %(trophy)s</div><h1>%(title)s</h1><p>%(facts)s</p>"
-            "<div class=k>Proven</div><ul>%(rows)s</ul></div><div class=art>%(art)s</div>"
+            "<div class=k>Proven</div><ul>%(rows)s</ul>%(gift)s</div><div class=art>%(art)s</div>"
             "<div class=foot>%(learner)s · won %(won)s · edu4self</div></div></body></html>") % dict(
         title=e(title), bg=pal["bg"], ink=pal["ink"], muted=pal["muted"], accent=pal["accent"], line=pal["line"],
-        room=e(meta.get("name") or item["theme"]), trophy=e(item["name"]), facts=e(facts), rows=rows, art=art,
+        room=e(meta.get("name") or item["theme"]), trophy=e(item["name"]), facts=e(facts), rows=rows, art=art, gift=gift,
         learner=e(load_config()[0]["name"] or "you"), won=e(item["date"]))
 
 
