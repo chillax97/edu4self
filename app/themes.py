@@ -149,6 +149,100 @@ class _Sanitizer(HTMLParser):
         self.err("<?...> isn't allowed")
 
 
+# ---------------------------------------------------------------- trophies (keepsakes)
+# Each room draws three trophies: one for a day that met the goal (small, made to be stacked), one for a
+# week that met the goal, and one for a finished die. A trophy keeps the drawing of the room it was won
+# in, so a shelf can mix rooms. The drawing is one small SVG: shapes only, no ids, no references.
+KEEPSAKE_KINDS = ("day", "week", "die")
+KEEPSAKE_LINES = ("day", "week", "die", "gift")
+STACKS = ("pile", "fan", "heap")   # how day trophies stack: straight up, fanned out, or tossed in a heap
+ART_LIMIT = 4096
+DEFAULT_KEEPSAKES = {
+    "day": {"name": "star", "plural": "stars", "stack": "pile",
+            "art": '<svg viewBox="0 0 40 14"><rect x="1" y="2" width="38" height="10" rx="5" fill="#ffd166" stroke="#a87b12"/></svg>'},
+    "week": {"name": "ribbon", "plural": "ribbons", "stack": "pile",
+             "art": '<svg viewBox="0 0 40 60"><path d="M12 30 L6 58 L16 52 L20 60 L24 38 Z" fill="#c0392b"/><path d="M28 30 L34 58 L24 52 L20 60 L16 38 Z" fill="#a93226"/><circle cx="20" cy="22" r="18" fill="#ffd166" stroke="#a87b12" stroke-width="3"/></svg>'},
+    "die": {"name": "die", "plural": "dice", "stack": "pile",
+            "art": '<svg viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="8" fill="#f4f1ea" stroke="#8a7f6a" stroke-width="2"/><circle cx="15" cy="15" r="4" fill="#333"/><circle cx="33" cy="33" r="4" fill="#333"/><circle cx="24" cy="24" r="4" fill="#333"/></svg>'},
+    "lines": {},
+}
+
+
+class _ArtSanitizer(_Sanitizer):
+    """A trophy: one <svg> of plain shapes. It's copied into the learner's vault and drawn next to other
+    rooms' trophies, many times over, so ids and url(#...) references are out too (they would collide)."""
+
+    def _open(self, tag, attrs, closing):
+        if not self.out and tag != "svg":
+            return self.err("a trophy drawing starts with <svg>")
+        if tag not in SVG_TAGS or tag in ("text", "tspan"):
+            return self.err("<%s> isn't allowed in a trophy (shapes only)" % tag)
+        for name, value in attrs:
+            if name == "id" or "url(" in (value or "").lower():
+                return self.err("trophies can't use ids or url(#...) references (draw with plain fills)")
+        super()._open(tag, attrs, closing)
+
+    def handle_data(self, data):
+        if data.strip():
+            self.err("a trophy has no text, only shapes")
+
+
+def clean_art(text):
+    """(clean svg, [errors]) for one trophy drawing."""
+    if not isinstance(text, str) or not text.strip():
+        return "", ["the drawing is empty"]
+    if len(text.encode("utf-8")) > ART_LIMIT:
+        return "", ["a trophy drawing is over 4 KB"]
+    p = _ArtSanitizer()
+    p.feed(text.strip())
+    p.close()
+    while p.stack:
+        p.out.append("</%s>" % p.stack.pop())
+    out = "".join(p.out)
+    if not p.errors and (not out.startswith("<svg") or out.count("<svg") != 1):
+        p.errors.append("a trophy is exactly one <svg>")
+    if not p.errors and "viewbox=" not in out.lower():
+        p.errors.append("give the <svg> a viewBox so it scales")
+    return out, p.errors
+
+
+def clean_keepsakes(raw, errors):
+    """The theme's trophies, defaults filled in for anything it leaves out."""
+    if raw is None:
+        return json.loads(json.dumps(DEFAULT_KEEPSAKES))
+    if not isinstance(raw, dict):
+        errors.append("keepsakes must be an object with day, week, die and lines")
+        return json.loads(json.dumps(DEFAULT_KEEPSAKES))
+    out = {"lines": {}}
+    for k in KEEPSAKE_KINDS:
+        d = raw.get(k)
+        if d is None:
+            out[k] = dict(DEFAULT_KEEPSAKES[k])
+            continue
+        if not isinstance(d, dict):
+            errors.append("keepsakes.%s must be an object" % k)
+            out[k] = dict(DEFAULT_KEEPSAKES[k])
+            continue
+        e = {"name": _text(d.get("name"), 30, "keepsakes.%s.name" % k, errors)}
+        e["plural"] = _text(d.get("plural", e["name"] + "s"), 32, "keepsakes.%s.plural" % k, errors)
+        stack = d.get("stack", "pile")
+        if stack not in STACKS:
+            errors.append("keepsakes.%s.stack must be one of %s" % (k, ", ".join(STACKS)))
+            stack = "pile"
+        e["stack"] = stack
+        art, errs = clean_art(d.get("art"))
+        errors.extend("keepsakes.%s.art: %s" % (k, x) for x in errs)
+        e["art"] = art if not errs else DEFAULT_KEEPSAKES[k]["art"]
+        out[k] = e
+    lines = raw.get("lines") or {}
+    for k, v in (lines.items() if isinstance(lines, dict) else []):
+        if k not in KEEPSAKE_LINES:
+            errors.append("unknown keepsakes line %r (use %s)" % (k, ", ".join(KEEPSAKE_LINES)))
+        else:
+            out["lines"][k] = _text(v, 200, "keepsakes line %s" % k, errors)
+    return out
+
+
 def clean_layout(text):
     """(clean html, [errors]). The page only ever receives the clean version."""
     if len(text.encode("utf-8")) > LIMIT:
@@ -350,6 +444,7 @@ def clean_meta(raw, tid):
     if raw.get("scape", "night") not in SCAPES:
         errors.append("scape must be one of %s" % ", ".join(SCAPES))
     meta["scape"] = raw.get("scape", "night") if raw.get("scape", "night") in SCAPES else "night"
+    meta["keepsakes"] = clean_keepsakes(raw.get("keepsakes"), errors)
     return meta, errors
 
 

@@ -39,5 +39,11 @@
     "valentine": "Valentine's Day. Two crew members share a viewport. Attention, as they say, is all you need.",
     "music_quiet": "Comms are quiet. Press play, or listen to the hum of the station.",
     "music_none": "No signal on comms."
+  },
+  "keepsakes": {
+    "day": {"name": "mission patch", "plural": "mission patches", "stack": "fan", "art": "<svg viewBox=\"0 0 40 40\"><path d=\"M20 2 L37 12 L37 28 L20 38 L3 28 L3 12 Z\" fill=\"#1f3b73\" stroke=\"#5ad1ff\" stroke-width=\"2\"/><circle cx=\"20\" cy=\"20\" r=\"7\" fill=\"#ffb347\"/><path d=\"M10 26 Q20 14 30 26\" stroke=\"#e8eefc\" stroke-width=\"1.5\" fill=\"none\"/></svg>"},
+    "week": {"name": "medal", "plural": "medals", "art": "<svg viewBox=\"0 0 44 62\"><path d=\"M12 0 L22 20 L32 0 Z\" fill=\"#c0392b\"/><path d=\"M17 0 L22 12 L27 0 Z\" fill=\"#e8eefc\"/><circle cx=\"22\" cy=\"40\" r=\"18\" fill=\"#ffd166\" stroke=\"#a87b12\" stroke-width=\"3\"/><path d=\"M22 29 L25 37 L33 37 L27 42 L29 50 L22 45 L15 50 L17 42 L11 37 L19 37 Z\" fill=\"#a87b12\"/></svg>"},
+    "die": {"name": "core", "plural": "cores", "art": "<svg viewBox=\"0 0 40 60\"><rect x=\"6\" y=\"4\" width=\"28\" height=\"52\" rx=\"6\" fill=\"#0d2a4a\" stroke=\"#5ad1ff\" stroke-width=\"2\"/><rect x=\"12\" y=\"11\" width=\"16\" height=\"38\" rx=\"3\" fill=\"#5ad1ff\" opacity=\".8\"/><rect x=\"4\" y=\"2\" width=\"32\" height=\"5\" rx=\"2\" fill=\"#7b8db8\"/><rect x=\"4\" y=\"53\" width=\"32\" height=\"5\" rx=\"2\" fill=\"#7b8db8\"/></svg>"},
+    "lines": {"day": "Shift complete. Another patch for the wall.", "week": "Week goal met. Station AI is pinning a medal on you. Hold still.", "die": "A core, fully charged. It's in the cargo bay now.", "gift": "Station AI left something in the cargo bay."}
   }
 }

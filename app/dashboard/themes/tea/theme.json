@@ -42,5 +42,11 @@
     "valentine": "Valentine's Day. Two guests share one pot. It steeps slower that way.",
     "music_quiet": "The kettle is quiet. Press play, or listen to the rain on the paper screens.",
     "music_none": "The kettle is cold."
+  },
+  "keepsakes": {
+    "day": {"name": "tea bowl", "plural": "tea bowls", "stack": "pile", "art": "<svg viewBox=\"0 0 40 14\"><path d=\"M2 2 H38 Q36 12 20 12 Q4 12 2 2 Z\" fill=\"#6b8f4e\" stroke=\"#3f5a2b\"/><rect x=\"2\" y=\"1\" width=\"36\" height=\"2.5\" rx=\"1.2\" fill=\"#e9dfc6\" stroke=\"#3f5a2b\" stroke-width=\".6\"/></svg>"},
+    "week": {"name": "teapot", "plural": "teapots", "art": "<svg viewBox=\"0 0 60 46\"><ellipse cx=\"28\" cy=\"28\" rx=\"20\" ry=\"15\" fill=\"#a0522d\" stroke=\"#5e2f17\" stroke-width=\"2\"/><path d=\"M47 24 Q58 20 56 10\" stroke=\"#5e2f17\" stroke-width=\"4\" fill=\"none\"/><path d=\"M9 22 Q0 26 6 36\" stroke=\"#5e2f17\" stroke-width=\"3\" fill=\"none\"/><rect x=\"20\" y=\"9\" width=\"16\" height=\"5\" rx=\"2\" fill=\"#5e2f17\"/><circle cx=\"28\" cy=\"7\" r=\"3\" fill=\"#5e2f17\"/></svg>"},
+    "die": {"name": "tin", "plural": "tins", "art": "<svg viewBox=\"0 0 40 52\"><rect x=\"4\" y=\"8\" width=\"32\" height=\"42\" rx=\"3\" fill=\"#2f5d4a\" stroke=\"#1d3a2e\" stroke-width=\"2\"/><rect x=\"2\" y=\"4\" width=\"36\" height=\"8\" rx=\"2\" fill=\"#c9a24a\" stroke=\"#8a6d2a\"/><rect x=\"10\" y=\"20\" width=\"20\" height=\"18\" rx=\"2\" fill=\"#e9dfc6\"/><path d=\"M20 24 Q14 29 20 34 Q26 29 20 24 Z\" fill=\"#6b8f4e\"/></svg>"},
+    "lines": {"day": "Today's cup is finished. The bowl goes on the stack.", "week": "A whole week of steeping. The tea master sets out a teapot for you.", "die": "A tin, filled to the lid. It joins the others on the shelf.", "gift": "The tea master left something by your cup. It's on the shelf."}
   }
 }
