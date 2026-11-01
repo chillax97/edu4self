@@ -155,14 +155,15 @@ class _Sanitizer(HTMLParser):
 # in, so a shelf can mix rooms. The drawing is one small SVG: shapes only, no ids, no references.
 KEEPSAKE_KINDS = ("day", "week", "die")
 KEEPSAKE_LINES = ("day", "week", "die", "gift")
-STACKS = ("pile", "fan", "heap")   # how day trophies stack: straight up, fanned out, or tossed in a heap
+STACKS = ("pile", "fan", "heap", "row")   # how day and die trophies gather: straight up, fanned out, tossed in a
+                                          # heap, or standing side by side like books on a shelf
 ART_LIMIT = 4096
 DEFAULT_KEEPSAKES = {
     "day": {"name": "star", "plural": "stars", "stack": "pile",
             "art": '<svg viewBox="0 0 40 14"><rect x="1" y="2" width="38" height="10" rx="5" fill="#ffd166" stroke="#a87b12"/></svg>'},
     "week": {"name": "ribbon", "plural": "ribbons", "stack": "pile",
              "art": '<svg viewBox="0 0 40 60"><path d="M12 30 L6 58 L16 52 L20 60 L24 38 Z" fill="#c0392b"/><path d="M28 30 L34 58 L24 52 L20 60 L16 38 Z" fill="#a93226"/><circle cx="20" cy="22" r="18" fill="#ffd166" stroke="#a87b12" stroke-width="3"/></svg>'},
-    "die": {"name": "die", "plural": "dice", "stack": "pile",
+    "die": {"name": "die", "plural": "dice", "stack": "heap",
             "art": '<svg viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="8" fill="#f4f1ea" stroke="#8a7f6a" stroke-width="2"/><circle cx="15" cy="15" r="4" fill="#333"/><circle cx="33" cy="33" r="4" fill="#333"/><circle cx="24" cy="24" r="4" fill="#333"/></svg>'},
     "lines": {},
 }
