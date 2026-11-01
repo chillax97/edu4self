@@ -33,7 +33,7 @@ How the five built-ins map the same things:
 | sound | night | rain | noise | rain | rain |
 | day trophy (stacks) | bottle cap | book | mission patch | ticket stub | tea bowl |
 | week trophy | neon sign | brass bookend | medal | postcard | teapot |
-| die trophy | die | volume | core | ticket book | tin |
+| die trophy (stacks) | chip | volume | core | ticket book | tin |
 
 ## Making one, step by step
 
@@ -51,9 +51,10 @@ Each step ends with how you know it's done.
    fonts, the words from step 1, voices, three sign names, five to ten gags, and the lines.
 4. **Make the trophies** (`keepsakes` in `theme.json`, reference below): one for a day that met the
    goal, one for a week, one for a finished die, plus the host's line for each and for a gift. They
-   follow the same rule as everything else: a stranger knows what each one is. The day trophy is won
-   most often and is drawn stacked, up to ten in a pile, so make it something that piles up well
-   (flat and wide for `pile`, a card or a ticket for `fan`, something small and loose for `heap`).
+   follow the same rule as everything else: a stranger knows what each one is, and each is a thing
+   you could hold. Day and die trophies are drawn stacked, up to ten to a pile, so make them things
+   that gather well (flat and wide for `pile`, a card or a ticket for `fan`, something small and loose
+   for `heap`, something tall that stands up, like a book or a jar, for `row`).
    Trophies leave the room: they stay on the learner's shelf in every room they move to afterwards,
    so each drawing should look good on any background. *Done when all three drawings pass the check
    and a pile of ten of the day trophy reads as a pile, not a smear.*
@@ -171,8 +172,9 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
   `polygon`, `polyline`, `g`), up to 4 KB. No text, no `id`, no `url(#…)`: the drawing is copied into
   the learner's vault and drawn many times next to other rooms' trophies, so it must stand alone.
   Plain fills and strokes only.
-- **stack** (day only matters): `pile` straight up, `fan` fanned out like cards, `heap` tossed in a
-  mound. The day drawing is shown 40 px wide in a pile, 34 px in a fan, 26 px in a heap.
+- **stack** (day and die; weeks stand alone): `pile` straight up, `fan` fanned out like cards, `heap`
+  tossed in a mound, `row` standing side by side like books on a shelf. Drawn 40 px wide in a pile,
+  34 px in a fan, 26 px in a heap, 50 px tall in a row. A tall drawing set to `pile` stands in a row.
 - **lines**: what the host says when a trophy is won today, and when Claude's gift is ready.
 - Leave `keepsakes` out and the room gets plain ones (a star, a ribbon, a die). A drawing that fails
   the check is named by `edu4self check` and replaced by the plain one until fixed.
@@ -181,7 +183,8 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 
 What happens to them: the server awards trophies as blocks are saved (`_system/keepsakes.json`); a
 week or a die won now also gets a gift, a page Claude makes from what the learner proved; every week
-and die has a printable card at `/card?id=…`, in the colours of the room it was won in.
+and die has a printable card at `/card?id=…`, in the colours of the room it was won in (click a die
+in its pile, or a week), and the card links the gift.
 
 ### layout.html
 
