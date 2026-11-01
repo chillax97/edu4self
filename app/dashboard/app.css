@@ -914,3 +914,26 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
   .topbar-actions { order: 3; width: 100%; }
   .topbar-actions .btn { flex: 1; justify-content: center; padding-left: .4rem; padding-right: .4rem; }
 }
+
+/* ---------------------------------------------------------------- the shelf (trophies)
+   Each trophy is the drawing of the room it was won in. Day trophies stack into piles (positions set
+   in app.js: ksPile); weeks and dice stand in a row. A room may set --ks-wood (the plank colour) on .room and restyle .room .ks-sum. */
+.ks-shelf { margin-top: 4px; }
+.ks-row { display: flex; flex-wrap: wrap; align-items: flex-end; row-gap: 18px; padding-top: 12px; }
+.ks-row + .ks-row { margin-top: 6px; }
+.ks-row > * { flex: none; padding: 0 9px; border-bottom: 7px solid var(--ks-wood, var(--line-2)); box-shadow: 0 4px 0 color-mix(in srgb, var(--ks-wood, var(--line-2)) 50%, #000); }
+.ks-pile { position: relative; box-sizing: content-box; }
+.ks-i { position: absolute; display: block; transform-origin: 50% 100%; line-height: 0; }
+.ks-i svg, .ks-art svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.ks-one { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; padding-bottom: 2px !important; }
+.ks-art { display: block; line-height: 0; transition: transform .15s ease; }
+.ks-art:hover, .ks-art:focus-visible { transform: translateY(-3px); }
+.ks-gift { font: 600 11px var(--sans); letter-spacing: .04em; color: var(--ink); background: color-mix(in srgb, var(--bar-amber, #e8870e) 30%, transparent);
+  border-radius: 999px; padding: 1px 8px; text-decoration: none; }
+.ks-sum { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+.room { --ks-wood: var(--bx-edge); }
+.room .ks-sum { font: 400 12.5px/1.45 var(--bx-mono); color: var(--bx-dim); }
+.ks-shelf.is-empty .ks-sum { margin: 0; }
+.ks-i.is-new, .ks-one.is-new .ks-art { animation: ks-drop .7s cubic-bezier(.3,1.4,.5,1) both; }
+@keyframes ks-drop { from { translate: 0 -60px; opacity: 0; } 60% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ks-i.is-new, .ks-one.is-new .ks-art { animation: none; } }

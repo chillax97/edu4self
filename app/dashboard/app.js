@@ -155,6 +155,7 @@
       paintWater();
       renderStatus();
       musicSync();
+      shelfNews();
       return;
     }
     app.innerHTML =
@@ -172,6 +173,7 @@
           renderCoach(st.coach) +
           renderHero(hero) +
           renderQueue(all, hero) +
+          shelfCard("Your shelf") +
           topics.map(renderTopic).join("") +
           renderLinked() +
         '</div>' +
@@ -189,6 +191,7 @@
     if (away >= IDLE_DAYS && !pick.touched && !active && pick.minutes !== 25) { pick.minutes = 25; paintControls(); }
     renderStatus();
     musicSync();
+    shelfNews();
   }
 
   function renderStatus() {
@@ -1488,6 +1491,13 @@
   function occasionLines(hero, S, t, d) {
     var O = [], now = new Date(), hr = now.getHours(), wd = now.getDay(), md = String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
     function add(p, v, text, id) { O.push([p, v, text, id]); }
+    // a trophy won today: the host says so, in the room's words
+    var ksl = (THEME && THEME.meta.keepsakes && THEME.meta.keepsakes.lines) || {}, todayKey = dayKey(now);
+    (ksData().items || []).forEach(function (it) {
+      if (it.backfill || dayKey(new Date(it.ts)) !== todayKey) return;
+      if (ksl[it.kind]) add(it.kind === "day" ? 84 : 94, "bartender", ksl[it.kind], "ks-" + it.id);
+      if (/^gifts\//.test(it.gift || "") && ksl.gift) add(95, "bartender", ksl.gift, "ksg-" + it.id);
+    });
     if (active) {
       var el = (Date.now() - active.start) / 60000, left = (active.end - Date.now()) / 60000;
       if (el < 3) add(90, "volition", "Clock's running. The first five minutes are the hardest, and you're in them.", "a-start");
@@ -1668,6 +1678,96 @@
     }).join("");
   }
 
+  // ---------------------------------------------------------------- the shelf (trophies)
+  // The server awards trophies (app/keepsakes.py) and keeps each one's drawing from the room it was won
+  // in, so a shelf can hold bottle caps from the bar next to books from the library. Day trophies stack
+  // into real piles of ten; weeks and dice stand in a row, each with a printable card and maybe a gift.
+  var KS_SEEN = "edu.keepsakes.seen.v1", KS_PILE = 10;
+  function ksData() { return (DATA && DATA.keepsakes) || { items: [], art: {} }; }
+  function ksLook(kind) { return (THEME && THEME.meta.keepsakes && THEME.meta.keepsakes[kind]) || { name: kind, plural: kind + "s" }; }
+  function ksBox(art) {
+    var m = /viewbox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(art || "");
+    return m && +m[1] > 0 ? { w: +m[1], h: +m[2] } : { w: 1, h: 1 };
+  }
+  function ksSeen() { try { return JSON.parse(store(KS_SEEN) || "null"); } catch (e) { return null; } }
+  function ksWhen(it) {
+    var d = new Date(it.date + "T12:00:00");
+    return it.kind === "day" ? d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }) + (it.minutes ? " · " + it.minutes + " min" : "")
+      : it.kind === "week" ? "week of " + d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "#" + it.n + " · " + d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  }
+  // one pile of day trophies: up to ten copies of the same drawing, placed by the room's stack style
+  function ksPile(group, art, isNew) {
+    var stack = group[0].stack, box = ksBox(art), n = group.length;
+    var W = stack === "fan" ? 34 : stack === "heap" ? 26 : 40, h = W * box.h / box.w, items = "", wide = W, tall = h;
+    group.forEach(function (it, i) {
+      var x, y, r;
+      if (stack === "fan") { x = i * 5; y = i * 3; r = -12 + (i * 7) % 24; }
+      else if (stack === "heap") {   // rows of 4, 3, 2, 1, each row resting in the dips of the one below
+        var row = i < 4 ? 0 : i < 7 ? 1 : i < 9 ? 2 : 3, col = i - [0, 4, 7, 9][row];
+        x = row * W * 0.42 + col * W * 0.84; y = row * h * 0.62; r = (i * 47) % 50 - 25;
+      } else { x = ((i * 37) % 5) - 2; y = i * h * 0.86; r = ((i * 53) % 5 - 2) * 0.9; }
+      wide = Math.max(wide, x + W); tall = Math.max(tall, y + h);
+      items += '<span class="ks-i' + (isNew[it.id] ? " is-new" : "") + '" style="left:' + x.toFixed(1) + "px;bottom:" + y.toFixed(1) + "px;width:" + W + "px;transform:rotate(" + r.toFixed(1) + 'deg)" title="' +
+        esc(cap(it.name) + " · " + ksWhen(it)) + '">' + art + "</span>";
+    });
+    return '<div class="ks-pile ks-' + esc(stack) + '" style="width:' + Math.ceil(wide + 4) + "px;height:" + Math.ceil(tall + 6) + 'px" role="img" aria-label="' +
+      esc(n + " " + (n === 1 ? group[0].name : group[0].plural)) + '">' + items + "</div>";
+  }
+  function ksStanding(it, art, isNew) {
+    var W = it.kind === "die" ? 34 : 46;
+    return '<div class="ks-one' + (isNew[it.id] ? " is-new" : "") + '"><a class="ks-art" href="/card?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener" style="width:' + W + 'px" title="' +
+      esc(cap(it.name) + " · " + ksWhen(it) + " · print the card") + '">' + art + "</a>" +
+      (/^gifts\//.test(it.gift || "") ? '<a class="ks-gift" href="/vault/' + esc(it.gift) + '" target="_blank" rel="noopener">a gift</a>' : "") + "</div>";
+  }
+  function shelfHTML() {
+    var K = ksData(), items = K.items || [], seen = ksSeen() || {}, isNew = {};
+    items.forEach(function (it) { if (!it.backfill && !seen[it.id]) isNew[it.id] = true; });
+    if (!items.length) {
+      var day = ksLook("day");
+      return '<div class="ks-shelf is-empty"><p class="ks-sum">An empty shelf. Reach today\'s goal (' + DAY_GOAL_MIN + " min) and the first " + esc(day.name) + " goes here.</p></div>";
+    }
+    var groups = [], byArt = {}, counts = {}, order = [];
+    items.forEach(function (it) {
+      var key = it.kind + ":" + it.name;
+      if (!counts[key]) { counts[key] = { n: 0, it: it }; order.push(key); }
+      counts[key].n++;
+      if (it.kind !== "day") return;
+      var g = byArt[it.art];
+      if (!g || g.length >= KS_PILE) { g = byArt[it.art] = []; groups.push({ art: it.art, list: g }); }
+      g.push(it);
+    });
+    var piles = groups.map(function (g) { return ksPile(g.list, K.art[g.art] || "", isNew); }).join("");
+    var standing = function (kind) { return items.filter(function (it) { return it.kind === kind; }).map(function (it) { return ksStanding(it, K.art[it.art] || "", isNew); }).join(""); };
+    var sum = order.map(function (k) { var c = counts[k]; return c.n + " " + (c.n === 1 ? c.it.name : c.it.plural); }).join(" · ");
+    // three shelves, like a bookcase: the piles of days, then the weeks, then the dice. Each object brings
+    // its own stretch of plank, so a shelf that wraps on a narrow screen still has wood under every row.
+    var shelves = [piles, standing("week"), standing("die")].filter(Boolean).map(function (row) { return '<div class="ks-row">' + row + "</div>"; }).join("");
+    return '<div class="ks-shelf">' + shelves + '<p class="ks-sum">' + esc(sum) + "</p></div>";
+  }
+  // after a paint: say hello to anything new, then remember it. The first visit ever only remembers.
+  function shelfNews() {
+    var K = ksData(), seen = ksSeen(), first = !seen, news = [];
+    seen = seen || {};
+    (K.items || []).forEach(function (it) {
+      if (!seen[it.id]) { if (!first && !it.backfill) news.push(it); seen[it.id] = 1; }
+      var gk = "gift:" + it.id;
+      if (/^gifts\//.test(it.gift || "") && !seen[gk]) { if (!first) news.push({ gift: it }); seen[gk] = 1; }
+    });
+    store(KS_SEEN, JSON.stringify(seen));
+    var last = news[news.length - 1];
+    if (!last) return;
+    var lines = (THEME && THEME.meta.keepsakes && THEME.meta.keepsakes.lines) || {};
+    if (last.gift) {
+      toast('<span>🎁</span><span><b>' + esc(lines.gift || "Someone left you something on the shelf.") + '</b> <a href="/vault/' + esc(last.gift.gift) + '" target="_blank" rel="noopener">Open it</a></span>', 12000);
+    } else {
+      toast('<span>🏆</span><span><b>' + esc(lines[last.kind] || "A " + last.name + " for your shelf.") + "</b>" +
+        (last.kind !== "day" ? ' <a href="/card?id=' + encodeURIComponent(last.id) + '" target="_blank" rel="noopener">Print the card</a>' : "") + "</span>", 9000);
+    }
+  }
+  function shelfCard(title) {
+    return '<section class="card ks-card"><div class="card-head"><h2 class="card-title">' + esc(title) + "</h2></div>" + shelfHTML() + "</section>";
+  }
+
   function renderBar(hero, topics, live) {
     var nm = barName(), room = barRoom();
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
@@ -1677,7 +1777,7 @@
     if (room === "back") {
       var list = allBlocks();
       return '<div class="room t-' + esc(THEME.meta.id) + ' is-back"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
-        '<div class="bx-back">' +
+        '<div class="bx-back">' + shelfCard("The shelf") +
           (list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "") +
           live.map(renderMilestones).join("") + renderGates(live) +
           live.map(renderEvidence).join("") + live.map(renderSkills).join("") +
@@ -1700,7 +1800,7 @@
         (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "",
       voices: barLines2HTML(hero), job: barJob(hero), replies: barReplies(hero),
       keys: "Press <kbd>1</kbd>–<kbd>9</kbd> to reply.",
-      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: ""
+      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: shelfHTML()
     };
     var tpl = document.createElement("template");
     tpl.innerHTML = THEME.layout;   // cleaned by the server: no scripts, handlers, links or ids
