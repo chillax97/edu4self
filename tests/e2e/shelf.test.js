@@ -32,7 +32,7 @@ after(async () => {
 test("day trophies are drawn as real stacks: one drawing per day, ten to a pile, both rooms on one shelf", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.waitForSelector('.room [data-slot="shelf"] .ks-pile');
-  const piles = await page.$$eval('.room [data-slot="shelf"] .ks-pile', (ps) => ps.map((p) => ({
+  const piles = await page.$$eval('.room [data-slot="shelf"] .ks-pile:has(span.ks-i)', (ps) => ps.map((p) => ({   // day piles (dice are links)
     n: p.querySelectorAll(".ks-i svg").length,
     label: p.getAttribute("aria-label"),
     tops: [...p.querySelectorAll(".ks-i")].map((i) => i.getBoundingClientRect().top),
@@ -45,6 +45,18 @@ test("day trophies are drawn as real stacks: one drawing per day, ten to a pile,
   assert.ok(Math.max(...tall.tops) - Math.min(...tall.tops) > 30, "a full pile is visibly taller than one item");
   assert.match(await page.$eval('.room [data-slot="shelf"] .ks-sum', (e) => e.innerText), /15 books · .* mission patches/);
   assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
+
+test("dice pile up too: one drawing per finished die, each one opening its own card", async () => {
+  const dies = (await (await fetch(server.url + "api/state")).json()).keepsakes.items.filter((i) => i.kind === "die");
+  assert.ok(dies.length >= 2, "the history finishes at least two dies");
+  const page = await openPage(browser, server.url, { view: "bar" });
+  await page.waitForSelector('.room [data-slot="shelf"] .ks-pile a.ks-i');
+  const links = await page.$$eval('.room [data-slot="shelf"] .ks-pile a.ks-i', (l) => l.map((a) => ({ href: a.getAttribute("href"), w: a.querySelector("svg").getBoundingClientRect().width })));
+  assert.deepEqual(links.map((l) => l.href).sort(), dies.map((d) => "/card?id=" + d.id).sort());
+  assert.ok(links.every((l) => l.w >= 20), "each die is drawn full size, not squeezed: " + JSON.stringify(links));
+  assert.equal(await page.$$eval('.room [data-slot="shelf"] .ks-one a[href^="/card?id=die-"]', (l) => l.length), 0, "no die stands alone any more");
   await closePage(page);
 });
 

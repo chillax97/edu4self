@@ -214,5 +214,15 @@ class CheckTest(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TrophyStackTest(unittest.TestCase):
+    def test_dice_can_stand_in_a_row_and_a_made_up_stack_is_named(self):
+        raw = {"die": {"name": "volume", "stack": "row", "art": '<svg viewBox="0 0 30 64"><rect width="30" height="64"/></svg>'}}
+        errors = []
+        self.assertEqual(themes.clean_keepsakes(raw, errors)["die"]["stack"], "row")
+        self.assertEqual(errors, [])
+        raw["die"]["stack"] = "tower"
+        themes.clean_keepsakes(raw, errors)
+        self.assertTrue(any("stack" in e for e in errors), errors)
+
 if __name__ == "__main__":
     unittest.main()
