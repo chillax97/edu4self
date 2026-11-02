@@ -17,6 +17,7 @@ edu4self is three small programs around one folder of plain files.
 | server | `app/server.py` | serves the page, a JSON API, vault files and music; validates everything it writes |
 | page | `app/dashboard/index.html`, `app.js`, `app.css`, `fonts/` | renders state; submissions, blocks, Settings |
 | rooms | `app/themes.py`, `app/dashboard/themes/<id>/` | load, check and clean rooms (built-in and the vault's own) |
+| MCP | `app/mcp_server.py` | `edu4self mcp`: progress for any AI tool over MCP (stdio); reads `/api/state`, notes go through `/api/inbox` |
 | reminders | `app/reminders.py` | when a nudge or the Sunday recap is due, presence, notifications, mail |
 | trophies | `app/keepsakes.py` | what the blocks have won (day, week, die), kept with the drawing of the room it was won in |
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |

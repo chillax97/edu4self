@@ -6,6 +6,9 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Your progress in any AI tool: `./edu4self mcp` is an MCP server. Claude, Codex, Cursor and other
+  MCP clients can read your progress, next task (with its rules) and proven work, and leave your tutor
+  a note. They can't submit or grade. See `docs/MCP.md`.
 - Reminders. One nudge on a day you haven't studied, only when something opens today or your
   week needs today, after an hour at the computer, never during a block. A desktop notification,
   and mail from your own account (`./edu4self mail setup`). Every Sunday, a recap of your week,

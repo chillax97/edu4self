@@ -145,6 +145,8 @@ while you study. Starting at login is automated on macOS (launchd) and Linux (sy
 | `./edu4self restart` / `status` | restart the service / show what's running |
 | `./edu4self check` | validate the vault (Claude runs this after every update) |
 | `./edu4self doctor` | check everything and say how to fix what's wrong |
+| `./edu4self mail setup` | reminders and the Sunday recap by mail, from your own account |
+| `./edu4self mcp` | your progress for any AI tool that speaks MCP ([how](docs/MCP.md)) |
 
 Update with `git pull` and `./edu4self restart`. The code and your data live in different folders,
 so updating never touches your vault.
@@ -175,6 +177,7 @@ Obsidian" in Settings), and works with git if you want history.
 - [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
 - [Rooms](docs/THEMES.md): how a room is made, for you or your agent
 - [The Claude protocol](docs/PROTOCOL.md): the contract between the dashboard and the tutor
+- [MCP](docs/MCP.md): your progress in Claude, Codex, Cursor or any MCP tool
 - [Architecture](docs/ARCHITECTURE.md): files, API, data flow, security model
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
 
@@ -183,7 +186,10 @@ Obsidian" in Settings), and works with git if you want history.
 The server binds to `127.0.0.1` only and refuses requests from other sites. The page loads nothing from
 the internet (fonts are bundled), with one exception you choose: if you pick a radio station for the
 jukebox, the page connects to that station while it plays. Your submissions, blocks, settings and music stay in your vault. Claude
-reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms.
+reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms. If you connect
+another AI tool over MCP, it sees your progress and sends it to its own model under its own terms.
+If you set up mail, reminders go out through your own mail account; its password stays in
+`~/.config/edu4self/`, outside the vault.
 
 ## Credits
 
