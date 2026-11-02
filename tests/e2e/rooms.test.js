@@ -127,6 +127,7 @@ test("Settings switches the room and turns themed lessons off", async () => {
   await page.click('input[name="set-theme"][value="library"]');
   await page.click("#set-theme-lessons");
   assert.equal(await page.$eval("#set-gifts", (e) => e.checked), true, "gifts start on");
+  await page.$eval("#set-gifts", (e) => e.scrollIntoView({ block: "center" }));   // out from under the sticky Save bar
   await page.click("#set-gifts");
   await page.click("#set-save");
   await page.waitForSelector(".room.t-library", { timeout: 5000 });
