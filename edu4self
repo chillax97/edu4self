@@ -11,6 +11,7 @@
     ./edu4self doctor                check everything and say how to fix what's wrong
     ./edu4self open                  open the dashboard in a browser
     ./edu4self mail setup|test|off   reminders and the Sunday recap by mail (your own account)
+    ./edu4self mcp                   your progress for any AI tool that speaks MCP (see docs/MCP.md)
 
 The vault and port are remembered in ~/.config/edu4self/settings.json after init.
 """
@@ -480,6 +481,15 @@ def ask(prompt, default):
     return got or default
 
 
+def cmd_mcp(args):
+    """Serve MCP on stdin/stdout for an AI tool. It reads the running dashboard, so no vault flag needed."""
+    sys.path.insert(0, APP)
+    import mcp_server
+    _, port = resolve(args)
+    mcp_server.serve(port)
+    return 0
+
+
 def cmd_mail(args):
     """Set up, test or remove the mail account used for reminders. It's kept outside the vault."""
     sys.path.insert(0, APP)
@@ -575,6 +585,7 @@ def main(argv=None):
                     ("status", "what's running"), ("check", "validate the vault"), ("doctor", "check everything"),
                     ("open", "open the dashboard")):
         common(sub.add_parser(name, help=h))
+    common(sub.add_parser("mcp", help="progress for AI tools over MCP (stdio)"), vault=False)
     p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
     p.add_argument("action", choices=("setup", "test", "off"))
     args = ap.parse_args(argv)
@@ -587,7 +598,7 @@ def main(argv=None):
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
             "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,
-            "open": cmd_open, "mail": cmd_mail}[args.cmd](args)
+            "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
 
 
 if __name__ == "__main__":
