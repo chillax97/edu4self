@@ -2375,6 +2375,9 @@
       '<p class="set-hint">Where you study. Each room has its own layout, colours, voices and jokes; your goals, blocks and lessons stay the same. ' +
         'To make your own, ask Claude for one (it follows <code>docs/THEMES.md</code>).</p>' +
       '<div class="set-rooms" role="radiogroup" aria-label="Room">' + roomPicks(c) + "</div>" +
+      '<div class="set-share"><a class="btn btn-ghost btn-sm" id="set-room-export" href="/api/themes/export?id=' + encodeURIComponent(c.theme || "bar") + '" download>Save this room to share</a>' +
+        '<label class="btn btn-ghost btn-sm">Add a room someone shared<input type="file" id="set-room-import" accept=".room,application/json" hidden></label>' +
+        '<span class="set-hint" id="set-room-msg" role="status"></span></div>' +
       '<label class="set-check"><input type="checkbox" id="set-theme-lessons"' + (c.theme_lessons !== false ? " checked" : "") + "> Lessons wear the room's look (off: the plain default lesson pages)</label>" +
 
       '<h3 id="set-goals">Goals</h3>' +
@@ -2572,7 +2575,31 @@
     } else if (t.id === "set-mu-url" && t.value.trim()) {
       var o = document.querySelector('input[name="set-mu-station"][value="other"]'); if (o) o.checked = true;
     } else if (t.id === "set-mu-file" && t.files[0]) uploadMusic(t.files[0]);
+    else if (t.name === "set-theme") $("#set-room-export").href = "/api/themes/export?id=" + encodeURIComponent(t.value);
+    else if (t.id === "set-room-import" && t.files[0]) importRoom(t.files[0], t);
   });
+
+  // a room someone shared: the server checks it and refuses anything off; it never replaces a room
+  function importRoom(file, input) {
+    var msg = $("#set-room-msg");
+    msg.textContent = "Checking " + file.name + "…";
+    file.text().then(function (text) {
+      var room;
+      try { room = JSON.parse(text); } catch (e) { throw new Error("That file isn't an edu4self room."); }
+      return fetch("/api/themes/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room: room }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Couldn't add it."); return j; }); });
+    }).then(function (j) {
+      return fetch("/api/themes", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (all) {
+        setRooms = all.themes || [];
+        var keep = document.querySelector('input[name="set-theme"]:checked');
+        $(".set-rooms").innerHTML = roomPicks({ theme: keep ? keep.value : setDraft.theme });
+        var pick = document.querySelector('input[name="set-theme"][value="' + j.id + '"]');
+        if (pick) { pick.checked = true; $("#set-room-export").href = "/api/themes/export?id=" + encodeURIComponent(j.id); }
+        msg.textContent = "Added the room " + j.id + ". It's picked; press Save to move in.";
+      });
+    }).catch(function (e) { msg.textContent = "Not added: " + e.message; })
+      .then(function () { input.value = ""; });
+  }
 
   // straight to disk, with a progress bar; saved as soon as it lands
   function uploadMusic(file) {

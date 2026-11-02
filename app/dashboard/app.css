@@ -939,3 +939,6 @@ a.ks-i:hover, a.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .ks-i.is-new, .ks-one.is-new .ks-art { animation: ks-drop .7s cubic-bezier(.3,1.4,.5,1) both; }
 @keyframes ks-drop { from { translate: 0 -60px; opacity: 0; } 60% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ks-i.is-new, .ks-one.is-new .ks-art { animation: none; } }
+
+.set-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
+.set-share label.btn { cursor: pointer; }
