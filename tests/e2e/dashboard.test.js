@@ -88,9 +88,12 @@ test("the soundscape plays, makes real sound, and switches without a file or the
       await page.click('.bx-music [data-mu="toggle"]');
     }
     await page.waitForFunction(() => document.body.classList.contains("music-on"));
-    await sleep(2500);   // the chords fade in over two seconds
-    const rms = await level(page);
-    assert.ok(rms > 0.002, id + " is audible: rms " + rms.toFixed(4));
+    // "night" is music with gaps (a chord every 3.3 s that fades before the next), so one 43 ms sample can
+    // land in a gap on a slow machine. Audible means: the loudest moment over 1.5 s, after the fade-in.
+    await sleep(2000);
+    let rms = 0;
+    for (let i = 0; i < 15; i++) { rms = Math.max(rms, await level(page)); await sleep(100); }
+    assert.ok(rms > 0.002, id + " is audible: loudest rms " + rms.toFixed(4));
   }
   assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.scape, "noise");
   await page.click('.bx-music [data-mu="toggle"]');
