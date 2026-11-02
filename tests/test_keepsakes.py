@@ -205,6 +205,24 @@ class ServerTest(unittest.TestCase):
         self.assertNotIn("onload", art)
         self.assertNotIn("<script", art)
 
+    def test_5_with_gifts_off_a_new_trophy_keeps_its_place_but_no_claude_run_starts(self):
+        path = os.path.join(self.vault, "_system", "keepsakes.json")
+        cfg = os.path.join(self.vault, "_system", "config.json")
+        write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": False})
+        data = keepsakes.load(path)
+        data["items"].append({"id": "die-99", "kind": "die", "n": 99, "date": "2026-11-01", "ts": "2026-11-01T10:00:00Z",
+                              "theme": "library", "name": "volume", "plural": "volumes", "stack": "row",
+                              "art": data["items"][0]["art"], "backfill": False, "gift": "pending"})
+        keepsakes.save(path, data)
+        runs = sum(1 for _ in open(self.log))
+        try:
+            self.req("GET", "/api/state")
+            item = next(i for i in keepsakes.load(path)["items"] if i["id"] == "die-99")
+            self.assertEqual(item["gift"], "off")
+            self.assertEqual(sum(1 for _ in open(self.log)), runs, "no Claude run when gifts are off")
+        finally:
+            write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}})
+
     def test_4_claude_runs_cant_edit_the_shelf(self):
         args = server.claude_args("x", None, "chat")
         self.assertIn("Write(./_system/keepsakes.json)", args[args.index("--disallowedTools") + 1])

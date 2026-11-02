@@ -126,11 +126,14 @@ test("Settings switches the room and turns themed lessons off", async () => {
   assert.equal(await page.$$eval('input[name="set-theme"]', (l) => l.length), ROOMS.length);
   await page.click('input[name="set-theme"][value="library"]');
   await page.click("#set-theme-lessons");
+  assert.equal(await page.$eval("#set-gifts", (e) => e.checked), true, "gifts start on");
+  await page.click("#set-gifts");
   await page.click("#set-save");
   await page.waitForSelector(".room.t-library", { timeout: 5000 });
   const c = readJSON(cfgPath);
   assert.equal(c.theme, "library");
   assert.equal(c.theme_lessons, false);
+  assert.equal(c.gifts, false);
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });

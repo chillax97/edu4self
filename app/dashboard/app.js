@@ -2367,6 +2367,8 @@
         fieldRow("Days a week", '<input type="number" id="set-week" min="1" max="7" value="' + c.goals.week_days + '">') +
       "</div>" +
 
+      '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts !== false ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
+
       '<h3 id="set-blocks">Focus blocks</h3>' +
       '<div class="set-field"><span class="field-label">Durations to pick from (minutes)</span><div class="set-presets">' + presets + "</div></div>" +
       '<div class="set-field"><span class="field-label">Kinds of block</span><div class="set-kinds">' + kinds + "</div>" +
@@ -2438,6 +2440,7 @@
     var view = document.querySelector('input[name="set-view"]:checked'); if (view) c.view = view.value;
     var room = document.querySelector('input[name="set-theme"]:checked'); if (room) c.theme = room.value;
     c.theme_lessons = $("#set-theme-lessons").checked;
+    c.gifts = $("#set-gifts").checked;
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
     c.goals.week_days = Math.round(Number($("#set-week").value));
     c.blocks.presets = [].map.call(document.querySelectorAll("[data-preset]"), function (i) { return Math.round(Number(i.value)); }).filter(function (v) { return v > 0; });

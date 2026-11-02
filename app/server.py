@@ -84,6 +84,7 @@ DEFAULT_CONFIG = {
     "view": "bar",                  # default look: "bar" (the room) or "classic" (each browser can switch)
     "theme": "bar",                 # which room: a folder in app/dashboard/themes/ or <vault>/themes/
     "theme_lessons": True,          # lesson pages wear the room's look (False: the plain default)
+    "gifts": True,                  # a week or a die won starts one Claude run that makes a gift (uses your account)
     "goals": {"day_minutes": 120, "week_days": 4},
     "blocks": {
         "presets": [25, 50, 90],
@@ -144,6 +145,7 @@ def clean_config(body):
         "view": c["view"] if c["view"] in ("bar", "classic") else "bar",
         "theme": c["theme"] if isinstance(c["theme"], str) and themes.THEME_ID.match(c["theme"]) else "bar",
         "theme_lessons": bool(c["theme_lessons"]),
+        "gifts": bool(c["gifts"]),
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
                   "week_days": _int(c["goals"].get("week_days"), 1, 7, "weekly goal")},
         "water": {"every": c["water"].get("every") if c["water"].get("every") in (0, 15, 30) else 15},
@@ -775,7 +777,14 @@ Finish with one short sentence saying what you made."""
 def maybe_gift():
     """Start the oldest waiting gift if Claude is installed and free. Otherwise it keeps waiting."""
     item = keepsakes.pending_gift(KEEPSAKES)
-    if not item or not claude_bin():
+    if not item:
+        return False
+    if not load_config()[0]["gifts"]:
+        # gifts are off: the trophy stays, the gift is skipped for good (turning gifts on later
+        # doesn't make a pile of old ones)
+        keepsakes.set_gift(KEEPSAKES, item["id"], "off")
+        return maybe_gift()
+    if not claude_bin():
         return False
     tid, meta = active_theme()
     what = ("met their goal for the week of %s" % item["date"] if item["kind"] == "week"

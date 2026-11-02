@@ -16,6 +16,7 @@ Saving from Settings writes a fresh, valid file.
 | Default look | `view` | `"bar"` (your room) or `"classic"` | `"bar"` |
 | Room | `theme` | `bar`, `library`, `space`, `train`, `tea`, or a room in `<vault>/themes/` | `"bar"` |
 | Lessons wear the room's look | `theme_lessons` | `true` / `false` | `true` |
+| Gifts from Claude for a week or a die | `gifts` | `true` / `false` | `true` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
