@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import urllib.parse
 import uuid
 from datetime import date, datetime, timedelta
@@ -34,7 +35,8 @@ APP = os.path.dirname(os.path.abspath(__file__))
 DASH = os.path.join(APP, "dashboard")
 THEMES_DIR = os.path.join(DASH, "themes")
 sys.path.insert(0, APP)
-import keepsakes  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
+import keepsakes
+import reminders  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
 import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
 
 # The dashboard page itself: scripts only from this server (so nothing in a theme can run), styles and
@@ -62,7 +64,7 @@ ALLOWED_ORIGINS = set()
 
 def configure(vault, port):
     """Point the server at a vault folder and a port."""
-    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES
+    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES, REMINDERS
     ROOT = os.path.abspath(os.path.expanduser(vault))
     SYSTEM = os.path.join(ROOT, "_system")
     STATE = os.path.join(SYSTEM, "state.json")
@@ -71,6 +73,7 @@ def configure(vault, port):
     CONFIG = os.path.join(SYSTEM, "config.json")
     MUSIC_DIR = os.path.join(SYSTEM, "music")
     KEEPSAKES = os.path.join(SYSTEM, "keepsakes.json")
+    REMINDERS = os.path.join(SYSTEM, "reminders.json")
     PORT = int(port)
     ALLOWED_HOSTS = {"127.0.0.1:%d" % PORT, "localhost:%d" % PORT}
     ALLOWED_ORIGINS = {"http://" + h for h in ALLOWED_HOSTS}
@@ -85,6 +88,8 @@ DEFAULT_CONFIG = {
     "theme": "bar",                 # which room: a folder in app/dashboard/themes/ or <vault>/themes/
     "theme_lessons": True,          # lesson pages wear the room's look (False: the plain default)
     "gifts": True,                  # a week or a die won starts one Claude run that makes a gift (uses your account)
+    "reminders": {"notify": True,   # a desktop notification on a day you haven't studied yet (see reminders.py)
+                  "mail": False},   # the same nudge by mail (needs `edu4self mail setup`); the Sunday recap is always sent
     "goals": {"day_minutes": 120, "week_days": 4},
     "blocks": {
         "presets": [25, 50, 90],
@@ -146,6 +151,7 @@ def clean_config(body):
         "theme": c["theme"] if isinstance(c["theme"], str) and themes.THEME_ID.match(c["theme"]) else "bar",
         "theme_lessons": bool(c["theme_lessons"]),
         "gifts": bool(c["gifts"]),
+        "reminders": {"notify": bool(c["reminders"].get("notify", True)), "mail": bool(c["reminders"].get("mail", False))},
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
                   "week_days": _int(c["goals"].get("week_days"), 1, 7, "weekly goal")},
         "water": {"every": c["water"].get("every") if c["water"].get("every") in (0, 15, 30) else 15},
@@ -434,6 +440,7 @@ def api_state():
                    for e in read_jsonl(BLOCKS)],
         "config": cfg,
         "keepsakes": shelf_for_page(),
+        "reminders": reminders_for_page(),
         "server": {"now": now_iso(), "state_mtime": mtime, "version": VERSION, "port": PORT,
                    "vault": os.path.basename(ROOT), "config_error": cfg_err},
     }
@@ -600,7 +607,7 @@ def claude_args(prompt, resume, kind="chat"):
              "Skill", "TodoWrite"]
     if kind not in ("grade", "gift"):
         tools += ["WebSearch", "WebFetch"]
-    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json"]
+    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in ("grade", "gift"):
         deny += ["WebSearch", "WebFetch"]
@@ -745,6 +752,76 @@ def shelf_for_page():
         clean, errs = themes.clean_art(svg)
         art[key] = "" if errs else clean
     return {"items": data["items"], "art": art}
+
+
+# ---------------------------------------------------------------- reminders (see reminders.py)
+BLOCK_UNTIL = None            # when the block running in the page ends (the page says so when it starts one)
+PRESENCE = reminders.Presence()
+
+
+def reminders_for_page():
+    sent = reminders.load_sent(REMINDERS)
+    return {"mail_ready": reminders.load_mail() is not None, "errors": sent["errors"][-3:]}
+
+
+def deliver(title, body, by_notify, by_mail, sent):
+    """Send one message the ways asked for; a failure is kept in the log for Settings to show."""
+    if by_notify:
+        reminders.notify(title, body)
+    if by_mail:
+        m = reminders.load_mail()
+        if m:
+            try:
+                reminders.send_mail(m, "edu4self: " + title, body)
+            except (OSError, reminders.smtplib.SMTPException) as exc:
+                sent["errors"].append("%s mail failed: %s" % (now_iso(), str(exc)[:200]))
+
+
+def reminder_tick(now=None):
+    """Once a minute: count presence, then send today's nudge or this week's recap if one is due."""
+    now = now or datetime.now().astimezone()
+    active = PRESENCE.tick(now)
+    try:
+        state = json.loads(read_text(STATE))
+    except ValueError:
+        return None
+    cfg = load_config()[0]
+    blocks = read_jsonl(BLOCKS)
+    sent = reminders.load_sent(REMINDERS)
+    out = None
+    today = now.date().isoformat()
+    if today not in sent["nudged"] and (cfg["reminders"]["notify"] or cfg["reminders"]["mail"]):
+        n = reminders.nudge(state, blocks, inbox_entries(), cfg, now, active, BLOCK_UNTIL)
+        if n:
+            title, body, task = n
+            if task:
+                body += "\n\nhttp://127.0.0.1:%d/#submit=%s" % (PORT, task)
+            deliver(title, body, cfg["reminders"]["notify"], cfg["reminders"]["mail"], sent)
+            sent["nudged"].append(today)
+            out = ("nudge", title)
+    due = reminders.recap_due(now, sent)
+    if due:
+        wid, mon = due
+        items = (keepsakes.load(KEEPSAKES) or {"items": []})["items"]
+        title, body = reminders.recap(state, blocks, items, cfg, mon, PORT)
+        os.makedirs(os.path.join(ROOT, "recaps"), exist_ok=True)
+        with open(os.path.join(ROOT, "recaps", wid + ".md"), "w", encoding="utf-8") as fh:
+            fh.write(body)
+        deliver(title, body, True, True, sent)    # the recap always goes out: a notification, and mail when set up
+        sent["recaps"].append(wid)
+        out = ("recap", title)
+    if out:
+        reminders.save_sent(REMINDERS, sent)
+    return out
+
+
+def reminder_loop():
+    while True:
+        try:
+            reminder_tick()
+        except Exception as exc:   # a reminder must never take the dashboard down
+            sys.stderr.write("%s reminder: %s\n" % (now_iso(), exc))
+        time.sleep(60)
 
 
 def sync_keepsakes():
@@ -1083,6 +1160,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, claude_stop())
         if route == "/api/claude/reset":
             return self.send_json(200, claude_reset())
+        if route == "/api/presence":
+            # the page says a block is running until this time (or null when it stops), so no nudge interrupts it
+            global BLOCK_UNTIL
+            until = body.get("block_until")
+            t = reminders.local_dt(until) if isinstance(until, str) else None
+            BLOCK_UNTIL = t if t and t < datetime.now().astimezone() + timedelta(hours=5) else None
+            return self.send_json(200, {"ok": True})
         try:
             state = json.loads(read_text(STATE))
         except ValueError:
@@ -1202,6 +1286,8 @@ def main(argv=None):
         sys.stderr.write("no vault: pass --vault PATH (a folder made by `edu4self init`)\n")
         return 2
     httpd = make_server(args.vault, args.port)
+    if os.environ.get("EDU4SELF_REMINDERS") != "0":
+        threading.Thread(target=reminder_loop, daemon=True).start()
     sys.stderr.write("%s edu4self %s on http://%s:%d (vault %s)\n" % (now_iso(), VERSION, HOST, PORT, ROOT))
     try:
         httpd.serve_forever()

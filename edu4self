@@ -10,6 +10,7 @@
     ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
     ./edu4self doctor                check everything and say how to fix what's wrong
     ./edu4self open                  open the dashboard in a browser
+    ./edu4self mail setup|test|off   reminders and the Sunday recap by mail (your own account)
 
 The vault and port are remembered in ~/.config/edu4self/settings.json after init.
 """
@@ -479,6 +480,53 @@ def ask(prompt, default):
     return got or default
 
 
+def cmd_mail(args):
+    """Set up, test or remove the mail account used for reminders. It's kept outside the vault."""
+    sys.path.insert(0, APP)
+    import reminders
+    import getpass
+    path = reminders.mail_path()
+    if args.action == "off":
+        if os.path.exists(path):
+            os.remove(path)
+        print("Mail is off; the settings file is gone (%s)." % path)
+        return 0
+    if args.action == "test":
+        m = reminders.load_mail()
+        if not m:
+            print("Mail isn't set up. Run: ./edu4self mail setup")
+            return 1
+    else:
+        print("Reminders and the Sunday recap can come by mail, from your own account.")
+        print("Use an app password, not your main one (Gmail: myaccount.google.com/apppasswords).")
+        print("It's stored in %s, readable only by you, never in your vault.\n" % path)
+        old = reminders.load_mail() or {}
+        ask = lambda q, d: (input("%s [%s]: " % (q, d)) if d else input("%s: " % q)).strip() or d
+        user = ask("Your mail address (the account that sends)", old.get("user", ""))
+        known = {"gmail.com": ("smtp.gmail.com", 465), "googlemail.com": ("smtp.gmail.com", 465),
+                 "icloud.com": ("smtp.mail.me.com", 587), "me.com": ("smtp.mail.me.com", 587),
+                 "outlook.com": ("smtp-mail.outlook.com", 587), "hotmail.com": ("smtp-mail.outlook.com", 587),
+                 "fastmail.com": ("smtp.fastmail.com", 465)}
+        guess = known.get(user.rsplit("@", 1)[-1].lower(), (old.get("host", ""), old.get("port", 465)))
+        host = ask("SMTP server", guess[0])
+        port = int(ask("Port (465 = SSL, 587 = STARTTLS)", str(old.get("port", guess[1]))))
+        pw = getpass.getpass("App password%s: " % (" (Enter keeps the old one)" if old.get("password") else "")) or old.get("password", "")
+        to = ask("Send reminders to", old.get("to") or user)
+        m = {"host": host, "port": port, "security": "ssl" if port == 465 else "starttls", "user": user, "password": pw, "to": to}
+    try:
+        reminders.send_mail(m, "edu4self: mail works", "This is the test mail from edu4self. Reminders and your Sunday recap will come like this.")
+    except Exception as exc:
+        print("Couldn't send the test mail: %s" % exc)
+        print("Nothing was saved. Check the server, port and app password, and try again." if args.action == "setup" else "")
+        return 1
+    if args.action == "setup":
+        reminders.save_mail(m)
+        print("Sent a test mail to %s and saved the settings. Turn on Mail in the dashboard's Settings." % m["to"])
+    else:
+        print("Sent a test mail to %s." % m["to"])
+    return 0
+
+
 def cmd_setup(args):
     print("edu4self setup. Press Enter to accept the suggestion in brackets.\n")
     path = args.vault or ask("Where should your learning vault go?", "~/learn")
@@ -527,6 +575,8 @@ def main(argv=None):
                     ("status", "what's running"), ("check", "validate the vault"), ("doctor", "check everything"),
                     ("open", "open the dashboard")):
         common(sub.add_parser(name, help=h))
+    p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
+    p.add_argument("action", choices=("setup", "test", "off"))
     args = ap.parse_args(argv)
     if not args.cmd:
         ap.print_help()
@@ -537,7 +587,7 @@ def main(argv=None):
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
             "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,
-            "open": cmd_open}[args.cmd](args)
+            "open": cmd_open, "mail": cmd_mail}[args.cmd](args)
 
 
 if __name__ == "__main__":
