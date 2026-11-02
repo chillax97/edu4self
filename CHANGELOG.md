@@ -6,6 +6,11 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Reminders. One nudge on a day you haven't studied, only when something opens today or your
+  week needs today, after an hour at the computer, never during a block. A desktop notification,
+  and mail from your own account (`./edu4self mail setup`). Every Sunday, a recap of your week,
+  saved to `recaps/`. Tasks can carry an `opens` date for spaced recall checks.
+- A Settings switch for Claude's gifts.
 - Trophies. Meeting your daily goal adds a trophy to a pile on your shelf, drawn by your room (a
   bottle cap, a book, a mission patch). Weekly goals and finished dice add their own, each with a
   card to print and a small gift Claude makes from what you proved. Days and dice pile up as

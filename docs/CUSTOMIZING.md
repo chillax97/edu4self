@@ -17,6 +17,8 @@ Saving from Settings writes a fresh, valid file.
 | Room | `theme` | `bar`, `library`, `space`, `train`, `tea`, or a room in `<vault>/themes/` | `"bar"` |
 | Lessons wear the room's look | `theme_lessons` | `true` / `false` | `true` |
 | Gifts from Claude for a week or a die | `gifts` | `true` / `false` | `true` |
+| Reminder as a desktop notification | `reminders.notify` | `true` / `false` | `true` |
+| Reminder by mail | `reminders.mail` | `true` / `false` (needs `./edu4self mail setup`) | `false` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
@@ -127,6 +129,22 @@ One per line in Settings, as `voice: text`. They join the bar jokes in the rotat
 regular: The coffee machine has been broken since the last exam.
 critic: Flashcards you never review are just stationery.
 ```
+
+### Reminders and the Sunday recap
+
+At most one nudge a day, and only when all of these hold: you haven't studied today (no block saved,
+no answer sent, no block running), you've been at the computer for an hour (on macOS, keyboard or
+mouse used; elsewhere, the time the dashboard has been running), it's between 09:00 and 22:00, and
+there's a reason: a task opens today, or your week's goal needs today (at most one spare day left).
+
+Every Sunday from 19:00 (or the first time the dashboard runs before Monday ends) you get a recap of
+the week: minutes, days, what you proved, what's next and what opens next week. It's saved to
+`recaps/<year>-W<week>.md` in your vault, shown as a notification, and mailed when mail is set up.
+
+Mail uses your own account. Run `./edu4self mail setup`, give it an app password (not your main
+password), and it sends a test mail before saving anything. The account lives in
+`~/.config/edu4self/mail.json`, readable only by you and never inside the vault.
+`./edu4self mail test` sends another test, `./edu4self mail off` deletes it.
 
 ### Obsidian
 
