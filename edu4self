@@ -12,6 +12,8 @@
     ./edu4self open                  open the dashboard in a browser
     ./edu4self mail setup|test|off   reminders and the Sunday recap by mail (your own account)
     ./edu4self mcp                   your progress for any AI tool that speaks MCP (see docs/MCP.md)
+    ./edu4self room export ID        save a room as one ID.room file to share
+    ./edu4self room import FILE      add a room someone shared (checked first; --as NAME, --replace)
 
 The vault and port are remembered in ~/.config/edu4self/settings.json after init.
 """
@@ -481,6 +483,37 @@ def ask(prompt, default):
     return got or default
 
 
+def cmd_room(args):
+    """Share rooms as one .room file. Import checks everything and only ever writes themes/<id>/."""
+    import themes
+    vault = need_vault(resolve(args)[0])
+    builtin = os.path.join(APP, "dashboard", "themes")
+    if args.action == "export":
+        path = themes.folders(builtin, vault).get(args.target)
+        if not path:
+            print("No room called %r. Rooms: %s" % (args.target, ", ".join(sorted(themes.folders(builtin, vault)))))
+            return 1
+        out = args.out or "%s.room" % args.target
+        with open(out, "w", encoding="utf-8") as fh:
+            json.dump(themes.pack(path, args.target), fh, ensure_ascii=False, indent=1)
+        print("Saved %s. Send it to anyone with edu4self; they add it with:  ./edu4self room import %s" % (out, os.path.basename(out)))
+        return 0
+    try:
+        with open(args.target, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError) as exc:
+        print("Can't read %s: %s" % (args.target, exc))
+        return 1
+    tid, errors = themes.unpack(vault, data, as_id=args.as_id, replace=args.replace, builtin_dir=builtin)
+    if errors:
+        print("Not imported:")
+        for e in errors:
+            print("  - " + e)
+        return 1
+    print("Added the room %s to %s. Pick it in Settings > Room." % (tid, os.path.join(vault, "themes", tid)))
+    return 0
+
+
 def cmd_mcp(args):
     """Serve MCP on stdin/stdout for an AI tool. It reads the running dashboard, so no vault flag needed."""
     sys.path.insert(0, APP)
@@ -586,6 +619,12 @@ def main(argv=None):
                     ("open", "open the dashboard")):
         common(sub.add_parser(name, help=h))
     common(sub.add_parser("mcp", help="progress for AI tools over MCP (stdio)"), vault=False)
+    p = common(sub.add_parser("room", help="share rooms: export ID, or import FILE"))
+    p.add_argument("action", choices=("export", "import"))
+    p.add_argument("target", help="the room id to export, or the .room file to import")
+    p.add_argument("-o", "--out", help="export: where to save (default ID.room)")
+    p.add_argument("--as", dest="as_id", help="import: under this name instead")
+    p.add_argument("--replace", action="store_true", help="import: replace a room with the same name")
     p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
     p.add_argument("action", choices=("setup", "test", "off"))
     args = ap.parse_args(argv)
@@ -598,7 +637,7 @@ def main(argv=None):
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
             "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,
-            "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
+            "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp, "room": cmd_room}[args.cmd](args)
 
 
 if __name__ == "__main__":

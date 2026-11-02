@@ -1060,6 +1060,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_file(os.path.join(DASH, "index.html"), {"Content-Security-Policy": PAGE_CSP})
         if route == "/api/themes":
             return self.send_json(200, {"themes": themes.catalog(THEMES_DIR, ROOT), "active": load_config()[0]["theme"]})
+        if route == "/api/themes/export":
+            tid = urllib.parse.parse_qs(parsed.query).get("id", [""])[0]
+            path = themes.folders(THEMES_DIR, ROOT).get(tid)
+            if not path or not themes.THEME_ID.match(tid):
+                return self.send_error(404)
+            data = json.dumps(themes.pack(path, tid), ensure_ascii=False, indent=1).encode("utf-8")
+            return self.send_text("application/json; charset=utf-8", data,
+                                  {"Content-Disposition": 'attachment; filename="%s.room"' % tid})
         if route == "/api/theme":
             tid = urllib.parse.parse_qs(parsed.query).get("id", [""])[0]
             path = themes.folders(THEMES_DIR, ROOT).get(tid)
@@ -1142,7 +1150,8 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = -1
-        if length < 0 or length > MAX_BODY:
+        limit = themes.ROOM_MAX * 2 if urllib.parse.urlsplit(self.path).path == "/api/themes/import" else MAX_BODY
+        if length < 0 or length > limit:
             return self.send_json(413, {"error": "body too large"})
         try:
             body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
@@ -1160,6 +1169,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, claude_stop())
         if route == "/api/claude/reset":
             return self.send_json(200, claude_reset())
+        if route == "/api/themes/import":
+            # a room someone shared: checked file by file, written only to themes/<id>/, refused if broken.
+            # A name that's taken gets -2, -3...: importing never replaces a room from the page.
+            room = body.get("room")
+            tid = room.get("id") if isinstance(room, dict) else None
+            if isinstance(tid, str) and themes.THEME_ID.match(tid):
+                tid = themes.free_id(ROOT, THEMES_DIR, tid)
+            got, errors = themes.unpack(ROOT, room, as_id=tid, builtin_dir=THEMES_DIR)
+            if errors:
+                return self.send_json(400, {"error": errors[0], "errors": errors})
+            return self.send_json(201, {"ok": True, "id": got})
         if route == "/api/presence":
             # the page says a block is running until this time (or null when it stops), so no nudge interrupts it
             global BLOCK_UNTIL
