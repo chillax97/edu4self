@@ -210,6 +210,17 @@ Styles the whole lesson page (no `.room` needed). Lessons read these variables, 
 `--accent`, `--good`, `--bad`, `--code`. The quiz is `.quiz` with `.prompt`, `button.opt`,
 `textarea`, `.verdict.ok`, `.verdict.no` and `.explain`.
 
+## Sharing a room
+
+A room travels as one file, `<id>.room`: JSON holding its four files. Save one from Settings ("Save
+this room to share") or with `./edu4self room export <id>`. Add one from Settings ("Add a room someone
+shared") or with `./edu4self room import <file>` (`--as <name>` to rename, `--replace` to overwrite).
+
+Importing is the only way someone else's files enter a vault, so it's strict: only `theme.json`,
+`layout.html`, `theme.css` and `lesson.css`, nothing else and no paths; 260 KB at most; the room must
+pass every check in this guide; it's written only to `themes/<id>/`, never through a link. Anything
+off and nothing is written. From Settings a taken name gets `-2`, `-3`; it never replaces a room.
+
 ## What a room can't do
 
 A room may come from someone else, so nothing in it runs or reaches outside. The server rebuilds the

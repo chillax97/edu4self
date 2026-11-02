@@ -66,6 +66,8 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/api/themes` | | `{themes: [{id, name, icon, about, lessons, builtin, errors}], active}` |
 | GET | `/api/theme?id=` | | 200 `{meta, layout, css}`; 422 `{errors}` for a broken room; 404 |
 | GET | `/theme/lesson.css` | | the active room's lesson styles |
+| GET | `/api/themes/export?id=` | | a room as a `.room` download |
+| POST | `/api/themes/import` | `{room}` | add a shared room under a free name; 400 with the reasons if refused |
 | POST | `/api/presence` | `{block_until}` | a block is running until then (or `null`); holds reminders |
 | GET | `/card?id=` | | a printable card for one trophy, in its room's colours; 404 if unknown |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |

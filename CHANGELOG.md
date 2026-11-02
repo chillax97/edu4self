@@ -6,6 +6,9 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+- Share rooms. Save any room as one `.room` file and add rooms others made, from Settings or with
+  `./edu4self room export` / `import`. Imports are checked and can't touch anything outside
+  `themes/<id>/`.
 - Your progress in any AI tool: `./edu4self mcp` is an MCP server. Claude, Codex, Cursor and other
   MCP clients can read your progress, next task (with its rules) and proven work, and leave your tutor
   a note. They can't submit or grade. See `docs/MCP.md`.
