@@ -139,6 +139,37 @@ test("Settings switches the room and turns themed lessons off", async () => {
   await closePage(page);
 });
 
+test("Settings shows reminders; mail waits for setup; a running block tells the server", async () => {
+  setConfig({ theme: "bar" });
+  const posts = [];
+  // listen before the page loads (a reload with a running block waits on a leave-the-page prompt)
+  const page = await browser.newPage();
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(String(e)));
+  page.on("request", (r) => { if (r.url().endsWith("/api/presence")) posts.push(JSON.parse(r.postData())); });
+  await page.setViewport({ width: 1440, height: 1000 });
+  await page.evaluateOnNewDocument(() => {
+    localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar");
+    const n = Date.now(); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 60000, end: n + 49 * 60000, water: 15, served: 0, drunk: 0 }));
+  });
+  await page.goto(server.url, { waitUntil: "domcontentloaded" });
+  for (let i = 0; i < 50 && !posts.length; i++) await sleep(100);
+  assert.ok(posts.some((p) => p.block_until && new Date(p.block_until) > new Date()), "the resumed block reports when it ends: " + JSON.stringify(posts));
+  await page.click("#btn-settings");
+  await page.waitForSelector("#set-rem-notify");
+  assert.equal(await page.$eval("#set-rem-notify", (e) => e.checked), true);
+  assert.equal(await page.$eval("#set-rem-mail", (e) => e.disabled), true, "no mail account yet");
+  assert.match(await page.$eval("#set-rem-mail", (e) => e.closest("label").innerText), /edu4self mail setup/);
+  await page.$eval("#set-rem-notify", (e) => e.scrollIntoView({ block: "center" }));
+  await page.click("#set-rem-notify");
+  await page.click("#set-save");
+  await sleep(500);
+  assert.equal(readJSON(cfgPath).reminders.notify, false);
+  assert.deepEqual(page.errors, []);
+  await page.close();
+  setConfig({ reminders: { notify: true, mail: false } });
+});
+
 test("a broken room of your own shows its problem in Settings and can't be picked", async () => {
   const d = path.join(v.vault, "themes", "wonky");
   fs.mkdirSync(d, { recursive: true });

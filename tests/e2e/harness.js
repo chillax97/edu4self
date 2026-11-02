@@ -27,7 +27,7 @@ export function chromePath() {
 export function makeVault(name = "Tester", extra = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "edu4self-e2e-"));
   // Claude Code is off unless a test brings its own stand-in, so a real install on this machine changes nothing
-  const env = { ...process.env, EDU4SELF_CONFIG_HOME: path.join(dir, "cfg"), EDU4SELF_CLAUDE: path.join(dir, "no-claude") };
+  const env = { ...process.env, EDU4SELF_CONFIG_HOME: path.join(dir, "cfg"), EDU4SELF_CLAUDE: path.join(dir, "no-claude"), EDU4SELF_REMINDERS: "0" };   // no real notifications from test servers
   const vault = path.join(dir, "vault");
   execFileSync("python3", [CLI, "init", vault, "--name", name, ...extra], { env, stdio: "pipe" });
   return { dir, vault, env };
