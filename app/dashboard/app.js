@@ -950,6 +950,18 @@
     barTick();
   }
 
+  // tell the server a block is running (or not), so a reminder never lands in the middle of one
+  function presence(until) {
+    fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ block_until: until ? new Date(until).toISOString() : null }) }).then(function (r) { return r.text(); }).catch(function () {});
+  }
+
+  function mailReady() { return !!(DATA && DATA.reminders && DATA.reminders.mail_ready); }
+  function mailErrors() {
+    var e = (DATA && DATA.reminders && DATA.reminders.errors) || [];
+    return e.length ? '<p class="set-warn">' + esc(e[e.length - 1]) + "</p>" : "";
+  }
+
   function startBlock(task) {
     var m = pick.minutes;
     if (!(m >= 1 && m <= 240)) return;
@@ -959,6 +971,7 @@
     active = { block: pick.block, minutes: m, start: now, end: now + m * 60000, water: waterEvery(), served: 0, drunk: 0 };
     if (task) active.task = task;
     writeJSON(BLOCK_KEY, active);
+    presence(active.end);
     arm();
     paintControls();
     if (isBar()) barSay("you", "start " + m + " minutes of " + esc(blockLabel(active.block)) + "." +
@@ -968,6 +981,7 @@
   function stopBlock() {
     if (!confirm("Stop this block? It won't count toward your die.")) return;
     writeJSON(BLOCK_KEY, null);
+    presence(null);
     idle();
   }
 
@@ -978,6 +992,7 @@
     idle();
     if (!stored || stored.start !== a.start) return; // another tab already claimed it
     writeJSON(BLOCK_KEY, null);
+    presence(null);
     var list = readJSON(UNSENT_KEY) || [];
     var rec = { block: a.block, minutes: a.minutes, started: new Date(a.start).toISOString(), ts: new Date(a.end).toISOString(), task: a.task };
     if (a.water) { rec.water_served = a.served || 0; rec.water_drunk = Math.min(a.drunk || 0, rec.water_served); }
@@ -1025,6 +1040,7 @@
     if (!active.block || !(active.end > active.start)) { writeJSON(BLOCK_KEY, null); active = null; return; }
     if (active.water == null) { active.water = waterEvery(); active.served = 0; active.drunk = 0; }   // started before water rounds existed
     if (active.end <= Date.now()) return finishBlock();
+    presence(active.end);   // the server may have restarted since the block began
     arm();
     paintControls();
     if (isBar() && DATA && !DATA.error) render();   // the room was drawn before the block came back (sign, clock strip)
@@ -2369,6 +2385,14 @@
 
       '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts !== false ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
 
+      '<h3 id="set-reminders">Reminders</h3>' +
+      '<p class="set-hint">At most one nudge a day, only on a day you haven\'t studied yet, after an hour at the computer, and only when something opens today or your week needs today. ' +
+        "Every Sunday evening you get a short recap of your week (it's also saved in <code>recaps/</code>).</p>" +
+      '<label class="set-check"><input type="checkbox" id="set-rem-notify"' + (!c.reminders || c.reminders.notify !== false ? " checked" : "") + "> Desktop notification</label>" +
+      '<label class="set-check"><input type="checkbox" id="set-rem-mail"' + (c.reminders && c.reminders.mail ? " checked" : "") + (mailReady() ? "" : " disabled") + "> Mail" +
+        (mailReady() ? " (the recap is mailed too)" : ' <small class="set-hint">not set up: run <code>./edu4self mail setup</code> in a terminal</small>') + "</label>" +
+      mailErrors() +
+
       '<h3 id="set-blocks">Focus blocks</h3>' +
       '<div class="set-field"><span class="field-label">Durations to pick from (minutes)</span><div class="set-presets">' + presets + "</div></div>" +
       '<div class="set-field"><span class="field-label">Kinds of block</span><div class="set-kinds">' + kinds + "</div>" +
@@ -2441,6 +2465,7 @@
     var room = document.querySelector('input[name="set-theme"]:checked'); if (room) c.theme = room.value;
     c.theme_lessons = $("#set-theme-lessons").checked;
     c.gifts = $("#set-gifts").checked;
+    c.reminders = { notify: $("#set-rem-notify").checked, mail: $("#set-rem-mail").checked };
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
     c.goals.week_days = Math.round(Number($("#set-week").value));
     c.blocks.presets = [].map.call(document.querySelectorAll("[data-preset]"), function (i) { return Math.round(Number(i.value)); }).filter(function (v) { return v > 0; });
