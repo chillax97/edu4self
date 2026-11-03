@@ -12,6 +12,10 @@ versions follow [Semantic Versioning](https://semver.org).
 - Two units always ready: the tutor writes the next unit while the learner works on the current
   one, and re-plans on every signal (notes, time, skips, recall results), not only on grades.
 
+### Fixed
+- Maths in lesson pages uses its proper fonts again. Lessons run sandboxed, and the browser refused
+  their font files; the server now allows font files, and only font files, to sandboxed pages.
+
 ## 1.1.0 - 2026-11-02
 
 ### Added

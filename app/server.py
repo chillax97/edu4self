@@ -541,6 +541,7 @@ def append_inbox(entry):
 # refused), plus read-only web research and the edu4self check. After every run the server runs the
 # check itself and reports it.
 ENGINE = os.path.dirname(APP)
+FONT_TYPES = (".woff2", ".woff", ".ttf", ".otf")
 VAULT_CSP = "sandbox allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
 CLAUDE_LOCK = threading.Lock()
 RUN = {"proc": None, "busy": False, "kind": None, "session": None, "events": [], "started": None}
@@ -1134,6 +1135,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_text("text/html; charset=utf-8", page, {"Content-Security-Policy": VAULT_CSP})
         if target.endswith(".svg"):
             return self.send_file(target, {"Content-Security-Policy": VAULT_CSP})
+        # Browsers fetch fonts with CORS, and a sandboxed page's origin is "null", so its own fonts
+        # (KaTeX's, for the maths) were refused. Allow exactly that: font files, to sandboxed pages.
+        if target.lower().endswith(FONT_TYPES) and self.headers.get("Origin") == "null":
+            return self.send_file(target, {"Access-Control-Allow-Origin": "null", "Vary": "Origin"})
         return self.send_file(target)
 
     def do_POST(self):
