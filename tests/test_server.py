@@ -501,6 +501,21 @@ class CliTest(unittest.TestCase):
         r = check()
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_a_new_vault_starts_with_a_running_plan(self):
+        vault, _ = make_vault(self.tmp)
+        with open(os.path.join(vault, "PLAN.md")) as fh:
+            plan = fh.read()
+        self.assertNotIn("{{", plan)
+        self.assertIn("Retrieval beats rereading", plan, "the plan lists the example topic's units")
+        with open(os.path.join(vault, "CLAUDE.md")) as fh:
+            self.assertIn("PLAN.md", fh.read(), "the tutor is told to keep it")
+        empty, _ = make_vault(os.path.join(self.tmp, "b"), "--no-example")
+        with open(os.path.join(empty, "PLAN.md")) as fh:
+            plan = fh.read()
+        self.assertNotIn("How learning works", plan, "no units from a topic that isn't there")
+        self.assertNotIn("{{", plan)
+        self.assertIn("## Changes", plan)
+
     def test_init_refuses_a_folder_with_files_in_it(self):
         vault, env = make_vault(self.tmp)
         r = subprocess.run([sys.executable, CLI, "init", vault], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
