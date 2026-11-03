@@ -508,7 +508,9 @@ class CliTest(unittest.TestCase):
         self.assertNotIn("{{", plan)
         self.assertIn("Retrieval beats rereading", plan, "the plan lists the example topic's units")
         with open(os.path.join(vault, "CLAUDE.md")) as fh:
-            self.assertIn("PLAN.md", fh.read(), "the tutor is told to keep it")
+            claude = fh.read()
+        self.assertIn("PLAN.md", claude, "the tutor is told to keep it")
+        self.assertIn("two units fully written", claude, "and to stay two units ahead")
         empty, _ = make_vault(os.path.join(self.tmp, "b"), "--no-example")
         with open(os.path.join(empty, "PLAN.md")) as fh:
             plan = fh.read()
