@@ -157,6 +157,7 @@ so updating never touches your vault.
 ```
 edu4self/               the code (this repo)            ~/learn/                your vault (yours)
   app/server.py           local web server                CLAUDE.md, AGENTS.md    instructions for the tutor
+                                                          PLAN.md                 what comes next, in order (Claude keeps it)
   app/dashboard/          the page (no build step)        _system/state.json      what the dashboard shows (Claude writes)
   edu4self                the command line                _system/inbox.jsonl     your submissions
   template/               what a new vault starts as      _system/blocks.jsonl    your focus blocks

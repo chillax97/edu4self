@@ -43,6 +43,7 @@ _system/music/         one audio file
 _system/logs/          service output (when installed)
 <topic>/               MISSION.md, lessons/*.html, probes/*.md, reference/*.html, learning-records/*.md, …
 CLAUDE.md, AGENTS.md   tutor instructions, with this vault's paths and port filled in
+PLAN.md                the running plan: every upcoming unit, in order, across topics (tutor writes)
 ```
 
 **Single writer per file.** `state.json` is written only by the tutor. The logs are appended only by the

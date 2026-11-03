@@ -3,6 +3,13 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+- A running plan. New vaults get a `PLAN.md`: every upcoming unit, in order, across all topics.
+  The tutor re-plans it after every grading and every request, so no topic goes quiet waiting for
+  its next lesson (PROTOCOL.md, section 5).
+
 ## 1.1.0 - 2026-11-02
 
 ### Added

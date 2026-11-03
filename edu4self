@@ -118,6 +118,17 @@ def cmd_init(args):
         json.dump(state, fh, indent=1, ensure_ascii=False)
         fh.write("\n")
 
+    plan = os.path.join(vault, "PLAN.md")
+    if os.path.isfile(plan):
+        with open(plan, encoding="utf-8") as fh:
+            text = fh.read().replace("{{DATE}}", today.date().isoformat())
+        if args.no_example:   # no topics yet: an order with nothing in it, not the example's units
+            head, _, _ = text.partition("| 1 |")
+            text = head + "| 1 | your first topic | Lesson 01, once `/teach` sets it up | next |\n\n## Changes\n\n" + \
+                "- %s: an empty vault; the plan fills in with the first topic.\n" % today.date().isoformat()
+        with open(plan, "w", encoding="utf-8") as fh:
+            fh.write(text)
+
     home = os.path.join(vault, "Home.md")
     if os.path.isfile(home):
         with open(home, encoding="utf-8") as fh:
