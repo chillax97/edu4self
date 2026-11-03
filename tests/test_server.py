@@ -449,6 +449,17 @@ class ClaudeTest(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertIn("sandbox", r.getheader("Content-Security-Policy") or "")
 
+    def test_sandboxed_pages_can_load_their_own_fonts_and_nothing_else_cross_origin(self):
+        # a sandboxed lesson's origin is "null"; browsers fetch fonts with CORS, so without this the
+        # maths in a lesson falls back to plain fonts
+        assets = os.path.join(self.vault, "how-learning-works", "assets")
+        with open(os.path.join(assets, "Math.woff2"), "wb") as fh:
+            fh.write(b"wOF2 not really a font")
+        acao = lambda path, origin: self.req("GET", path, headers={"Origin": origin})[2].getheader("Access-Control-Allow-Origin")
+        self.assertEqual(acao("/vault/how-learning-works/assets/Math.woff2", "null"), "null")
+        self.assertIsNone(acao("/vault/how-learning-works/assets/Math.woff2", "https://example.com"), "other sites: no")
+        self.assertIsNone(acao("/vault/how-learning-works/assets/quiz.js", "null"), "fonts only")
+
 
 class CliTest(unittest.TestCase):
     def setUp(self):

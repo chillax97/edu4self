@@ -110,6 +110,22 @@ test("New topic: say what and why, Claude starts with the teach skill", async ()
   await closePage(page);
 });
 
+test("a sandboxed lesson can load its own fonts (the maths in lessons uses them)", async () => {
+  const dir = path.join(v.vault, "how-learning-works", "assets");
+  fs.writeFileSync(path.join(dir, "Math.woff2"), "wOF2 not really a font");
+  fs.writeFileSync(path.join(v.vault, "how-learning-works", "lessons", "fonts.html"),
+    "<!doctype html><style>@font-face{font-family:M;src:url(../assets/Math.woff2) format('woff2')}" +
+    "p{font-family:M}</style><p>x</p>");
+  const page = await browser.newPage();
+  const logs = [];
+  page.on("console", (m) => logs.push(m.text()));
+  page.on("requestfailed", (r) => logs.push("failed " + r.url() + " " + r.failure()?.errorText));
+  await page.goto(server.url + "vault/how-learning-works/lessons/fonts.html", { waitUntil: "networkidle0" });
+  assert.equal(await page.evaluate(() => window.origin), "null", "the page is sandboxed");
+  assert.deepEqual(logs.filter((l) => /CORS|failed .*Math\.woff2/.test(l)), [], "the font wasn't blocked");
+  await closePage(page);
+});
+
 test("lessons run sandboxed: the quiz still works, but the page can't call the dashboard", async () => {
   const page = await browser.newPage();   // a plain tab: openPage seeds localStorage, which a sandboxed page can't touch
   page.errors = [];
