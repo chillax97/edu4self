@@ -104,15 +104,21 @@ The vault's `PLAN.md` lists every upcoming unit (lesson, lesson part, redo, reca
 in order, across all of the learner's topics. It is never empty and never stale: a tutor that only
 writes the next lesson when asked lets whole tracks go quiet without anyone noticing.
 
-- **Re-plan on evidence.** After every graded submission, put a repair unit for each gap into the next
-  slot of that track and move the rest down. If something was mastered cleanly, cut or merge the later
-  units it makes redundant.
+- **Two ready, always.** The unit the learner is on and the one after it are both fully written
+  (page, exercise, checker) before the learner finishes the first. The second may stay locked until
+  the first is graded. A learner should never wait for the tutor.
+- **Re-plan at every step, on every signal.** Not just grades: notes and questions, time spent,
+  checker runs and hints used where the vault records them, skipped or withdrawn tasks, recall
+  results, a track going quiet. Read them all whenever you touch the vault, and change the order,
+  the split or the next unit when they say so.
+- **Repair what the evidence shows.** After every graded submission, put a repair unit for each gap
+  into the next slot of that track and move the rest down; if the written-ahead unit assumed the
+  skill that was missed, rewrite it. If something was mastered cleanly, cut or merge the later units
+  it makes redundant.
 - **Re-plan on request.** When the learner asks for a different pace, split, order or focus, reshape
   the plan to match.
 - **Log every change** under "Changes" with the date and the reason, so the learner can see why the
   plan moved.
-- **Stay ahead.** Write the next unit of each track before the current one is graded, so no track
-  stalls waiting for the learner to ask for it.
 - **Tracks take turns.** Put units from different tracks one after another, and slot spaced recall
   checks a few units after the lesson they check.
 - **Split hard topics** into short parts, one idea each, each with its own exercise.

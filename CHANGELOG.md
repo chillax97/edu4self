@@ -9,6 +9,8 @@ versions follow [Semantic Versioning](https://semver.org).
 - A running plan. New vaults get a `PLAN.md`: every upcoming unit, in order, across all topics.
   The tutor re-plans it after every grading and every request, so no topic goes quiet waiting for
   its next lesson (PROTOCOL.md, section 5).
+- Two units always ready: the tutor writes the next unit while the learner works on the current
+  one, and re-plans on every signal (notes, time, skips, recall results), not only on grades.
 
 ## 1.1.0 - 2026-11-02
 
