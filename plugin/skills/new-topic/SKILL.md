@@ -15,6 +15,8 @@ The learner wants a new topic: $ARGUMENTS
    [PROTOCOL.md](../check-inbox/PROTOCOL.md): id, title, tagline, path, colour, milestones with steps, a
    first `todo` task (usually a calibration probe, with `submit.fields`), regions at level 0, and a history
    entry with `evidence: false`. Add a `gate` only if the topic ends in a high-stakes attempt.
+   Then put its first units into the vault's `PLAN.md`, taking turns with the other topics
+   (PROTOCOL.md, section 5).
 4. Set `updated`, write a short `coach` note about the new topic, and run the check command from the vault's
    `CLAUDE.md`. It must exit 0.
 5. Tell the learner the topic is on the dashboard and what the first task is, with its `#submit=` link.
