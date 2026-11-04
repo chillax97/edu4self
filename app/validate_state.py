@@ -3,7 +3,7 @@
 
 Run after every edit to state.json:  edu4self check   (or: python3 validate_state.py VAULT)
 """
-import json, os, re, sys
+import json, os, sys
 
 ARG = os.path.abspath(os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("EDU4SELF_VAULT", ".")))
 # accept the vault folder or the state.json file itself
@@ -64,9 +64,6 @@ for t in s.get("topics", []):
             err("task %s is actionable but has neither href nor submit" % k)
         if href and href.startswith("/vault/") and not os.path.isfile(os.path.join(ROOT, href[len("/vault/"):])):
             err("task %s href points at a missing file: %s" % (k, href))
-        opens = task.get("opens")
-        if opens is not None and not (isinstance(opens, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", opens)):
-            err("task %s opens must be a date like 2026-11-05, not %r" % (k, opens))
         if task.get("status") == "locked" and not task.get("unlock"):
             err("task %s is locked but says nothing about how it unlocks" % k)
         sub = task.get("submit")

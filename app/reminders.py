@@ -168,7 +168,7 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
     goal_days = cfg["goals"]["week_days"]
     won = len(days) >= goal_days
     goal_hit = len([m for m in days.values() if m >= cfg["goals"]["day_minutes"]])
-    proven, nxt, opens = [], [], []
+    proven, nxt = [], []
     for t in state.get("topics", []):
         for h in t.get("history", []):
             try:
@@ -181,10 +181,6 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
         if todo:
             q = todo[0]
             nxt.append("%s: %s%s" % (t.get("title", ""), (q.get("label") + ", ") if q.get("label") else "", q.get("title", "")))
-        for q in t.get("queue", []):
-            o = q.get("opens")
-            if o and q.get("status") != "done" and (sun + timedelta(days=1)).isoformat() <= o <= (sun + timedelta(days=7)).isoformat():
-                opens.append("%s: %s (opens %s)" % (t.get("title", ""), q.get("label") or q.get("title", ""), o))
     trophies = [i for i in keepsake_items if not i.get("backfill") and mon.isoformat() <= str(i.get("date", ""))[:10] <= sun.isoformat()]
     title = "Your week, %s to %s: %s" % (mon.strftime("%-d %b"), sun.strftime("%-d %b"),
                                          "goal met" if won else "%d of %d days" % (len(days), goal_days))
@@ -199,8 +195,6 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
     lines += ["", "## Proven this week", ""] + (["- " + p for p in proven] or ["- Nothing graded this week. The minutes still count."])
     if nxt:
         lines += ["", "## Up next", ""] + ["- " + n for n in nxt]
-    if opens:
-        lines += ["", "## Opening next week", ""] + ["- " + o for o in opens]
     lines += ["", "Dashboard: http://127.0.0.1:%d/" % port, ""]
     return title, "\n".join(lines)
 

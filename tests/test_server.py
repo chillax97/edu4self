@@ -290,11 +290,9 @@ class ValidatorTest(unittest.TestCase):
         t["queue"][1]["href"] = "/vault/how-learning-works/nope.md"  # missing file
         t["queue"][2].pop("unlock")                               # locked without unlock
         t["regions"][0]["level"] = 7
-        t["queue"][0]["opens"] = "next tuesday"                   # opens must be a date
         self.state["coach"]["voices"] = [{"voice": "narrator", "text": "x"}]
         out = self.check(self.state).stdout
-        for msg in ("duplicate task id", "missing file", "says nothing about how it unlocks", "level must be 0..4", "coach.voices",
-                    "opens must be a date"):
+        for msg in ("duplicate task id", "missing file", "says nothing about how it unlocks", "level must be 0..4", "coach.voices"):
             self.assertIn(msg, out)
 
     def test_link_checker_finds_a_broken_link(self):

@@ -79,10 +79,8 @@ pending submission, across all topics, becomes **Up next**.
   reading | project | mock`, `status` ∈ `todo | done | locked`, `title`, `label`, `why`, `href`,
   `effort`, `rules`, `unlock` (required when locked), `submit: {type: "answers" | "done", intro,
   fields: [labels]}`. A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
-  files; question labels are at most 1000 characters. `opens` (optional, `YYYY-MM-DD`): the day a
-  spaced task is meant to be done, such as a recall check a few days after a lesson. The Sunday
-  recap lists it under what opens next week, and AI tools connected over MCP see it as due. Set it
-  whenever you space something on purpose; leave it out otherwise.
+  files; question labels are at most 1000 characters. Tasks carry no dates: spacing comes from the
+  order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md"}`.
 - `linked_topics[]` (optional): read-only courses outside the vault,
@@ -120,7 +118,8 @@ writes the next lesson when asked lets whole tracks go quiet without anyone noti
 - **Log every change** under "Changes" with the date and the reason, so the learner can see why the
   plan moved.
 - **Tracks take turns.** Put units from different tracks one after another, and slot spaced recall
-  checks a few units after the lesson they check.
+  checks a few units after the lesson they check. Space by units, never by dates: when the units
+  before a task are done, open it, however soon that is.
 - **Split hard topics** into short parts, one idea each, each with its own exercise.
 - Update `PLAN.md` in the same turn as `state.json`. The plan is the order; `state.json` shows the
   part of it that is open now.

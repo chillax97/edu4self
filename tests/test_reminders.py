@@ -29,10 +29,8 @@ def blk(when, minutes=30):
             "block": "lessons", "minutes": minutes}
 
 
-def state_with(opens=None, status="todo"):
+def state_with(status="todo"):
     q = {"id": "t-recall", "kind": "probe", "status": status, "label": "Recall check", "title": "How big is the cache?", "href": "/x"}
-    if opens:
-        q["opens"] = opens
     return {"topics": [{"id": "t", "title": "Inference", "queue": [q], "history": [
         {"date": "2026-11-03", "title": "Lesson 06: cache size", "evidence": True},
         {"date": "2026-10-20", "title": "older", "evidence": True}]}]}
@@ -100,7 +98,7 @@ class RecapTest(unittest.TestCase):
     def test_the_recap_says_what_happened_and_what_is_next(self):
         mon = datetime(2026, 11, 2).date()
         blocks = [blk(WED - timedelta(days=1), 70), blk(WED, 20), blk(WED - timedelta(days=9), 50)]
-        title, body = reminders.recap(state_with(opens="2026-11-10"), blocks, [
+        title, body = reminders.recap(state_with(), blocks, [
             {"name": "book", "kind": "day", "date": "2026-11-03", "backfill": False}], CFG, mon, 4747)
         self.assertIn("2 of 4 days", title)
         self.assertIn("90 focused minutes on 2 days", body)
@@ -108,7 +106,7 @@ class RecapTest(unittest.TestCase):
         self.assertIn("Lesson 06: cache size", body)
         self.assertNotIn("older", body)
         self.assertIn("1 book", body)
-        self.assertIn("opens 2026-11-10", body)
+        self.assertIn("Recall check, How big is the cache?", body, "up next")
 
 
 class FakeSMTP(socketserver.ThreadingTCPServer):
