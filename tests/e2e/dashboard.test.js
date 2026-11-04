@@ -98,8 +98,11 @@ test("the soundscape plays, makes real sound, and switches without a file or the
   assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.scape, "noise");
   await page.click('.bx-music [data-mu="toggle"]');
   await page.waitForFunction(() => !document.body.classList.contains("music-on"));
-  await sleep(800);
-  assert.ok(await level(page) < 0.001, "pause is silence");
+  // Pause fades out (time constant 0.15 s) and frees the nodes at 0.8 s. A slow machine's audio thread
+  // can run behind the page clock, so wait for silence instead of sampling one fixed moment.
+  let quiet = Infinity;
+  for (let i = 0; i < 30 && quiet >= 0.001; i++) { await sleep(100); quiet = await level(page); }
+  assert.ok(quiet < 0.001, "pause is silence within 3 s: rms " + quiet.toFixed(4));
   assert.deepEqual(offsite, [], "nothing loaded from the internet");
   assert.deepEqual(page.errors, []);
   await closePage(page);
