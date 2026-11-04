@@ -3,7 +3,7 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 1.2.0 - 2026-11-04
 
 ### Added
 - A running plan. New vaults get a `PLAN.md`: every upcoming unit, in order, across all topics.
