@@ -6,6 +6,13 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Changed
+- Gifts from Claude are off until you say yes. Each one is a run on your Claude plan, so setup asks
+  (or `--gifts on|off`), and if it didn't, the dashboard asks once. A gift won before you answer waits.
+- Tasks carry no dates. The `opens` field is gone: a spaced recall check sits a few units later in
+  `PLAN.md` and opens as soon as the units before it are done. The MCP tool `get_due` went with it;
+  `get_progress` now lists the answers waiting to be graded.
+- MCP: every read tells the connected tool (Claude included) to let you know, once per conversation,
+  that what it reads goes to its model provider. docs/MCP.md says what leaves your computer.
 - Reminders come by mail only, and only when you've been away: after 3, 7, 15 and 30 days without a
   block, answer or note, then once every 30 days. Each mail says what you've done so far and offers
   one small thing for today. The daily nudge and desktop notifications are gone. The Sunday recap

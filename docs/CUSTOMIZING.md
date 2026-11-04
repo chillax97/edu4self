@@ -16,7 +16,7 @@ Saving from Settings writes a fresh, valid file.
 | Default look | `view` | `"bar"` (your room) or `"classic"` | `"bar"` |
 | Room | `theme` | `bar`, `library`, `space`, `train`, `tea`, or a room in `<vault>/themes/` | `"bar"` |
 | Lessons wear the room's look | `theme_lessons` | `true` / `false` | `true` |
-| Gifts from Claude for a week or a die | `gifts` | `true` / `false` | `true` |
+| Gifts from Claude for a week or a die (each is a run on your Claude plan) | `gifts` | `true` / `false` | not set: setup or the dashboard asks you once |
 | Mail me when I've been away | `reminders.mail` | `true` / `false` (needs `./edu4self mail setup`) | `true` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
@@ -47,8 +47,8 @@ a built-in's id replaces it. If the chosen room is broken or missing, the bar sh
 
 Nothing to set: they follow your goals. A day that reaches **Focused minutes a day** adds a trophy
 to a pile on your shelf, a week with blocks on **Days a week** days adds a week trophy, and every 10
-focused hours finishes a die. Weeks and dice have a card to print, and a gift Claude makes for you
-(if Claude Code is installed). They're stored in `_system/keepsakes.json`; delete that file and they
+focused hours finishes a die. Weeks and dice have a card to print, and, if you said yes to gifts
+and Claude Code is installed, a gift Claude makes for you. Until you answer, a won gift waits. They're stored in `_system/keepsakes.json`; delete that file and they
 are awarded again from your blocks, in the room you're in now.
 
 ### Kinds of block
@@ -138,7 +138,7 @@ with a link, and the shortest block you have. Your next block or answer starts t
 Mails go out between 09:00 and 22:00, never while a block runs.
 
 Every Sunday from 19:00 (or the first time the dashboard runs before Monday ends) you get a recap of
-the week: minutes, days, what you proved, what's next and what opens next week. It's saved to
+the week: minutes, days, what you proved and what's next. It's saved to
 `recaps/<year>-W<week>.md` in your vault, and mailed when mail is set up.
 
 Mail uses your own account. Run `./edu4self mail setup`, give it an app password (not your main
