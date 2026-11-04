@@ -6,7 +6,7 @@ transport), and talks to the dashboard over its local HTTP API. So the dashboard
 stays the only writer of the vault: this process reads /api/state and posts notes to /api/inbox, exactly
 like the page does, with the same checks.
 
-What a tool can do: read progress, the next task (with its rules), what was proven, what's due; and leave
+What a tool can do: read progress, the next task (with its rules), what was proven; and leave
 a note for the tutor. What it can't: submit answers, grade, or change anything else. Proof is something
 the learner does themselves.
 """
@@ -14,7 +14,7 @@ import json
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import reminders
 
@@ -27,13 +27,19 @@ INSTRUCTIONS = (
     "rules (for example \"closed book\" or \"no AI\"): respect them. For a task marked no AI, don't solve it, "
     "hint at its answer or check their work; talk about how to approach studying instead. Answers are "
     "submitted and graded only in the dashboard. You can leave the tutor a note (leave_note) when the "
-    "learner asks you to, for example a question or something that confused them."
+    "learner asks you to, for example a question or something that confused them. The first time you read "
+    "their progress in a conversation, tell them in one plain line that what you read from edu4self is now "
+    "part of this chat and goes to your model provider (for Claude, Anthropic)."
 )
+
+# Every read result carries this, because some tools don't pass the server's instructions to the model.
+PRIVACY = ("Tell the learner once per conversation: what you read from edu4self (their progress, not their answers "
+           "or files) is now part of this chat and goes to your model provider, under its terms.")
 
 TOOLS = [
     {"name": "get_progress",
      "description": "Where the learner is: each topic's current milestone and next task, focused time today and "
-                    "this week against their goals, total hours, trophies, and answers waiting to be graded.",
+                    "this week against their goals, total hours, trophies, and the answers waiting to be graded.",
      "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
      "annotations": {"readOnlyHint": True}},
     {"name": "get_next_task",
@@ -50,11 +56,6 @@ TOOLS = [
          "topic": {"type": "string", "description": "a topic id; leave out for every topic"},
          "limit": {"type": "integer", "minimum": 1, "maximum": 100, "description": "how many, default 20"}},
          "additionalProperties": False},
-     "annotations": {"readOnlyHint": True}},
-    {"name": "get_due",
-     "description": "Spaced tasks that open today or in the next 7 days, and submitted answers still waiting for "
-                    "the tutor to grade.",
-     "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
      "annotations": {"readOnlyHint": True}},
     {"name": "leave_note",
      "description": "Leave the learner's tutor a note: a question, something that confused them, or a change they "
@@ -123,7 +124,7 @@ def _milestone(t):
 
 
 def _task(port, q):
-    out = {k: q[k] for k in ("id", "label", "title", "kind", "why", "effort", "rules", "opens") if q.get(k)}
+    out = {k: q[k] for k in ("id", "label", "title", "kind", "why", "effort", "rules") if q.get(k)}
     out["open_in_dashboard"] = _link(port, q["id"])
     return out
 
@@ -151,6 +152,7 @@ def get_progress(d, port, now):
         "topics": topics,
         "trophies": trophies,
         "answers_waiting_for_grading": len(d.get("inbox", {}).get("pending", [])),
+        "waiting_for_grading": [{"task": e.get("task"), "sent": e.get("ts")} for e in d.get("inbox", {}).get("pending", [])],
         "dashboard": "http://127.0.0.1:%d/" % port,
     }
 
@@ -174,19 +176,6 @@ def get_proven(d, port, now, topic=None, limit=20):
     return {"proven": rows[:limit]}
 
 
-def get_due(d, port, now):
-    today, soon = now.date().isoformat(), (now.date() + timedelta(days=7)).isoformat()
-    due = []
-    for t in d["state"].get("topics", []):
-        for q in t.get("queue", []):
-            o = q.get("opens")
-            if o and q.get("status") != "done" and o <= soon:
-                due.append(dict(_task(port, q), topic=t.get("id"), opens_today=o == today, overdue=o < today))
-    due.sort(key=lambda x: x["opens"])
-    pending = [{"task": e.get("task"), "sent": e.get("ts")} for e in d.get("inbox", {}).get("pending", [])]
-    return {"opening": due, "waiting_for_grading": pending}
-
-
 def call(dash, name, args, client, now=None):
     now = now or datetime.now().astimezone()
     if name == "leave_note":
@@ -195,7 +184,7 @@ def call(dash, name, args, client, now=None):
             raise ValueError("the note is empty")
         r = dash.note(text, client)
         return {"sent": True, "id": r.get("id"), "note": "The tutor reads it the next time it goes through the inbox."}
-    fns = {"get_progress": get_progress, "get_next_task": get_next_task, "get_proven": get_proven, "get_due": get_due}
+    fns = {"get_progress": get_progress, "get_next_task": get_next_task, "get_proven": get_proven}
     if name not in fns:
         raise LookupError(name)
     d = dash.state()
@@ -204,7 +193,9 @@ def call(dash, name, args, client, now=None):
     kw = {k: v for k, v in args.items() if k in ("topic", "limit")}
     if "limit" in kw and not (isinstance(kw["limit"], int) and 1 <= kw["limit"] <= 100):
         raise ValueError("limit must be a whole number from 1 to 100")
-    return fns[name](d, dash.port, now, **kw)
+    out = fns[name](d, dash.port, now, **kw)
+    out["privacy"] = PRIVACY
+    return out
 
 
 # ---------------------------------------------------------------- JSON-RPC over stdio

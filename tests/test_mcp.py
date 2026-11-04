@@ -66,7 +66,7 @@ class McpTest(unittest.TestCase):
         self.assertEqual(init["protocolVersion"], "2025-06-18")
         self.assertIn("no AI", init["instructions"])
         names = {t["name"] for t in r[1]["result"]["tools"]}
-        self.assertEqual(names, {"get_progress", "get_next_task", "get_proven", "get_due", "leave_note"})
+        self.assertEqual(names, {"get_progress", "get_next_task", "get_proven", "leave_note"})
         self.assertFalse(any("submit" in n or "grade" in n for n in names), "tools can't hand in or grade work")
         self.assertEqual(r[2]["result"], {})
 
@@ -80,6 +80,11 @@ class McpTest(unittest.TestCase):
         self.assertIn("#submit=", task["open_in_dashboard"])
         _, pr = tool(self.port, "get_proven")
         self.assertEqual(pr["proven"][0]["title"], "Lesson 01: proved it")
+        for out in (p, n, pr):
+            self.assertIn("model provider", out["privacy"], "every read says where the data goes")
+        self.assertIn("model provider", talk(self.port)[0]["result"]["instructions"])
+        self.assertEqual(len(p["waiting_for_grading"]), p["answers_waiting_for_grading"])
+        self.assertTrue(all(set(w) == {"task", "sent"} for w in p["waiting_for_grading"]))
 
     def test_a_note_lands_in_the_inbox_through_the_dashboard(self):
         res, out = tool(self.port, "leave_note", text="Why does rereading feel like learning?")

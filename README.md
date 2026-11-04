@@ -189,7 +189,8 @@ The server binds to `127.0.0.1` only and refuses requests from other sites. The 
 the internet (fonts are bundled), with one exception you choose: if you pick a radio station for the
 jukebox, the page connects to that station while it plays. Your submissions, blocks, settings and music stay in your vault. Claude
 reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms. If you connect
-another AI tool over MCP, it sees your progress and sends it to its own model under its own terms.
+any AI tool over MCP (Claude included), it sees your progress and sends it to its own model under its
+own terms; the tool is asked to tell you so when it first reads it ([details](docs/MCP.md)).
 If you set up mail, reminders go out through your own mail account; its password stays in
 `~/.config/edu4self/`, outside the vault.
 
