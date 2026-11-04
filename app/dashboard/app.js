@@ -2389,11 +2389,10 @@
       '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts !== false ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
 
       '<h3 id="set-reminders">Reminders</h3>' +
-      '<p class="set-hint">At most one nudge a day, only on a day you haven\'t studied yet, after an hour at the computer, and only when something opens today or your week needs today. ' +
-        "Every Sunday evening you get a short recap of your week (it's also saved in <code>recaps/</code>).</p>" +
-      '<label class="set-check"><input type="checkbox" id="set-rem-notify"' + (!c.reminders || c.reminders.notify !== false ? " checked" : "") + "> Desktop notification</label>" +
-      '<label class="set-check"><input type="checkbox" id="set-rem-mail"' + (c.reminders && c.reminders.mail ? " checked" : "") + (mailReady() ? "" : " disabled") + "> Mail" +
-        (mailReady() ? " (the recap is mailed too)" : ' <small class="set-hint">not set up: run <code>./edu4self mail setup</code> in a terminal</small>') + "</label>" +
+      '<p class="set-hint">If you\'ve been away, a short mail after 3, 7, 15 and 30 days, then once a month: what you\'ve done so far, and one small thing to do today. ' +
+        "Every Sunday evening, a recap of your week (it's also saved in <code>recaps/</code>).</p>" +
+      '<label class="set-check"><input type="checkbox" id="set-rem-mail"' + (!c.reminders || c.reminders.mail !== false ? " checked" : "") + (mailReady() ? "" : " disabled") + "> Mail me when I've been away" +
+        (mailReady() ? "" : ' <small class="set-hint">not set up: run <code>./edu4self mail setup</code> in a terminal</small>') + "</label>" +
       mailErrors() +
 
       '<h3 id="set-blocks">Focus blocks</h3>' +
@@ -2468,7 +2467,7 @@
     var room = document.querySelector('input[name="set-theme"]:checked'); if (room) c.theme = room.value;
     c.theme_lessons = $("#set-theme-lessons").checked;
     c.gifts = $("#set-gifts").checked;
-    c.reminders = { notify: $("#set-rem-notify").checked, mail: $("#set-rem-mail").checked };
+    c.reminders = { mail: $("#set-rem-mail").checked };
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
     c.goals.week_days = Math.round(Number($("#set-week").value));
     c.blocks.presets = [].map.call(document.querySelectorAll("[data-preset]"), function (i) { return Math.round(Number(i.value)); }).filter(function (v) { return v > 0; });

@@ -139,7 +139,7 @@ test("Settings switches the room and turns themed lessons off", async () => {
   await closePage(page);
 });
 
-test("Settings shows reminders; mail waits for setup; a running block tells the server", async () => {
+test("Settings shows the away mail; it waits for setup; a running block tells the server", async () => {
   setConfig({ theme: "bar" });
   const posts = [];
   // listen before the page loads (a reload with a running block waits on a leave-the-page prompt)
@@ -156,18 +156,34 @@ test("Settings shows reminders; mail waits for setup; a running block tells the 
   for (let i = 0; i < 50 && !posts.length; i++) await sleep(100);
   assert.ok(posts.some((p) => p.block_until && new Date(p.block_until) > new Date()), "the resumed block reports when it ends: " + JSON.stringify(posts));
   await page.click("#btn-settings");
-  await page.waitForSelector("#set-rem-notify");
-  assert.equal(await page.$eval("#set-rem-notify", (e) => e.checked), true);
+  await page.waitForSelector("#set-rem-mail");
+  assert.equal(await page.$("#set-rem-notify"), null, "no desktop notifications: mail only");
+  assert.equal(await page.$eval("#set-rem-mail", (e) => e.checked), true, "on by default");
   assert.equal(await page.$eval("#set-rem-mail", (e) => e.disabled), true, "no mail account yet");
   assert.match(await page.$eval("#set-rem-mail", (e) => e.closest("label").innerText), /edu4self mail setup/);
-  await page.$eval("#set-rem-notify", (e) => e.scrollIntoView({ block: "center" }));
-  await page.click("#set-rem-notify");
+  assert.match(await page.$eval("#set-rem-mail", (e) => e.closest(".settings, form, body").innerText), /3, 7, 15 and 30 days/);
+  await page.$eval("#set-rem-mail", (e) => e.scrollIntoView({ block: "center" }));
   await page.click("#set-save");
   await sleep(500);
-  assert.equal(readJSON(cfgPath).reminders.notify, false);
+  assert.deepEqual(readJSON(cfgPath).reminders, { mail: true });
+  // with mail set up, the switch works and turns the away mail off
+  fs.mkdirSync(path.join(v.dir, "cfg"), { recursive: true });
+  fs.writeFileSync(path.join(v.dir, "cfg", "mail.json"), JSON.stringify({ host: "127.0.0.1", port: 1, security: "none", user: "a@b.c", password: "", to: "a@b.c" }));
   assert.deepEqual(page.errors, []);
   await page.close();
-  setConfig({ reminders: { notify: true, mail: false } });
+  const p2 = await openPage(browser, server.url, { view: "bar" });
+  await p2.click("#btn-settings");
+  await p2.waitForSelector("#set-rem-mail");
+  assert.equal(await p2.$eval("#set-rem-mail", (e) => e.disabled), false, "mail is set up");
+  await p2.$eval("#set-rem-mail", (e) => e.scrollIntoView({ block: "center" }));
+  await p2.click("#set-rem-mail");
+  await p2.click("#set-save");
+  await sleep(500);
+  assert.deepEqual(readJSON(cfgPath).reminders, { mail: false });
+  fs.rmSync(path.join(v.dir, "cfg", "mail.json"));
+  assert.deepEqual(p2.errors || [], []);
+  await closePage(p2);
+  setConfig({ reminders: { mail: true } });
 });
 
 test("Settings saves a room to share and adds one someone shared", async () => {
