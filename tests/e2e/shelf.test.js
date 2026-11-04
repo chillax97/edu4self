@@ -99,7 +99,7 @@ test("a week trophy opens its printable card, in the colours of the room it was 
 
 test("the back room and the classic view show the shelf too", async () => {
   const back = await browser.newPage();
-  await back.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar"); localStorage.setItem("edu.bar.room.v1", "back"); });
+  await back.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1"); localStorage.setItem("edu.view.v1", "bar"); localStorage.setItem("edu.bar.room.v1", "back"); });
   await back.goto(server.url, { waitUntil: "networkidle0" });
   await back.waitForSelector(".is-back .ks-card .ks-pile");
   await back.close();

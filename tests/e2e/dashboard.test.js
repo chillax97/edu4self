@@ -76,7 +76,7 @@ test("the soundscape plays, makes real sound, and switches without a file or the
   const offsite = [];
   page.on("request", (r) => { if (!r.url().startsWith(server.url) && !r.url().startsWith("data:")) offsite.push(r.url()); });
   await listen(page);
-  await page.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar"); });
+  await page.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1"); localStorage.setItem("edu.view.v1", "bar"); });
   await page.goto(server.url, { waitUntil: "networkidle0" });
   await page.waitForSelector('.bx-music [data-mu="toggle"]');
   assert.equal(await level(page), 0, "silent until asked");

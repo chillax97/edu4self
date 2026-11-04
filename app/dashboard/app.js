@@ -631,7 +631,25 @@
     $("#ob-back").hidden = obStep === 0;
     $("#ob-next").textContent = obStep === 2 ? "Let's go" : "Next";
   }
-  function finishOnboarding() { store(ONBOARD_KEY, "1"); closeOverlay($("#onboarding")); }
+  function finishOnboarding() { store(ONBOARD_KEY, "1"); closeOverlay($("#onboarding")); askGifts(); }
+
+  // gifts cost the learner's Claude plan, so they start undecided (null) and the page asks once
+  function askGifts() {
+    if (!DATA || !DATA.config || DATA.config.gifts !== null) return;
+    if (document.querySelector(".overlay:not([hidden])")) return;
+    try { if (sessionStorage.getItem("edu.giftask.later")) return; sessionStorage.setItem("edu.giftask.later", "1"); } catch (e) {}
+    openOverlay("gift-ask");          // once per browser session; closing it without an answer asks again next time
+  }
+  function answerGifts(yes) {
+    fetch("/api/config", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      var c = j.config; c.gifts = yes;
+      return postConfig({ config: c });
+    }).then(function () {
+      closeOverlay($("#gift-ask"));
+      if (DATA && DATA.config) DATA.config.gifts = yes;
+      toast(yes ? "Gifts are on." : "No gifts. You can turn them on in Settings.");
+    }).catch(function (e) { toast("Couldn't save: " + e.message); });
+  }
 
   function openHelp(section) {
     openOverlay("help");
@@ -2386,7 +2404,7 @@
         fieldRow("Days a week", '<input type="number" id="set-week" min="1" max="7" value="' + c.goals.week_days + '">') +
       "</div>" +
 
-      '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts !== false ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
+      '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts === true ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
 
       '<h3 id="set-reminders">Reminders</h3>' +
       '<p class="set-hint">If you\'ve been away, a short mail after 3, 7, 15 and 30 days, then once a month: what you\'ve done so far, and one small thing to do today. ' +
@@ -2702,6 +2720,8 @@
   $("#ob-next").addEventListener("click", function () { if (obStep < 2) { obStep++; paintOnboarding(); } else finishOnboarding(); });
   $("#ob-back").addEventListener("click", function () { if (obStep > 0) { obStep--; paintOnboarding(); } });
   $("#replay-onboarding").addEventListener("click", function () { closeOverlay($("#help")); showOnboarding(); });
+  $("#gift-yes").addEventListener("click", function () { answerGifts(true); });
+  $("#gift-no").addEventListener("click", function () { answerGifts(false); });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;
     load();
@@ -2726,7 +2746,7 @@
     if (claudeOK()) render();
     resumeBlock();
     if (location.hash) return followHash();
-    if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding();
+    if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding(); else askGifts();
   });
   setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
 })();

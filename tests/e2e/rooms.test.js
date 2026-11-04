@@ -119,6 +119,7 @@ for (const id of ROOMS) {
 
 test("Settings switches the room and turns themed lessons off", async () => {
   setConfig({ theme: "bar", theme_lessons: true });
+  { const c = readJSON(cfgPath); delete c.gifts; fs.writeFileSync(cfgPath, JSON.stringify(c)); }   // not asked yet
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.waitForSelector(".room.t-bar");
   await page.click("#btn-settings");
@@ -126,7 +127,7 @@ test("Settings switches the room and turns themed lessons off", async () => {
   assert.equal(await page.$$eval('input[name="set-theme"]', (l) => l.length), ROOMS.length);
   await page.click('input[name="set-theme"][value="library"]');
   await page.click("#set-theme-lessons");
-  assert.equal(await page.$eval("#set-gifts", (e) => e.checked), true, "gifts start on");
+  assert.equal(await page.$eval("#set-gifts", (e) => e.checked), false, "gifts start off: they use the learner's Claude plan");
   await page.$eval("#set-gifts", (e) => e.scrollIntoView({ block: "center" }));   // out from under the sticky Save bar
   await page.click("#set-gifts");
   await page.click("#set-save");
@@ -134,7 +135,7 @@ test("Settings switches the room and turns themed lessons off", async () => {
   const c = readJSON(cfgPath);
   assert.equal(c.theme, "library");
   assert.equal(c.theme_lessons, false);
-  assert.equal(c.gifts, false);
+  assert.equal(c.gifts, true, "ticking the box is a yes");
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
@@ -149,7 +150,7 @@ test("Settings shows the away mail; it waits for setup; a running block tells th
   page.on("request", (r) => { if (r.url().endsWith("/api/presence")) posts.push(JSON.parse(r.postData())); });
   await page.setViewport({ width: 1440, height: 1000 });
   await page.evaluateOnNewDocument(() => {
-    localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar");
+    localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1"); localStorage.setItem("edu.view.v1", "bar");
     const n = Date.now(); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 60000, end: n + 49 * 60000, water: 15, served: 0, drunk: 0 }));
   });
   await page.goto(server.url, { waitUntil: "domcontentloaded" });
@@ -184,6 +185,35 @@ test("Settings shows the away mail; it waits for setup; a running block tells th
   assert.deepEqual(p2.errors || [], []);
   await closePage(p2);
   setConfig({ reminders: { mail: true } });
+});
+
+test("gifts start undecided: the page asks once, and the answer is saved", async () => {
+  const c = readJSON(cfgPath); delete c.gifts; fs.writeFileSync(cfgPath, JSON.stringify(c));
+  const page = await browser.newPage();
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(String(e)));
+  await page.setViewport({ width: 1280, height: 900 });
+  await page.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); localStorage.setItem("edu.view.v1", "bar"); });
+  await page.goto(server.url, { waitUntil: "networkidle0" });
+  await page.waitForSelector("#gift-ask:not([hidden])");
+  assert.match(await page.$eval("#gift-ask", (e) => e.innerText), /your own account/);
+  await page.click("#gift-no");
+  await page.waitForSelector("#gift-ask", { hidden: true });
+  await sleep(300);
+  assert.equal(readJSON(cfgPath).gifts, false);
+  await page.click("#btn-settings");
+  await page.waitForSelector("#set-gifts");
+  assert.equal(await page.$eval("#set-gifts", (e) => e.checked), false);
+  // answered: a new session doesn't ask again
+  const p2 = await browser.newPage();                 // a fresh session, no "asked already" flag
+  await p2.evaluateOnNewDocument(() => { localStorage.setItem("edu.onboarded.v1", "1"); });
+  await p2.goto(server.url, { waitUntil: "networkidle0" });
+  await sleep(500);
+  assert.equal(await p2.$eval("#gift-ask", (e) => e.hidden), true, "asked once, answered once");
+  assert.deepEqual(page.errors, []);
+  await page.close();
+  await p2.close();
+  setConfig({ gifts: false });
 });
 
 test("Settings saves a room to share and adds one someone shared", async () => {

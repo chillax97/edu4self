@@ -137,6 +137,9 @@ def cmd_init(args):
             fh.write(text)
 
     cfg = {"name": name}
+    gifts = getattr(args, "gifts", None)
+    if gifts in ("on", "off"):
+        cfg["gifts"] = gifts == "on"        # left out: the dashboard asks the first time it opens
     with open(os.path.join(vault, "_system", "config.json"), "w", encoding="utf-8") as fh:
         json.dump(cfg, fh, indent=2)
         fh.write("\n")
@@ -585,7 +588,12 @@ def cmd_setup(args):
     print("edu4self setup. Press Enter to accept the suggestion in brackets.\n")
     path = args.vault or ask("Where should your learning vault go?", "~/learn")
     name = args.name if args.name is not None else ask("What should the dashboard call you?", os.environ.get("USER", "").capitalize() or "friend")
-    ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example)
+    gifts = args.gifts
+    if gifts is None and sys.stdin.isatty():
+        print("\nWhen you win a week or finish a die, Claude can make you a small gift from what you proved.")
+        print("Each gift is one short Claude run on your own account, so it uses a little of your plan.")
+        gifts = "on" if ask("Turn gifts on? (y/n)", "n").lower().startswith("y") else "off"
+    ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example, gifts=gifts)
     vault, port = cmd_init(ns)
     rc = 0
     if not args.no_service:
@@ -619,10 +627,13 @@ def main(argv=None):
     p.add_argument("--no-example", action="store_true", help="start without the example topic")
     p.add_argument("--no-service", action="store_true", help="don't start at login")
     p.add_argument("--no-open", action="store_true", help="don't open a browser")
+    p.add_argument("--gifts", choices=("on", "off"), help="Claude gifts for a won week or die (uses your Claude plan); "
+                   "left out: asked here, or by the dashboard")
     p = common(sub.add_parser("init", help="make a new vault"), vault=False)
     p.add_argument("path")
     p.add_argument("--name", default="")
     p.add_argument("--no-example", action="store_true")
+    p.add_argument("--gifts", choices=("on", "off"))
     p = common(sub.add_parser("serve", help="run the dashboard in this terminal"))
     p.add_argument("--open", action="store_true", help="open a browser too")
     for name, h in (("install", "start at login"), ("uninstall", "stop starting at login"), ("restart", "restart the service"),

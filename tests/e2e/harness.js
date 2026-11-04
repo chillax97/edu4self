@@ -83,7 +83,7 @@ export async function openPage(browser, url, { width = 1440, height = 1000, view
   page.on("dialog", (d) => d.accept());
   await page.setViewport({ width, height });
   await page.evaluateOnNewDocument((v, blk) => {
-    localStorage.setItem("edu.onboarded.v1", "1");
+    localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1");
     if (v) localStorage.setItem("edu.view.v1", v);
     // a focus block already running: the top bar is at its most crowded
     if (blk) { const n = Date.now(); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 60000, end: n + 49 * 60000, water: 15, served: 0, drunk: 0 })); }

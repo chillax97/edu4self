@@ -535,6 +535,19 @@ class CliTest(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("isn't empty", r.stderr)
 
+    def test_gifts_start_undecided_unless_setup_was_told(self):
+        vault, _ = make_vault(os.path.join(self.tmp, "g1"))
+        self.assertNotIn("gifts", read_json(os.path.join(vault, "_system", "config.json")), "left for the dashboard to ask")
+        on, _ = make_vault(os.path.join(self.tmp, "g2"), "--gifts", "on")
+        self.assertIs(read_json(os.path.join(on, "_system", "config.json"))["gifts"], True)
+        env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg3"), HOME=self.tmp)
+        v3 = os.path.join(self.tmp, "g3", "vault")
+        r = subprocess.run([sys.executable, CLI, "setup", "--vault", v3, "--name", "T", "--no-service", "--no-open", "--gifts", "off"],
+                           env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIs(read_json(os.path.join(v3, "_system", "config.json"))["gifts"], False)
+        self.assertNotIn("Turn gifts on", r.stdout, "no question without a terminal")
+
     def test_no_example(self):
         vault, env = make_vault(self.tmp, "--no-example")
         self.assertFalse(os.path.exists(os.path.join(vault, "how-learning-works")))

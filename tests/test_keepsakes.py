@@ -127,7 +127,7 @@ class ServerTest(unittest.TestCase):
         cls.log = os.path.join(cls.tmp, "fake.log")
         os.environ["EDU4SELF_CLAUDE"] = FAKE
         os.environ["FAKE_CLAUDE_LOG"] = cls.log
-        write_json(os.path.join(cls.vault, "_system", "config.json"), {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}})
+        write_json(os.path.join(cls.vault, "_system", "config.json"), {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True})
         with open(os.path.join(cls.vault, "_system", "blocks.jsonl"), "w") as fh:     # history from before trophies existed
             for i in range(3):
                 fh.write(json.dumps(block(at(30 + i, 20), 45)) + "\n")
@@ -221,7 +221,36 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(item["gift"], "off")
             self.assertEqual(sum(1 for _ in open(self.log)), runs, "no Claude run when gifts are off")
         finally:
-            write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}})
+            write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True})
+
+    def test_6_not_asked_yet_means_the_gift_waits_for_the_answer(self):
+        path = os.path.join(self.vault, "_system", "keepsakes.json")
+        cfg = os.path.join(self.vault, "_system", "config.json")
+        write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}})   # no "gifts": never asked
+        self.assertIsNone(json.loads(self.req("GET", "/api/state")[2])["config"]["gifts"], "the page sees 'not asked'")
+        data = keepsakes.load(path)
+        data["items"].append({"id": "die-98", "kind": "die", "n": 98, "date": "2026-11-01", "ts": "2026-11-01T10:00:00Z",
+                              "theme": "library", "name": "volume", "plural": "volumes", "stack": "row",
+                              "art": data["items"][0]["art"], "backfill": False, "gift": "pending"})
+        keepsakes.save(path, data)
+        runs = sum(1 for _ in open(self.log))
+        try:
+            self.req("GET", "/api/state")
+            time.sleep(0.3)
+            item = next(i for i in keepsakes.load(path)["items"] if i["id"] == "die-98")
+            self.assertEqual(item["gift"], "pending", "kept, not skipped")
+            self.assertEqual(sum(1 for _ in open(self.log)), runs, "no Claude run before the learner says yes")
+            code, _, _ = self.req("POST", "/api/config", {"config": {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True}})
+            self.assertEqual(code, 200)
+            self.req("GET", "/api/state")
+            for _ in range(100):
+                item = next(i for i in keepsakes.load(path)["items"] if i["id"] == "die-98")
+                if item["gift"] not in ("pending", "making"):
+                    break
+                time.sleep(0.1)
+            self.assertEqual(item["gift"], "gifts/die-98.html", "a yes makes the waiting gift")
+        finally:
+            write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True})
 
     def test_4_claude_runs_cant_edit_the_shelf(self):
         args = server.claude_args("x", None, "chat")

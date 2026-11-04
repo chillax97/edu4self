@@ -81,7 +81,7 @@ async function shot(name, { width = 1440, height = 1000, view = "bar", block = f
   await page.setViewport({ width, height, deviceScaleFactor: scale });
   await page.evaluateOnNewDocument((o) => {
     localStorage.clear();
-    localStorage.setItem("edu.onboarded.v1", "1");
+    localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1");
     localStorage.setItem("edu.view.v1", o.view);
     localStorage.setItem("edu.bar.room.v1", o.room);
     localStorage.setItem("edu.proofs.seen.v1", "[]");

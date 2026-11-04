@@ -942,3 +942,7 @@ a.ks-i:hover, a.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 
 .set-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
 .set-share label.btn { cursor: pointer; }
+
+/* the one-time gifts question */
+.gift-ask { max-width: 440px; }
+.gift-ask-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
