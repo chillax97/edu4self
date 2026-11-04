@@ -1,34 +1,27 @@
-"""Reminders: one gentle nudge on a day you haven't studied, and a recap every Sunday.
+"""Reminders, by mail only: a note when you've been away, and a recap every Sunday.
 
-The nudge goes out at most once a day, and only when all of these hold:
-  - there's a reason: a task opens today (its "opens" date), or the week's goal is at risk (the days you
-    still need are as many as, or one fewer than, the days left in the week);
-  - nothing edu happened today: no block saved, no answer submitted, no block running in the page;
-  - you've been at the computer for an hour today (macOS: keyboard or mouse used in the last 2 minutes,
-    counted minute by minute; elsewhere the minutes the server has been up);
-  - it's between 09:00 and 22:00.
-It's a desktop notification and/or a mail, each switched on in Settings.
+The away mail goes out after 3, 7, 15 and 30 days without a study action (a focus block saved, an
+answer or a note sent), then every 30 days while you stay away. Each step goes out once; your next
+study action starts the ladder again. It says what you've already done, then offers one small thing
+to do today, so coming back feels cheap. It goes out between 09:00 and 22:00, never while a block runs,
+and only when mail is set up (`edu4self mail setup`) and switched on in Settings.
 
 The recap goes out once a week, on Sunday from 19:00 (or the first chance after, until Monday ends). It's
-written to recaps/<year>-W<week>.md in the vault, shown as a notification, and mailed when mail is set up.
+written to recaps/<year>-W<week>.md in the vault, and mailed when mail is set up.
 
 Mail settings (server, account, app password) live outside the vault, in the edu4self config folder
 (mail.json, readable only by you), so they never end up in a synced or shared vault.
 """
 import json
 import os
-import platform
-import re
-import shutil
 import smtplib
 import ssl
-import subprocess
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 
-ACTIVE_IDLE = 120          # seconds without input that still count as "at the computer"
-NUDGE_AFTER = 60           # minutes at the computer today before a nudge may go out
-NUDGE_HOURS = (9, 22)      # local hours a nudge may go out in: from 09:00, before 22:00
+AWAY_STEPS = (3, 7, 15, 30)    # days without a study action that send a mail; then every 30 days
+AWAY_REPEAT = 30
+MAIL_HOURS = (9, 22)           # local hours an away mail may go out in: from 09:00, before 22:00
 RECAP_HOUR = 19            # Sunday, from this hour
 
 
@@ -61,62 +54,97 @@ def block_days(blocks):
     return out
 
 
-def studied_today(blocks, inbox, today, block_until, now):
-    """Anything edu today: a block saved, an answer sent, or a block running right now."""
-    if today in block_days(blocks):
-        return True
-    for e in inbox:
-        t = local_dt(e.get("ts") or "")
-        if t and t.date() == today:
-            return True
-    return bool(block_until and block_until > now)
+def last_activity(blocks, inbox):
+    """When you last did something: the latest saved block or sent entry (answers, notes), or None."""
+    times = [local_dt(b.get("ts") or b.get("started") or "") for b in blocks]
+    times += [local_dt(e.get("ts") or "") for e in inbox]
+    times = [t for t in times if t]
+    return max(times) if times else None
 
 
-def opening_today(state, today):
-    """Tasks whose opens date is today and that are still to do: [(topic title, task)]."""
-    out = []
+def away_step(last, now):
+    """The away step reached now (3, 7, 15, 30, 60, 90...), or None before day 3."""
+    if not last:
+        return None
+    days = (now.date() - last.date()).days
+    if days < AWAY_STEPS[0]:
+        return None
+    if days < AWAY_REPEAT:
+        return max(s for s in AWAY_STEPS if s <= days)
+    return AWAY_REPEAT * (days // AWAY_REPEAT)
+
+
+def away_due(blocks, inbox, now, sent, block_until=None):
+    """(key, step, last) when an away mail should go out now, else None. The key marks it as sent."""
+    if not MAIL_HOURS[0] <= now.hour < MAIL_HOURS[1] or (block_until and block_until > now):
+        return None
+    last = last_activity(blocks, inbox)
+    step = away_step(last, now)
+    if step is None:
+        return None
+    key = "%s+%d" % (last.date().isoformat(), step)
+    return None if key in sent.get("away", []) else (key, step, last)
+
+
+OPENERS = {
+    3: ("Three days off. Your next step is waiting", "It's been three days. A short break is fine, and everything you built is still here."),
+    7: ("A week away. Here's what you've built", "It's been a week. Starting again feels bigger than it is: the next step is small."),
+    15: ("Two weeks away. Pick up where you left off", "It's been two weeks. You don't have to catch up on anything. Just start where you left off."),
+}
+
+
+def away(state, blocks, keepsake_items, cfg, step, last, pending_tasks, port):
+    """(title, plain-text body) for an away mail: what you did, then one small thing for today."""
+    if step in OPENERS:
+        title, opener = OPENERS[step]
+    else:
+        title = "%d days away. Nothing is lost" % step
+        opener = "It's been %d days. Your progress, your trophies and your next step are all where you left them." % step
+    days = block_days(blocks)
+    hours = sum(days.values()) / 60
+    proven = []
+    for t in state.get("topics", []):
+        for h in t.get("history", []):
+            if h.get("evidence"):
+                proven.append((h.get("date") or "", h.get("title") or ""))
+    proven.sort(reverse=True)
+    done = ["%s focused hour%s over %d day%s" % (("%.1f" % hours).rstrip("0").rstrip("."), "" if round(hours, 1) == 1 else "s",
+                                                 len(days), "" if len(days) == 1 else "s")] if days else []
+    if proven:
+        done.append("%d thing%s proven, most recently: %s" % (len(proven), "" if len(proven) == 1 else "s",
+                                                             "; ".join(p[1] for p in proven[:3])))
+    if keepsake_items:
+        counts = {}
+        for i in keepsake_items:
+            k = i.get("plural") or i.get("name") or "trophy"
+            counts[k] = counts.get(k, 0) + 1
+        done.append("On your shelf: " + ", ".join("%d %s" % (n, k) for k, n in counts.items()))
+    lines = [opener, ""]
+    if done:
+        lines += ["What you've done so far:"] + ["- " + d for d in done] + [""]
+    lines.append("Your last session was on %s." % last.strftime("%A %-d %B"))
+    lines.append("")
+    minutes = min(cfg.get("blocks", {}).get("presets") or [25])
+    nxt = None
     for t in state.get("topics", []):
         for q in t.get("queue", []):
-            if q.get("opens") == today.isoformat() and q.get("status") != "done":
-                out.append((t.get("title", ""), q))
-    return out
-
-
-def week_at_risk(blocks, today, week_days):
-    """(days done this week, days still needed, days left including today) when the goal is at risk, else None.
-    At risk: still reachable, and with at most one day to spare."""
-    mon = monday(today)
-    done = len([d for d in block_days(blocks) if mon <= d <= today])
-    need = week_days - done
-    left = 7 - today.weekday()
-    if need > 0 and left - 1 <= need <= left:
-        return done, need, left
-    return None
-
-
-def nudge(state, blocks, inbox, cfg, now, active_minutes, block_until=None):
-    """The nudge to send now as (title, body, link task id), or None."""
-    today = now.date()
-    if not NUDGE_HOURS[0] <= now.hour < NUDGE_HOURS[1] or active_minutes < NUDGE_AFTER:
-        return None
-    if studied_today(blocks, inbox, today, block_until, now):
-        return None
-    opens = opening_today(state, today)
-    if opens:
-        topic, q = opens[0]
+            if q.get("status") == "todo" and q.get("id") not in pending_tasks:
+                nxt = (t, q)
+                break
+        if nxt:
+            break
+    lines.append("Something small for today:")
+    if nxt:
+        t, q = nxt
         name = (q.get("label") + ": " if q.get("label") else "") + q.get("title", "")
-        more = " (and %d more)" % (len(opens) - 1) if len(opens) > 1 else ""
-        return ("Opens today: %s" % (q.get("label") or q.get("title")),
-                "%s%s, in %s. It's spaced on purpose: today is when it works best. One 25-minute block is enough." % (name, more, topic),
-                q.get("id"))
-    risk = week_at_risk(blocks, today, cfg["goals"]["week_days"])
-    if risk:
-        done, need, left = risk
-        tail = "Every day left counts now." if need == left else "One day to spare."
-        return ("Your week needs today",
-                "%d of %d days so far, %d more to go, %d days left including today. %s A 25-minute block counts."
-                % (done, cfg["goals"]["week_days"], need, left, tail), None)
-    return None
+        lines.append("%s, in %s. Open it and do only the first part. One %d-minute block is enough to pick the thread back up."
+                     % (name, t.get("title", ""), minutes))
+        lines.append("http://127.0.0.1:%d/#submit=%s" % (port, q.get("id")))
+    else:
+        lines.append("One %d-minute block of anything you like. It counts." % minutes)
+        lines.append("http://127.0.0.1:%d/" % port)
+    lines += ["", "(You get these after 3, 7, 15 and 30 days away, then once a month. Switch them off in Settings.)"]
+    return title, "\n".join(lines)
 
 
 def recap_due(now, sent):
@@ -175,36 +203,6 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
         lines += ["", "## Opening next week", ""] + ["- " + o for o in opens]
     lines += ["", "Dashboard: http://127.0.0.1:%d/" % port, ""]
     return title, "\n".join(lines)
-
-
-# ---------------------------------------------------------------- presence
-
-def idle_seconds():
-    """Seconds since the last keyboard or mouse input, or None where we can't tell (not macOS)."""
-    if platform.system() != "Darwin":
-        return None
-    try:
-        out = subprocess.run(["ioreg", "-c", "IOHIDSystem", "-d", "4"], stdout=subprocess.PIPE,
-                             stderr=subprocess.DEVNULL, text=True, timeout=5).stdout
-    except (OSError, subprocess.SubprocessError):
-        return None
-    m = re.search(r'"HIDIdleTime"\s*=\s*(\d+)', out)
-    return int(m.group(1)) / 1e9 if m else None
-
-
-class Presence:
-    """Minutes at the computer today, counted once a minute."""
-
-    def __init__(self, idle=idle_seconds):
-        self.idle, self.day, self.minutes = idle, None, 0
-
-    def tick(self, now):
-        if now.date() != self.day:
-            self.day, self.minutes = now.date(), 0
-        s = self.idle()
-        if s is None or s < ACTIVE_IDLE:
-            self.minutes += 1
-        return self.minutes
 
 
 # ---------------------------------------------------------------- delivery
@@ -270,26 +268,6 @@ def send_mail(m, subject, body):
             pass
 
 
-def notify(title, body):
-    """A desktop notification. False when this computer has no way to show one."""
-    cmd = os.environ.get("EDU4SELF_NOTIFY")   # tests (and anyone) can swap in their own command
-    try:
-        if cmd:
-            subprocess.run([cmd, title, body], timeout=10, check=False)
-            return True
-        if platform.system() == "Darwin":
-            q = lambda s: '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
-            subprocess.run(["osascript", "-e", "display notification %s with title %s" % (q(body[:240]), q("edu4self: " + title))],
-                           timeout=10, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return True
-        if shutil.which("notify-send"):
-            subprocess.run(["notify-send", "edu4self: " + title, body[:240]], timeout=10, check=False)
-            return True
-    except (OSError, subprocess.SubprocessError):
-        pass
-    return False
-
-
 # ---------------------------------------------------------------- the sent log
 
 def load_sent(path):
@@ -297,11 +275,11 @@ def load_sent(path):
         with open(path, encoding="utf-8") as fh:
             d = json.load(fh)
         if isinstance(d, dict):
-            return {"nudged": list(d.get("nudged", []))[-60:], "recaps": list(d.get("recaps", []))[-60:],
+            return {"away": list(d.get("away", []))[-60:], "recaps": list(d.get("recaps", []))[-60:],
                     "errors": list(d.get("errors", []))[-20:]}
     except (OSError, ValueError):
         pass
-    return {"nudged": [], "recaps": [], "errors": []}
+    return {"away": [], "recaps": [], "errors": []}
 
 
 def save_sent(path, d):

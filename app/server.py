@@ -88,8 +88,7 @@ DEFAULT_CONFIG = {
     "theme": "bar",                 # which room: a folder in app/dashboard/themes/ or <vault>/themes/
     "theme_lessons": True,          # lesson pages wear the room's look (False: the plain default)
     "gifts": True,                  # a week or a die won starts one Claude run that makes a gift (uses your account)
-    "reminders": {"notify": True,   # a desktop notification on a day you haven't studied yet (see reminders.py)
-                  "mail": False},   # the same nudge by mail (needs `edu4self mail setup`); the Sunday recap is always sent
+    "reminders": {"mail": True},    # mail after 3, 7, 15, 30 days away (needs `edu4self mail setup`; see reminders.py)
     "goals": {"day_minutes": 120, "week_days": 4},
     "blocks": {
         "presets": [25, 50, 90],
@@ -151,7 +150,7 @@ def clean_config(body):
         "theme": c["theme"] if isinstance(c["theme"], str) and themes.THEME_ID.match(c["theme"]) else "bar",
         "theme_lessons": bool(c["theme_lessons"]),
         "gifts": bool(c["gifts"]),
-        "reminders": {"notify": bool(c["reminders"].get("notify", True)), "mail": bool(c["reminders"].get("mail", False))},
+        "reminders": {"mail": away_mail_on(c["reminders"])},
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
                   "week_days": _int(c["goals"].get("week_days"), 1, 7, "weekly goal")},
         "water": {"every": c["water"].get("every") if c["water"].get("every") in (0, 15, 30) else 15},
@@ -757,7 +756,16 @@ def shelf_for_page():
 
 # ---------------------------------------------------------------- reminders (see reminders.py)
 BLOCK_UNTIL = None            # when the block running in the page ends (the page says so when it starts one)
-PRESENCE = reminders.Presence()
+
+
+def away_mail_on(r):
+    """The away-mail switch. Up to 1.2, mail was off by default because desktop notifications were the
+    main channel ({"notify": ..., "mail": false}); that false meant "not set up", not "no thanks"."""
+    if not isinstance(r, dict):
+        return True
+    if "notify" in r:
+        return True
+    return bool(r.get("mail", True))
 
 
 def reminders_for_page():
@@ -765,23 +773,22 @@ def reminders_for_page():
     return {"mail_ready": reminders.load_mail() is not None, "errors": sent["errors"][-3:]}
 
 
-def deliver(title, body, by_notify, by_mail, sent):
-    """Send one message the ways asked for; a failure is kept in the log for Settings to show."""
-    if by_notify:
-        reminders.notify(title, body)
-    if by_mail:
-        m = reminders.load_mail()
-        if m:
-            try:
-                reminders.send_mail(m, "edu4self: " + title, body)
-            except (OSError, reminders.smtplib.SMTPException) as exc:
-                sent["errors"].append("%s mail failed: %s" % (now_iso(), str(exc)[:200]))
+def mail(title, body, sent):
+    """Mail one message when mail is set up. A failure is kept in the log for Settings to show."""
+    m = reminders.load_mail()
+    if not m:
+        return False
+    try:
+        reminders.send_mail(m, "edu4self: " + title, body)
+        return True
+    except (OSError, reminders.smtplib.SMTPException) as exc:
+        sent["errors"].append("%s mail failed: %s" % (now_iso(), str(exc)[:200]))
+        return False
 
 
 def reminder_tick(now=None):
-    """Once a minute: count presence, then send today's nudge or this week's recap if one is due."""
+    """Once a minute: send the away mail or this week's recap if one is due."""
     now = now or datetime.now().astimezone()
-    active = PRESENCE.tick(now)
     try:
         state = json.loads(read_text(STATE))
     except ValueError:
@@ -790,16 +797,16 @@ def reminder_tick(now=None):
     blocks = read_jsonl(BLOCKS)
     sent = reminders.load_sent(REMINDERS)
     out = None
-    today = now.date().isoformat()
-    if today not in sent["nudged"] and (cfg["reminders"]["notify"] or cfg["reminders"]["mail"]):
-        n = reminders.nudge(state, blocks, inbox_entries(), cfg, now, active, BLOCK_UNTIL)
-        if n:
-            title, body, task = n
-            if task:
-                body += "\n\nhttp://127.0.0.1:%d/#submit=%s" % (PORT, task)
-            deliver(title, body, cfg["reminders"]["notify"], cfg["reminders"]["mail"], sent)
-            sent["nudged"].append(today)
-            out = ("nudge", title)
+    if cfg["reminders"]["mail"] and reminders.load_mail():
+        due = reminders.away_due(blocks, inbox_entries(), now, sent, BLOCK_UNTIL)
+        if due:
+            key, step, last = due
+            items = (keepsakes.load(KEEPSAKES) or {"items": []})["items"]
+            pending = {e.get("task") for e in pending_entries(state)}
+            title, body = reminders.away(state, blocks, items, cfg, step, last, pending, PORT)
+            mail(title, body, sent)
+            sent["away"].append(key)       # once per step, even if the mail failed: the error shows in Settings
+            out = ("away", title)
     due = reminders.recap_due(now, sent)
     if due:
         wid, mon = due
@@ -808,7 +815,7 @@ def reminder_tick(now=None):
         os.makedirs(os.path.join(ROOT, "recaps"), exist_ok=True)
         with open(os.path.join(ROOT, "recaps", wid + ".md"), "w", encoding="utf-8") as fh:
             fh.write(body)
-        deliver(title, body, True, True, sent)    # the recap always goes out: a notification, and mail when set up
+        mail(title, body, sent)            # the recap is always mailed when mail is set up
         sent["recaps"].append(wid)
         out = ("recap", title)
     if out:
@@ -1186,7 +1193,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(400, {"error": errors[0], "errors": errors})
             return self.send_json(201, {"ok": True, "id": got})
         if route == "/api/presence":
-            # the page says a block is running until this time (or null when it stops), so no nudge interrupts it
+            # the page says a block is running until this time (or null when it stops), so no reminder lands in it
             global BLOCK_UNTIL
             until = body.get("block_until")
             t = reminders.local_dt(until) if isinstance(until, str) else None

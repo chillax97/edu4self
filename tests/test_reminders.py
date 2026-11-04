@@ -1,4 +1,4 @@
-"""Reminders: when a nudge goes out (and when it stays quiet), the Sunday recap, mail, and the server loop."""
+"""Reminders: when an away mail goes out (and when it stays quiet), what it says, the Sunday recap, mail, the server loop."""
 import json
 import os
 import shutil
@@ -20,7 +20,7 @@ import reminders  # noqa: E402
 import server  # noqa: E402
 from test_server import make_vault, free_port, read_json  # noqa: E402
 
-CFG = {"goals": {"day_minutes": 60, "week_days": 4}, "reminders": {"notify": True, "mail": False}}
+CFG = {"goals": {"day_minutes": 60, "week_days": 4}, "reminders": {"mail": True}, "blocks": {"presets": [25, 50]}}
 WED = datetime(2026, 11, 4, 15, 0).astimezone()          # a Wednesday afternoon
 
 
@@ -38,47 +38,54 @@ def state_with(opens=None, status="todo"):
         {"date": "2026-10-20", "title": "older", "evidence": True}]}]}
 
 
-class NudgeTest(unittest.TestCase):
-    def test_a_task_opening_today_nudges_once_you_have_been_around_an_hour(self):
-        st = state_with(opens="2026-11-04")
-        n = reminders.nudge(st, [], [], CFG, WED, 60)
-        self.assertIsNotNone(n)
-        self.assertIn("Recall check", n[0])
-        self.assertEqual(n[2], "t-recall")
-        self.assertIsNone(reminders.nudge(st, [], [], CFG, WED, 59), "not before an hour at the computer")
+class AwayTest(unittest.TestCase):
+    def test_the_ladder_is_3_7_15_30_then_every_30_days(self):
+        last = WED - timedelta(hours=1)
+        step = lambda days: reminders.away_step(last, WED + timedelta(days=days))
+        self.assertEqual([step(d) for d in (0, 2, 3, 6, 7, 14, 15, 29, 30, 59, 60, 95)],
+                         [None, None, 3, 3, 7, 7, 15, 15, 30, 30, 60, 90])
+        self.assertIsNone(reminders.away_step(None, WED), "nothing ever done: nothing to come back to")
 
-    def test_quiet_when_you_already_studied_or_a_block_is_running(self):
-        st = state_with(opens="2026-11-04")
-        self.assertIsNone(reminders.nudge(st, [blk(WED - timedelta(hours=3))], [], CFG, WED, 90), "a block today")
-        self.assertIsNone(reminders.nudge(st, [], [{"ts": (WED - timedelta(hours=1)).isoformat()}], CFG, WED, 90), "an answer sent today")
-        self.assertIsNone(reminders.nudge(st, [], [], CFG, WED, 90, block_until=WED + timedelta(minutes=20)), "a block running now")
-        self.assertIsNotNone(reminders.nudge(st, [blk(WED - timedelta(days=1))], [], CFG, WED, 90), "yesterday's block doesn't count")
+    def test_each_step_once_and_your_next_action_starts_over(self):
+        blocks = [blk(WED - timedelta(days=3))]
+        due = reminders.away_due(blocks, [], WED, {"away": []})
+        self.assertEqual(due[:2], ("2026-11-01+3", 3))
+        self.assertIsNone(reminders.away_due(blocks, [], WED + timedelta(days=2), {"away": ["2026-11-01+3"]}), "day 5: 3 is sent, 7 not yet")
+        self.assertEqual(reminders.away_due(blocks, [], WED + timedelta(days=4), {"away": ["2026-11-01+3"]})[1], 7)
+        self.assertEqual(reminders.away_due(blocks, [], WED + timedelta(days=12), {"away": []})[1], 15,
+                         "off for a while: only the step reached now goes, not a pile of old ones")
+        back = blocks + [blk(WED + timedelta(days=5))]
+        self.assertIsNone(reminders.away_due(back, [], WED + timedelta(days=6), {"away": ["2026-11-01+3"]}), "a block resets the clock")
+        note = [{"ts": (WED - timedelta(days=1)).isoformat(), "kind": "note"}]
+        self.assertIsNone(reminders.away_due(blocks, note, WED, {"away": []}), "so does an answer or a note")
 
-    def test_quiet_at_night_and_early_morning(self):
-        st = state_with(opens="2026-11-04")
-        self.assertIsNone(reminders.nudge(st, [], [], CFG, WED.replace(hour=22), 90))
-        self.assertIsNone(reminders.nudge(st, [], [], CFG, WED.replace(hour=8, minute=59), 90))
-        self.assertIsNotNone(reminders.nudge(st, [], [], CFG, WED.replace(hour=9), 90))
+    def test_quiet_at_night_and_during_a_block(self):
+        blocks = [blk(WED - timedelta(days=3))]
+        self.assertIsNone(reminders.away_due(blocks, [], WED.replace(hour=22), {"away": []}))
+        self.assertIsNone(reminders.away_due(blocks, [], WED.replace(hour=8, minute=59), {"away": []}))
+        self.assertIsNotNone(reminders.away_due(blocks, [], WED.replace(hour=9), {"away": []}))
+        self.assertIsNone(reminders.away_due(blocks, [], WED, {"away": []}, block_until=WED + timedelta(minutes=20)))
 
-    def test_a_done_task_or_another_day_is_no_reason(self):
-        easy = dict(CFG, goals={"day_minutes": 60, "week_days": 1})       # the week is already won, so only "opens" could nudge
-        monday = [blk(WED - timedelta(days=2))]
-        self.assertIsNotNone(reminders.nudge(state_with(opens="2026-11-04"), monday, [], easy, WED, 90))
-        self.assertIsNone(reminders.nudge(state_with(opens="2026-11-04", status="done"), monday, [], easy, WED, 90))
-        self.assertIsNone(reminders.nudge(state_with(opens="2026-11-05"), monday, [], easy, WED, 90))
+    def test_the_mail_praises_what_you_did_then_offers_one_small_thing(self):
+        blocks = [blk(WED - timedelta(days=8), 90), blk(WED - timedelta(days=7), 30)]
+        items = [{"name": "bottle cap", "plural": "bottle caps"}] * 2
+        title, body = reminders.away(state_with(), blocks, items, CFG, 7, reminders.last_activity(blocks, []), set(), 4747)
+        self.assertIn("A week away", title)
+        self.assertIn("2 focused hours over 2 days", body)
+        self.assertIn("2 things proven, most recently: Lesson 06: cache size; older", body)
+        self.assertIn("2 bottle caps", body)
+        self.assertIn("Recall check: How big is the cache?, in Inference", body)
+        self.assertIn("One 25-minute block", body, "the smallest block on offer")
+        self.assertIn("http://127.0.0.1:4747/#submit=t-recall", body)
+        self.assertNotRegex(body.lower(), r"miss|behind|fail|streak", "no guilt")
 
-    def test_the_week_is_at_risk_only_with_at_most_one_day_to_spare(self):
-        # Wednesday: 5 days left including today. Goal 4 days.
-        mon = WED - timedelta(days=2)
-        st = state_with()
-        self.assertIsNotNone(reminders.nudge(st, [], [], CFG, WED, 90), "0 done, 4 needed, 5 left: one day to spare")
-        self.assertIsNone(reminders.nudge(st, [blk(mon)], [], CFG, WED, 90), "1 done, 3 needed, 5 left: two to spare")
-        sat = WED + timedelta(days=3)       # 2 days left
-        self.assertIsNotNone(reminders.nudge(st, [blk(mon), blk(mon + timedelta(days=1))], [], CFG, sat, 90), "2 needed, 2 left")
-        self.assertIsNone(reminders.nudge(st, [blk(mon)], [], CFG, sat, 90), "3 needed, 2 left: already lost, no nagging")
-        four = [blk(mon + timedelta(days=i)) for i in range(2)] + [blk(WED - timedelta(days=7))]
-        self.assertIsNone(reminders.nudge(st, four[:2] + [blk(mon), blk(mon)], [], dict(CFG, goals={"day_minutes": 60, "week_days": 2}), sat, 90),
-                          "goal already met")
+    def test_nothing_to_do_still_gives_a_small_step_and_long_absences_get_their_own_words(self):
+        blocks = [blk(WED - timedelta(days=60))]
+        last = reminders.last_activity(blocks, [])
+        title, body = reminders.away(state_with(), blocks, [], CFG, 60, last, {"t-recall"}, 4747)
+        self.assertIn("60 days away", title)
+        self.assertIn("One 25-minute block of anything", body, "the only task is waiting for grading")
+        self.assertNotIn("#submit=", body)
 
 
 class RecapTest(unittest.TestCase):
@@ -102,19 +109,6 @@ class RecapTest(unittest.TestCase):
         self.assertNotIn("older", body)
         self.assertIn("1 book", body)
         self.assertIn("opens 2026-11-10", body)
-
-
-class PresenceTest(unittest.TestCase):
-    def test_counts_minutes_at_the_computer_and_resets_each_day(self):
-        idle = [10]
-        p = reminders.Presence(idle=lambda: idle[0])
-        for i in range(3):
-            p.tick(WED + timedelta(minutes=i))
-        idle[0] = 600
-        self.assertEqual(p.tick(WED + timedelta(minutes=3)), 3, "away from the keyboard doesn't count")
-        idle[0] = 10
-        self.assertEqual(p.tick(WED + timedelta(days=1)), 1, "a new day starts from zero")
-        self.assertEqual(reminders.Presence(idle=lambda: None).tick(WED), 1, "where idle time is unknown, being up counts")
 
 
 class FakeSMTP(socketserver.ThreadingTCPServer):
@@ -192,91 +186,91 @@ class MailTest(unittest.TestCase):
 
 
 class ServerLoopTest(unittest.TestCase):
-    """The real server: one nudge a day through the notifier, never during a block; the recap file on Sunday."""
+    """The real server: the away mail through a mail server, never during a block; the recap file on Sunday."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="edu4self-rem-")
         self.vault, _ = make_vault(self.tmp)
         os.environ["EDU4SELF_CONFIG_HOME"] = os.path.join(self.tmp, "cfg")
-        self.out = os.path.join(self.tmp, "notified.txt")
-        note = os.path.join(self.tmp, "notify.sh")
-        with open(note, "w") as fh:
-            fh.write('#!/bin/sh\nprintf "%%s|%%s\\n" "$1" "$2" >> %s\n' % self.out)
-        os.chmod(note, 0o755)
-        os.environ["EDU4SELF_NOTIFY"] = note
-        st = read_json(os.path.join(self.vault, "_system", "state.json"))
-        q = st["topics"][0]["queue"][0]
-        q["opens"] = WED.date().isoformat()
-        q["status"] = "todo"
-        with open(os.path.join(self.vault, "_system", "state.json"), "w") as fh:
-            json.dump(st, fh)
-        open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w").close()
+        self.smtp = FakeSMTP()
+        threading.Thread(target=self.smtp.serve_forever, daemon=True).start()
+        reminders.save_mail({"host": "127.0.0.1", "port": self.smtp.server_address[1], "security": "none",
+                             "user": "me@example.com", "password": "", "to": "me@example.com"})
+        self.blocks(WED - timedelta(days=3))
         self.port = free_port()
         self.httpd = server.make_server(self.vault, self.port)
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
-        server.PRESENCE = reminders.Presence(idle=lambda: 0)
         server.BLOCK_UNTIL = None
 
     def tearDown(self):
         self.httpd.shutdown()
         self.httpd.server_close()
-        for k in ("EDU4SELF_CONFIG_HOME", "EDU4SELF_NOTIFY"):
-            os.environ.pop(k, None)
+        self.smtp.shutdown()
+        self.smtp.server_close()
+        os.environ.pop("EDU4SELF_CONFIG_HOME", None)
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def notified(self):
-        return open(self.out).read().splitlines() if os.path.exists(self.out) else []
+    def blocks(self, *when):
+        with open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w") as fh:
+            for w in when:
+                fh.write(json.dumps(blk(w)) + "\n")
 
-    def warm_up(self, start):
-        for i in range(59):
-            server.reminder_tick(start + timedelta(minutes=i - 59))   # 59 minutes at the computer; the next tick is the 60th
+    def config(self, c):
+        with open(os.path.join(self.vault, "_system", "config.json"), "w") as fh:
+            json.dump(c, fh)
 
-    def test_one_nudge_a_day_with_a_link_to_the_task(self):
-        self.warm_up(WED)
-        self.assertEqual(server.reminder_tick(WED)[0], "nudge")
-        self.assertIsNone(server.reminder_tick(WED + timedelta(minutes=5)), "once a day")
-        lines = [l for l in self.notified() if "|" in l]   # one line per notification (the body runs on)
-        self.assertEqual(len(lines), 1)
-        self.assertIn("#submit=", lines[0] + open(self.out).read())
-        self.assertIn(WED.date().isoformat(), read_json(os.path.join(self.vault, "_system", "reminders.json"))["nudged"])
+    def test_one_mail_per_step_with_a_link_to_the_task(self):
+        self.assertEqual(server.reminder_tick(WED)[0], "away")
+        self.assertIsNone(server.reminder_tick(WED + timedelta(minutes=5)), "once per step")
+        self.assertEqual(len(self.smtp.mails), 1)
+        self.assertIn("Subject: edu4self: Three days off", self.smtp.mails[0])
+        self.assertIn("#submit=", self.smtp.mails[0])
+        self.assertIn("+3", read_json(os.path.join(self.vault, "_system", "reminders.json"))["away"][0])
+        self.assertEqual(server.reminder_tick(WED + timedelta(days=4))[0], "away", "day 7")
+        self.assertIn("A week away", self.smtp.mails[1])
 
-    def test_a_block_running_in_the_page_holds_the_nudge(self):
+    def test_a_block_running_in_the_page_holds_the_mail(self):
         import http.client
         now = datetime.now().astimezone() + timedelta(minutes=1)    # the block's end is set from the real clock
-        hours, reminders.NUDGE_HOURS = reminders.NUDGE_HOURS, (0, 24)   # so this runs at any hour
-        self.addCleanup(setattr, reminders, "NUDGE_HOURS", hours)
-        st = read_json(os.path.join(self.vault, "_system", "state.json"))
-        st["topics"][0]["queue"][0]["opens"] = now.date().isoformat()
-        with open(os.path.join(self.vault, "_system", "state.json"), "w") as fh:
-            json.dump(st, fh)
+        hours, reminders.MAIL_HOURS = reminders.MAIL_HOURS, (0, 24)   # so this runs at any hour
+        self.addCleanup(setattr, reminders, "MAIL_HOURS", hours)
+        self.blocks(now - timedelta(days=3))
         with open(os.path.join(self.vault, "_system", "reminders.json"), "w") as fh:   # no recap in the way
             json.dump({"recaps": [reminders.week_id(now.date()), reminders.week_id(now.date() - timedelta(days=1))]}, fh)
-        self.warm_up(now)
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         until = (datetime.now().astimezone() + timedelta(minutes=30)).isoformat()
         c.request("POST", "/api/presence", json.dumps({"block_until": until}),
                   {"Content-Type": "application/json", "Host": "127.0.0.1:%d" % self.port, "Origin": "http://127.0.0.1:%d" % self.port})
         self.assertEqual(c.getresponse().status, 200)
         self.assertIsNone(server.reminder_tick(now))
-        self.assertEqual(self.notified(), [])
-        server.BLOCK_UNTIL = None                       # the block ends: now the nudge may go
-        self.assertEqual(server.reminder_tick(now)[0], "nudge")
+        self.assertEqual(self.smtp.mails, [])
+        server.BLOCK_UNTIL = None                       # the block ends: now the mail may go
+        self.assertEqual(server.reminder_tick(now)[0], "away")
 
-    def test_switched_off_means_quiet(self):
-        with open(os.path.join(self.vault, "_system", "config.json"), "w") as fh:
-            json.dump({"reminders": {"notify": False, "mail": False}}, fh)
-        self.warm_up(WED)
+    def test_switched_off_or_not_set_up_means_quiet(self):
+        self.config({"reminders": {"mail": False}})
         self.assertIsNone(server.reminder_tick(WED))
-        self.assertEqual(self.notified(), [])
+        self.config({})
+        os.remove(reminders.mail_path())
+        self.assertIsNone(server.reminder_tick(WED))
+        self.assertEqual(self.smtp.mails, [])
 
-    def test_sunday_writes_the_recap_and_says_so(self):
+    def test_an_old_config_keeps_mail_on(self):
+        # up to 1.2, {"notify": true, "mail": false} was the default: mail off meant "not set up", not "no thanks"
+        self.config({"reminders": {"notify": True, "mail": False}})
+        self.assertTrue(server.load_config()[0]["reminders"]["mail"])
+        self.assertNotIn("notify", server.load_config()[0]["reminders"])
+        self.assertEqual(server.reminder_tick(WED)[0], "away")
+
+    def test_sunday_writes_the_recap_and_mails_it(self):
         sun = datetime(2026, 11, 8, 19, 30).astimezone()
+        self.blocks(sun - timedelta(hours=2))
         kind, title = server.reminder_tick(sun)
         self.assertEqual(kind, "recap")
         path = os.path.join(self.vault, "recaps", "2026-W45.md")
         self.assertTrue(os.path.isfile(path))
         self.assertIn("# Your week", open(path).read())
-        self.assertTrue(any(l.startswith("Your week") for l in self.notified()))
+        self.assertIn("Subject: edu4self: Your week", self.smtp.mails[0])
         self.assertIsNone(server.reminder_tick(sun + timedelta(minutes=1)))
 
 
