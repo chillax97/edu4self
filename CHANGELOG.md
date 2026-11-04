@@ -3,6 +3,14 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Changed
+- Reminders come by mail only, and only when you've been away: after 3, 7, 15 and 30 days without a
+  block, answer or note, then once every 30 days. Each mail says what you've done so far and offers
+  one small thing for today. The daily nudge and desktop notifications are gone. The Sunday recap
+  stays, by mail. Mail is on by default once `./edu4self mail setup` is done.
+
 ## 1.2.0 - 2026-11-04
 
 ### Added

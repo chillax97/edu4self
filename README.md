@@ -146,7 +146,7 @@ while you study. Starting at login is automated on macOS (launchd) and Linux (sy
 | `./edu4self restart` / `status` | restart the service / show what's running |
 | `./edu4self check` | validate the vault (Claude runs this after every update) |
 | `./edu4self doctor` | check everything and say how to fix what's wrong |
-| `./edu4self mail setup` | reminders and the Sunday recap by mail, from your own account |
+| `./edu4self mail setup` | a mail when you've been away, and the Sunday recap, from your own account |
 | `./edu4self mcp` | your progress for any AI tool that speaks MCP ([how](docs/MCP.md)) |
 
 Update with `git pull` and `./edu4self restart`. The code and your data live in different folders,

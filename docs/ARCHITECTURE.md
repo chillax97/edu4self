@@ -18,7 +18,7 @@ edu4self is three small programs around one folder of plain files.
 | page | `app/dashboard/index.html`, `app.js`, `app.css`, `fonts/` | renders state; submissions, blocks, Settings |
 | rooms | `app/themes.py`, `app/dashboard/themes/<id>/` | load, check and clean rooms (built-in and the vault's own) |
 | MCP | `app/mcp_server.py` | `edu4self mcp`: progress for any AI tool over MCP (stdio); reads `/api/state`, notes go through `/api/inbox` |
-| reminders | `app/reminders.py` | when a nudge or the Sunday recap is due, presence, notifications, mail |
+| reminders | `app/reminders.py` | when an away mail (3, 7, 15, 30 days) or the Sunday recap is due, what they say, mail |
 | trophies | `app/keepsakes.py` | what the blocks have won (day, week, die), kept with the drawing of the room it was won in |
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |
 | CLI | `edu4self` | setup, init, serve, login service, check, doctor |
@@ -36,7 +36,7 @@ _system/inbox.jsonl    submissions and withdrawals (append-only)
 _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
 _system/keepsakes.json trophies won, with a copy of each one's drawing (server only)
-_system/reminders.json which days were nudged and which weeks recapped (server only)
+_system/reminders.json which away mails went out and which weeks were recapped (server only)
 recaps/                the Sunday recaps, one markdown file a week
 gifts/                 pages Claude made when a week or a die was won
 _system/music/         one audio file
@@ -145,9 +145,9 @@ loads anything or styles outside `.room`, and keeps only plain values from `them
 served with a CSP that runs only its own scripts.
 
 **Reminders.** `edu4self serve` runs `reminder_loop` once a minute (off with `EDU4SELF_REMINDERS=0`,
-as the browser tests do). Each tick counts presence, then asks `reminders.nudge` and
-`reminders.recap_due`. The page posts `/api/presence` with the end of a running block, so no nudge
-lands during one. Mail settings are read from the config folder, never the vault.
+as the browser tests do). Each tick asks `reminders.away_due` and `reminders.recap_due`, and
+mails what's due. The page posts `/api/presence` with the end of a running block, so no mail
+goes out during one. Mail settings are read from the config folder, never the vault.
 
 **Trophies.** The server awards them (`sync_keepsakes`) when a block is saved and when the state is
 read, so a changed goal or a first run catches up. The first run on a vault awards its history

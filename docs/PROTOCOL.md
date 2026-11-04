@@ -80,9 +80,9 @@ pending submission, across all topics, becomes **Up next**.
   `effort`, `rules`, `unlock` (required when locked), `submit: {type: "answers" | "done", intro,
   fields: [labels]}`. A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
   files; question labels are at most 1000 characters. `opens` (optional, `YYYY-MM-DD`): the day a
-  spaced task is meant to be done, such as a recall check a few days after a lesson. On that day,
-  if the learner hasn't studied, the server sends their one reminder about it. Set it whenever you
-  space something on purpose; leave it out otherwise.
+  spaced task is meant to be done, such as a recall check a few days after a lesson. The Sunday
+  recap lists it under what opens next week, and AI tools connected over MCP see it as due. Set it
+  whenever you space something on purpose; leave it out otherwise.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md"}`.
 - `linked_topics[]` (optional): read-only courses outside the vault,

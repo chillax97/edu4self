@@ -10,7 +10,7 @@
     ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
     ./edu4self doctor                check everything and say how to fix what's wrong
     ./edu4self open                  open the dashboard in a browser
-    ./edu4self mail setup|test|off   reminders and the Sunday recap by mail (your own account)
+    ./edu4self mail setup|test|off   away mails and the Sunday recap (your own mail account)
     ./edu4self mcp                   your progress for any AI tool that speaks MCP (see docs/MCP.md)
     ./edu4self room export ID        save a room as one ID.room file to share
     ./edu4self room import FILE      add a room someone shared (checked first; --as NAME, --replace)
@@ -568,7 +568,7 @@ def cmd_mail(args):
         to = ask("Send reminders to", old.get("to") or user)
         m = {"host": host, "port": port, "security": "ssl" if port == 465 else "starttls", "user": user, "password": pw, "to": to}
     try:
-        reminders.send_mail(m, "edu4self: mail works", "This is the test mail from edu4self. Reminders and your Sunday recap will come like this.")
+        reminders.send_mail(m, "edu4self: mail works", "This is the test mail from edu4self. Away mails and your Sunday recap will come like this.")
     except Exception as exc:
         print("Couldn't send the test mail: %s" % exc)
         print("Nothing was saved. Check the server, port and app password, and try again." if args.action == "setup" else "")
