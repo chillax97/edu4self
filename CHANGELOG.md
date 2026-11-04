@@ -5,6 +5,11 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Added
+- The mail app password can live in the macOS Keychain or a Linux desktop's password store instead of
+  the config file. It's optional: `mail setup` lists where it can go and the risk of each, and the
+  file stays the default.
+
 ### Changed
 - Gifts from Claude are off until you say yes. Each one is a run on your Claude plan, so setup asks
   (or `--gifts on|off`), and if it didn't, the dashboard asks once. A gift won before you answer waits.

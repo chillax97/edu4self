@@ -144,6 +144,17 @@ the week: minutes, days, what you proved and what's next. It's saved to
 Mail uses your own account. Run `./edu4self mail setup`, give it an app password (not your main
 password), and it sends a test mail before saving anything. The account lives in
 `~/.config/edu4self/mail.json`, readable only by you and never inside the vault.
+
+You choose where the app password is kept, and setup shows the risk of each:
+
+| where | risk |
+|---|---|
+| in `mail.json` (default) | any program running as you can read it, and it's in backups of your home folder |
+| the macOS Keychain | encrypted on disk, locked when you log out; any program running as you can still ask for it through `security`; mail waits while the Keychain is locked |
+| your Linux desktop's password store (`secret-tool`, when installed) | encrypted on disk, locked when you log out; any program in your session can ask for it; without a desktop session mail fails |
+
+None of them protects against a program already running as you. That's why it should be an app
+password you can revoke, never your main one. `./edu4self mail off` removes it from wherever it is.
 `./edu4self mail test` sends another test, `./edu4self mail off` deletes it.
 
 ### Obsidian
