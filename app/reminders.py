@@ -10,12 +10,17 @@ The recap goes out once a week, on Sunday from 19:00 (or the first chance after,
 written to recaps/<year>-W<week>.md in the vault, and mailed when mail is set up.
 
 Mail settings (server, account, app password) live outside the vault, in the edu4self config folder
-(mail.json, readable only by you), so they never end up in a synced or shared vault.
+(mail.json, readable only by you), so they never end up in a synced or shared vault. If you choose, the
+app password goes to the system's password store instead (macOS Keychain, or the Secret Service on
+Linux desktops) and mail.json only says where it is. See PASSWORD_STORES for what each one protects.
 """
 import json
 import os
+import platform
+import shutil
 import smtplib
 import ssl
+import subprocess
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 
@@ -213,8 +218,74 @@ def mail_path():
 MAIL_KEYS = ("host", "port", "security", "user", "password", "to")
 
 
+# Where the app password can live. Each entry: what it is, and the risks, shown before the learner picks.
+PASSWORD_STORES = {
+    "file": ("a file only you can read (%s)",
+             "Any program running as you can read it, and it's copied into backups of your home folder."),
+    "keychain": ("the macOS Keychain",
+                 "Encrypted on disk and locked when you log out. Any program running as you can still ask for "
+                 "it through the `security` tool once it's stored this way. If the Keychain is locked, mail "
+                 "waits until you log in."),
+    "secret-service": ("your desktop's password store (Secret Service, through secret-tool)",
+                       "Encrypted on disk and locked when you log out. Any program in your session can ask for "
+                       "it. Without a desktop session (a server, plain SSH) it can't be read and mail fails."),
+}
+SECRET_SERVICE = "edu4self-mail"
+
+
+def password_stores():
+    """The stores this computer has, the plain file first."""
+    out = ["file"]
+    if platform.system() == "Darwin" and shutil.which("security"):
+        out.append("keychain")
+    if shutil.which("secret-tool"):
+        out.append("secret-service")
+    return out
+
+
+def _run(cmd, stdin=""):
+    """Run a password-store command; the password only ever travels on stdin or stdout, never in argv."""
+    try:
+        p = subprocess.run(cmd, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 1, "", str(exc)
+    return p.returncode, p.stdout, p.stderr
+
+
+def store_password(store, user, pw):
+    """Put the password in the store. Raises OSError when the store refuses."""
+    if store == "keychain":
+        q = lambda v: '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        rc, _, err = _run(["security", "-i"], "add-generic-password -U -a %s -s %s -w %s\n" % (q(user), q(SECRET_SERVICE), q(pw)))
+    elif store == "secret-service":
+        rc, _, err = _run(["secret-tool", "store", "--label=edu4self mail", "service", SECRET_SERVICE, "account", user], pw)
+    else:
+        raise OSError("unknown password store %r" % store)
+    if rc != 0 or read_password(store, user) != pw:
+        raise OSError("the %s didn't keep the password: %s" % (store, (err or "").strip()[:200] or "no reason given"))
+
+
+def read_password(store, user):
+    """The password from the store, or None."""
+    if store == "keychain":
+        rc, out, _ = _run(["security", "find-generic-password", "-a", user, "-s", SECRET_SERVICE, "-w"])
+    elif store == "secret-service":
+        rc, out, _ = _run(["secret-tool", "lookup", "service", SECRET_SERVICE, "account", user])
+    else:
+        return None
+    return out.rstrip("\n") if rc == 0 and out else None
+
+
+def forget_password(store, user):
+    if store == "keychain":
+        _run(["security", "delete-generic-password", "-a", user, "-s", SECRET_SERVICE])
+    elif store == "secret-service":
+        _run(["secret-tool", "clear", "service", SECRET_SERVICE, "account", user])
+
+
 def load_mail():
-    """The mail account, or None when it isn't set up (or the file is broken)."""
+    """The mail account, or None when it isn't set up (or the file is broken). With the password in a
+    system store, "password" is filled in from there, or None when the store won't give it."""
     try:
         with open(mail_path(), encoding="utf-8") as fh:
             m = json.load(fh)
@@ -222,15 +293,24 @@ def load_mail():
         return None
     if not isinstance(m, dict) or any(k not in m for k in MAIL_KEYS):
         return None
+    store = m.get("password_store", "file")
+    if store != "file":
+        m["password"] = read_password(store, m["user"])
     return m
 
 
 def save_mail(m):
+    """Save the account. With password_store set to a system store, the password goes there, not the file."""
+    store = m.get("password_store", "file")
+    out = dict(m)
+    if store != "file":
+        store_password(store, m["user"], m["password"])
+        out["password"] = ""
     os.makedirs(config_dir(), exist_ok=True)
     path = mail_path()
     fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        json.dump(m, fh, indent=1)
+        json.dump(out, fh, indent=1)
     os.chmod(path + ".tmp", 0o600)
     os.replace(path + ".tmp", path)
 
@@ -242,6 +322,9 @@ def send_mail(m, subject, body):
     msg["From"] = m.get("from") or m["user"]
     msg["To"] = m["to"]
     msg.set_content(body)
+    if m.get("password") is None:
+        raise smtplib.SMTPException("couldn't read the mail password from the %s (locked, or removed?)"
+                                    % PASSWORD_STORES.get(m.get("password_store"), ("password store",))[0])
     sec, host, port = m["security"], m["host"], int(m["port"])
     if sec == "none" and host not in ("127.0.0.1", "localhost"):
         raise smtplib.SMTPException("mail without encryption is only allowed to this computer")

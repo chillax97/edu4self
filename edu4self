@@ -544,9 +544,12 @@ def cmd_mail(args):
     import getpass
     path = reminders.mail_path()
     if args.action == "off":
+        old = reminders.load_mail()
+        if old and old.get("password_store", "file") != "file":
+            reminders.forget_password(old["password_store"], old["user"])
         if os.path.exists(path):
             os.remove(path)
-        print("Mail is off; the settings file is gone (%s)." % path)
+        print("Mail is off; the settings file is gone (%s)%s." % (path, ", and so is the stored password" if old and old.get("password_store", "file") != "file" else ""))
         return 0
     if args.action == "test":
         m = reminders.load_mail()
@@ -554,9 +557,9 @@ def cmd_mail(args):
             print("Mail isn't set up. Run: ./edu4self mail setup")
             return 1
     else:
-        print("Reminders and the Sunday recap can come by mail, from your own account.")
+        print("Away mails and the Sunday recap come by mail, from your own account.")
         print("Use an app password, not your main one (Gmail: myaccount.google.com/apppasswords).")
-        print("It's stored in %s, readable only by you, never in your vault.\n" % path)
+        print("It never goes in your vault. You choose where it's kept; a test mail goes out before anything is saved.\n")
         old = reminders.load_mail() or {}
         ask = lambda q, d: (input("%s [%s]: " % (q, d)) if d else input("%s: " % q)).strip() or d
         user = ask("Your mail address (the account that sends)", old.get("user", ""))
@@ -567,9 +570,19 @@ def cmd_mail(args):
         guess = known.get(user.rsplit("@", 1)[-1].lower(), (old.get("host", ""), old.get("port", 465)))
         host = ask("SMTP server", guess[0])
         port = int(ask("Port (465 = SSL, 587 = STARTTLS)", str(old.get("port", guess[1]))))
-        pw = getpass.getpass("App password%s: " % (" (Enter keeps the old one)" if old.get("password") else "")) or old.get("password", "")
+        pw = getpass.getpass("App password%s: " % (" (Enter keeps the old one)" if old.get("password") else "")) or old.get("password") or ""
         to = ask("Send reminders to", old.get("to") or user)
         m = {"host": host, "port": port, "security": "ssl" if port == 465 else "starttls", "user": user, "password": pw, "to": to}
+        stores = reminders.password_stores()
+        m["password_store"] = "file"
+        if len(stores) > 1:
+            print("\nWhere should the app password be kept? Each has a risk:")
+            for i, st in enumerate(stores, 1):
+                what, risk = reminders.PASSWORD_STORES[st]
+                print("  %d. %s%s\n     %s" % (i, what % path if "%s" in what else what, " (default)" if i == 1 else "", risk))
+            was = old.get("password_store", "file")
+            pick = ask("Choose", str(stores.index(was) + 1 if was in stores else 1))
+            m["password_store"] = stores[int(pick) - 1] if pick.isdigit() and 1 <= int(pick) <= len(stores) else "file"
     try:
         reminders.send_mail(m, "edu4self: mail works", "This is the test mail from edu4self. Away mails and your Sunday recap will come like this.")
     except Exception as exc:
@@ -577,8 +590,17 @@ def cmd_mail(args):
         print("Nothing was saved. Check the server, port and app password, and try again." if args.action == "setup" else "")
         return 1
     if args.action == "setup":
-        reminders.save_mail(m)
-        print("Sent a test mail to %s and saved the settings. Turn on Mail in the dashboard's Settings." % m["to"])
+        try:
+            reminders.save_mail(m)
+        except OSError as exc:
+            print("The test mail went out, but the password couldn't be stored: %s" % exc)
+            print("Nothing was saved. Run setup again and pick another place.")
+            return 1
+        was = old.get("password_store", "file") if old else "file"
+        if was != "file" and (was != m["password_store"] or old["user"] != m["user"]):
+            reminders.forget_password(old["password_store"], old["user"])     # moved: don't leave a copy behind
+        what = reminders.PASSWORD_STORES[m["password_store"]][0]
+        print("Sent a test mail to %s and saved the settings; the password is in %s." % (m["to"], what % path if "%s" in what else what))
     else:
         print("Sent a test mail to %s." % m["to"])
     return 0

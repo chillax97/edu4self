@@ -114,7 +114,7 @@ class FakeSMTP(socketserver.ThreadingTCPServer):
     daemon_threads = True
 
     def __init__(self):
-        self.mails = []
+        self.mails, self.logins = [], []
         super().__init__(("127.0.0.1", 0), self.Handler)
 
     class Handler(socketserver.StreamRequestHandler):
@@ -134,7 +134,12 @@ class FakeSMTP(socketserver.ThreadingTCPServer):
                     continue
                 cmd = line.upper()
                 if cmd.startswith("EHLO"):
-                    w("250 fake")
+                    w("250-fake")
+                    w("250 AUTH PLAIN")
+                elif cmd.startswith("AUTH PLAIN"):
+                    import base64
+                    self.server.logins.append(base64.b64decode(line.split()[2]).decode().split("\0")[1:])
+                    w("235 ok")
                 elif cmd.startswith("DATA"):
                     data = True
                     w("354 go")
@@ -166,6 +171,65 @@ class MailTest(unittest.TestCase):
         reminders.send_mail(reminders.load_mail(), "edu4self: hi", "body text")
         self.assertIn("Subject: edu4self: hi", self.smtp.mails[0])
         self.assertIn("body text", self.smtp.mails[0])
+
+    def fake_store(self):
+        """A stand-in for security / secret-tool: remembers what it was given, and checks argv never holds it."""
+        kept = {}
+        def run(cmd, stdin=""):
+            self.assertNotIn("s3cret", " ".join(cmd), "the password never goes on a command line")
+            if cmd[:2] == ["security", "-i"]:
+                kept["pw"] = stdin.split(" -w ")[1].strip().strip('"')
+                return 0, "", ""
+            if cmd[:2] == ["security", "find-generic-password"]:
+                return (0, kept["pw"] + "\n", "") if "pw" in kept else (44, "", "not found")
+            if cmd[:2] == ["security", "delete-generic-password"]:
+                kept.pop("pw", None)
+                return 0, "", ""
+            return 1, "", "?"
+        real = reminders._run
+        reminders._run = run
+        self.addCleanup(setattr, reminders, "_run", real)
+        return kept
+
+    def test_the_password_can_live_in_the_keychain_instead_of_the_file(self):
+        kept = self.fake_store()
+        reminders.save_mail(dict(self.acct, password="s3cret", password_store="keychain"))
+        on_disk = json.load(open(reminders.mail_path()))
+        self.assertEqual((on_disk["password"], on_disk["password_store"]), ("", "keychain"), "not in the file")
+        self.assertEqual(kept["pw"], "s3cret")
+        m = reminders.load_mail()
+        self.assertEqual(m["password"], "s3cret")
+        reminders.send_mail(m, "edu4self: hi", "via the keychain")
+        self.assertIn("via the keychain", self.smtp.mails[0])
+        self.assertEqual(self.smtp.logins[-1], ["me@example.com", "s3cret"], "logged in with the stored password")
+        reminders.forget_password("keychain", m["user"])
+        m = reminders.load_mail()
+        self.assertIsNone(m["password"])
+        with self.assertRaises(reminders.smtplib.SMTPException) as cm:
+            reminders.send_mail(m, "x", "y")
+        self.assertIn("Keychain", str(cm.exception), "Settings says why mail stopped")
+
+    def test_a_store_that_refuses_saves_nothing(self):
+        reminders._run, real = (lambda cmd, stdin="": (1, "", "User interaction is not allowed.")), reminders._run
+        self.addCleanup(setattr, reminders, "_run", real)
+        with self.assertRaises(OSError):
+            reminders.save_mail(dict(self.acct, password="s3cret", password_store="keychain"))
+        self.assertFalse(os.path.exists(reminders.mail_path()))
+
+    def test_every_store_comes_with_its_risk(self):
+        self.assertEqual(reminders.password_stores()[0], "file", "the plain file is always there, and first")
+        for store, (what, risk) in reminders.PASSWORD_STORES.items():
+            self.assertIn("Any program", risk, store)
+
+    @unittest.skipUnless(sys.platform == "darwin" and os.environ.get("EDU4SELF_TEST_KEYCHAIN"),
+                         "touches the real login Keychain; set EDU4SELF_TEST_KEYCHAIN=1 to run")
+    def test_real_keychain_round_trip(self):
+        user = "edu4self-test@example.invalid"
+        self.addCleanup(reminders.forget_password, "keychain", user)
+        reminders.store_password("keychain", user, 'a"b\\c d')
+        self.assertEqual(reminders.read_password("keychain", user), 'a"b\\c d')
+        reminders.forget_password("keychain", user)
+        self.assertIsNone(reminders.read_password("keychain", user))
 
     def test_unencrypted_mail_only_goes_to_this_computer(self):
         with self.assertRaises(reminders.smtplib.SMTPException):
