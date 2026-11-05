@@ -126,7 +126,7 @@ def sync(path, blocks, day_minutes, week_days, theme_id, theme_keepsakes, now=No
             data["art"].setdefault(key, look["art"])
             quiet = first or not is_now(item, now)
             item.update(theme=theme_id, name=look["name"], plural=look.get("plural", look["name"] + "s"),
-                        stack=look.get("stack", "pile"), art=key, won=now.isoformat(timespec="seconds"),
+                        stack=look.get("stack", "pile"), stamp=look.get("stamp") or "earned", art=key, won=now.isoformat(timespec="seconds"),
                         backfill=quiet, gift=None if quiet or item["kind"] == "day" else "pending")
             data["items"].append(item)
             have.add(item["id"])

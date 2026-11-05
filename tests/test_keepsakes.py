@@ -81,12 +81,14 @@ class SyncTest(unittest.TestCase):
         self.assertEqual(keepsakes.pending_gift(self.path)["id"], by["week"]["id"])
 
     def test_a_trophy_keeps_the_drawing_of_the_room_it_was_won_in(self):
-        library = dict(LOOK, day=dict(LOOK["day"], name="book", art='<svg viewBox="0 0 4 1"><rect width="4" height="1"/></svg>'))
+        library = dict(LOOK, day=dict(LOOK["day"], name="book", stamp="checked out", art='<svg viewBox="0 0 4 1"><rect width="4" height="1"/></svg>'))
         keepsakes.sync(self.path, [block(at(9, 20), 60)], 30, 7, "library", library)
         keepsakes.sync(self.path, [block(at(9, 20), 60), block(at(8, 20), 60)], 30, 7, "space", LOOK)
         data = keepsakes.load(self.path)
         rooms = [(i["theme"], i["name"]) for i in data["items"] if i["kind"] == "day"]
         self.assertEqual(rooms, [("library", "book"), ("space", "star")])
+        self.assertEqual([i["stamp"] for i in data["items"] if i["kind"] == "day"], ["checked out", "earned"],
+                         "the stamp word travels with the trophy; a room without one says earned")
         self.assertEqual(len(data["art"]), 2, "both drawings are kept")
         self.assertIn("<rect", data["art"][data["items"][0]["art"]])
 
@@ -107,6 +109,8 @@ class ArtTest(unittest.TestCase):
         meta, errs = themes.clean_meta({"name": "X", "keepsakes": {"day": {"name": "tooth", "art": "<script>x</script>", "stack": "tower"}}}, "x")
         self.assertTrue(any("keepsakes.day.art" in e for e in errs))
         self.assertTrue(any("stack" in e for e in errs))
+        _, errs = themes.clean_meta({"name": "X", "keepsakes": {"day": {"name": "tooth", "stamp": "x" * 19}}}, "x")
+        self.assertTrue(any("keepsakes.day.stamp" in e for e in errs), "a stamp is a word, not a paragraph")
 
     def test_every_built_in_room_brings_its_own_three_trophies(self):
         base = os.path.join(APP, "dashboard", "themes")
@@ -114,6 +118,7 @@ class ArtTest(unittest.TestCase):
             ks = themes.load(os.path.join(base, tid), tid)["meta"]["keepsakes"]
             for k in themes.KEEPSAKE_KINDS:
                 self.assertNotEqual(ks[k]["art"], themes.DEFAULT_KEEPSAKES[k]["art"], (tid, k))
+                self.assertTrue(ks[k].get("stamp"), (tid, k, "every built-in trophy has its stamp word"))
             self.assertEqual(set(ks["lines"]), set(themes.KEEPSAKE_LINES), tid)
 
 

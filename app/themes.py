@@ -231,6 +231,8 @@ def clean_keepsakes(raw, errors):
             errors.append("keepsakes.%s.stack must be one of %s" % (k, ", ".join(STACKS)))
             stack = "pile"
         e["stack"] = stack
+        if d.get("stamp") is not None:      # the word printed with the date on its card: "bottled 3 Nov"
+            e["stamp"] = _text(d.get("stamp"), 18, "keepsakes.%s.stamp" % k, errors)
         art, errs = clean_art(d.get("art"))
         errors.extend("keepsakes.%s.art: %s" % (k, x) for x in errs)
         e["art"] = art if not errs else DEFAULT_KEEPSAKES[k]["art"]
