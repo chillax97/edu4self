@@ -160,7 +160,7 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 
 ```json
 "keepsakes": {
-  "day":  { "name": "bottle cap", "plural": "bottle caps", "stack": "pile",
+  "day":  { "name": "bottle cap", "plural": "bottle caps", "stack": "pile", "stamp": "bottled",
             "art": "<svg viewBox='0 0 40 12'><path d='M3 3 H37 L35 10 H5 Z' fill='#c0392b'/></svg>" },
   "week": { "name": "neon sign", "art": "<svg viewBox='0 0 56 44'>…</svg>" },
   "die":  { "name": "die", "plural": "dice", "art": "<svg viewBox='0 0 48 48'>…</svg>" },
@@ -175,6 +175,9 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 - **stack** (day and die; weeks stand alone): `pile` straight up, `fan` fanned out like cards, `heap`
   tossed in a mound, `row` standing side by side like books on a shelf. Drawn 40 px wide in a pile,
   34 px in a fan, 26 px in a heap, 50 px tall in a row. A tall drawing set to `pile` stands in a row.
+- **stamp**: the word printed with the date on a trophy's card when the learner clicks it, like the
+  date stamped on a bottle cap: "bottled 3 Nov 2026", "checked out", "punched". Up to 18 characters;
+  leave it out for "earned". It's kept with the trophy, so a cap from the bar keeps its word in the library.
 - **lines**: what the host says when a trophy is won today, and when Claude's gift is ready.
 - Leave `keepsakes` out and the room gets plain ones (a star, a ribbon, a die). A drawing that fails
   the check is named by `edu4self check` and replaced by the plain one until fixed.
@@ -183,8 +186,10 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 
 What happens to them: the server awards trophies as blocks are saved (`_system/keepsakes.json`); a
 week or a die won now also gets a gift, a page Claude makes from what the learner proved; every week
-and die has a printable card at `/card?id=…`, in the colours of the room it was won in (click a die
-in its pile, or a week), and the card links the gift.
+and die has a printable card at `/card?id=…`, in the colours of the room it was won in, and the card
+links the gift. Clicking any trophy on the shelf, days too, opens a small card: the drawing, its
+stamped date, what it stands for, the numbers behind it, arrows to the others of its kind (piles
+overlap, so not every one can be clicked), and for weeks and dice the printable card.
 
 ### layout.html
 

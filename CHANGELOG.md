@@ -26,6 +26,9 @@ versions follow [Semantic Versioning](https://semver.org).
 - The away mail gives context: where you left off (your last session and the last thing you proved,
   your milestone), what each trophy on your shelf stands for, how close your next die is, and why
   the next task matters.
+- Every trophy on the shelf can be clicked: a small card shows the day it was won, stamped in the
+  room's words ("bottled", "checked out", "punched"), what it stands for and the numbers behind it.
+  The shelf caption says what each kind means. Rooms set the word with `keepsakes.<kind>.stamp`.
 - A reminder mail that fails shows on the dashboard until you dismiss it, with the reason and a way to
   the mail settings.
 
