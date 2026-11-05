@@ -975,6 +975,26 @@
   }
 
   function mailReady() { return !!(DATA && DATA.reminders && DATA.reminders.mail_ready); }
+  // a failed mail shows on the dashboard until dismissed, so the learner can check why
+  var MAILERR_KEY = "edu.mailerr.seen";
+  function paintMailAlert() {
+    var e = (DATA && DATA.reminders && DATA.reminders.errors) || [];
+    var last = e.length ? e[e.length - 1] : "";
+    var box = $("#mail-alert");
+    if (!box) return;
+    if (!last || store(MAILERR_KEY) === last) { box.hidden = true; return; }
+    var m = /^(\S+) mail failed: ([\s\S]*)$/.exec(last);
+    var when = m ? new Date(m[1]) : null;
+    $("#mail-alert-why").textContent = (when && !isNaN(when) ? when.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" }) + ": " : "") +
+      (m ? m[2] : last) + " Run ./edu4self mail test in a terminal to try again.";
+    box.hidden = false;
+  }
+  function dismissMailAlert() {
+    var e = (DATA && DATA.reminders && DATA.reminders.errors) || [];
+    if (e.length) store(MAILERR_KEY, e[e.length - 1]);
+    $("#mail-alert").hidden = true;
+  }
+
   function mailErrors() {
     var e = (DATA && DATA.reminders && DATA.reminders.errors) || [];
     return e.length ? '<p class="set-warn">' + esc(e[e.length - 1]) + "</p>" : "";
@@ -2651,6 +2671,7 @@
         lastStamp = stamp;
         render();
         paintClaude();
+        paintMailAlert();
         if (changed) toast("<span>✦</span><span><b>Claude updated your dashboard.</b> Take a look at what's next.</span>", 6000);
         if (readJSON(UNSENT_KEY)) flushUnsent();
         checkProofs();
@@ -2721,6 +2742,8 @@
   $("#ob-back").addEventListener("click", function () { if (obStep > 0) { obStep--; paintOnboarding(); } });
   $("#replay-onboarding").addEventListener("click", function () { closeOverlay($("#help")); showOnboarding(); });
   $("#gift-yes").addEventListener("click", function () { answerGifts(true); });
+  $("#mail-alert-ok").addEventListener("click", dismissMailAlert);
+  $("#mail-alert-open").addEventListener("click", function () { dismissMailAlert(); openSettings("reminders"); });
   $("#gift-no").addEventListener("click", function () { answerGifts(false); });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;

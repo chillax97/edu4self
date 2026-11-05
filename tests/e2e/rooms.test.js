@@ -216,6 +216,29 @@ test("gifts start undecided: the page asks once, and the answer is saved", async
   setConfig({ gifts: false });
 });
 
+test("a mail that failed shows on the dashboard until dismissed", async () => {
+  const rem = path.join(v.vault, "_system", "reminders.json");
+  fs.writeFileSync(rem, JSON.stringify({ away: [], recaps: [], errors: ["2026-11-05T10:00:00+03:00 mail failed: (535, 'Username and Password not accepted')"] }));
+  const page = await openPage(browser, server.url, { view: "bar" });
+  await page.waitForSelector("#mail-alert:not([hidden])");
+  assert.match(await page.$eval("#mail-alert", (e) => e.innerText), /couldn't be sent[\s\S]*Password not accepted/);
+  await page.click("#mail-alert-ok");
+  assert.equal(await page.$eval("#mail-alert", (e) => e.hidden), true);
+  await page.reload({ waitUntil: "networkidle0" });
+  await sleep(300);
+  assert.equal(await page.$eval("#mail-alert", (e) => e.hidden), true, "dismissed stays dismissed");
+  // a new failure shows again, and the button opens the mail settings
+  fs.writeFileSync(rem, JSON.stringify({ away: [], recaps: [], errors: ["2026-11-05T10:00:00+03:00 mail failed: old", "2026-11-06T10:00:00+03:00 mail failed: timed out"] }));
+  await page.reload({ waitUntil: "networkidle0" });
+  await page.waitForSelector("#mail-alert:not([hidden])");
+  assert.match(await page.$eval("#mail-alert", (e) => e.innerText), /timed out/);
+  await page.click("#mail-alert-open");
+  await page.waitForSelector("#set-reminders");
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+  fs.rmSync(rem);
+});
+
 test("Settings saves a room to share and adds one someone shared", async () => {
   setConfig({ theme: "tea" });
   const page = await openPage(browser, server.url, { view: "bar" });
