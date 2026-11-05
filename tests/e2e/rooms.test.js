@@ -187,6 +187,35 @@ test("Settings shows the away mail; it waits for setup; a running block tells th
   setConfig({ reminders: { mail: true } });
 });
 
+test("no dialog's words touch its edge", async () => {
+  const page = await openPage(browser, server.url, { view: "bar" });
+  const tight = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll(".overlay").forEach((o) => {
+      const was = o.hidden;
+      o.hidden = false;
+      const d = o.querySelector(".dialog");
+      if (!d) { o.hidden = was; return; }
+      // fill the empty ones (the trophy card, the submit form's title) with a long line, like real use
+      d.querySelectorAll("h2:empty, p:empty").forEach((e) => { e.textContent = "A long enough line of words to reach both sides of the box and wrap. ".repeat(3); e.dataset.filled = 1; });
+      const box = d.getBoundingClientRect();
+      const walk = document.createTreeWalker(d, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walk.nextNode());) {
+        if (!n.textContent.trim() || !n.parentElement.offsetParent) continue;
+        const r = document.createRange(); r.selectNodeContents(n);
+        for (const q of r.getClientRects()) {
+          if (q.width && (q.left - box.left < 12 || box.right - q.right < 12)) { out.push(o.id + ": " + n.textContent.trim().slice(0, 30)); break; }
+        }
+      }
+      d.querySelectorAll("[data-filled]").forEach((e) => { e.textContent = ""; delete e.dataset.filled; });
+      o.hidden = was;
+    });
+    return [...new Set(out)];
+  });
+  assert.deepEqual(tight, [], "text flush against a dialog's edge");
+  await closePage(page);
+});
+
 test("gifts start undecided: the page asks once, and the answer is saved", async () => {
   const c = readJSON(cfgPath); delete c.gifts; fs.writeFileSync(cfgPath, JSON.stringify(c));
   const page = await browser.newPage();
