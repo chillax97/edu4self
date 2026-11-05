@@ -21,7 +21,13 @@ versions follow [Semantic Versioning](https://semver.org).
 - Reminders come by mail only, and only when you've been away: after 3, 7, 15 and 30 days without a
   block, answer or note, then once every 30 days. Each mail says what you've done so far and offers
   one small thing for today. The daily nudge and desktop notifications are gone. The Sunday recap
-  stays, by mail. Mail is on by default once `./edu4self mail setup` is done.
+  stays, by mail. Mail is on by default once `./edu4self mail setup` is done, unless you switched it off
+  before: a saved `mail: false` stays off.
+- The away mail gives context: where you left off (your last session and the last thing you proved,
+  your milestone), what each trophy on your shelf stands for, how close your next die is, and why
+  the next task matters.
+- A reminder mail that fails shows on the dashboard until you dismiss it, with the reason and a way to
+  the mail settings.
 
 ## 1.2.0 - 2026-11-04
 

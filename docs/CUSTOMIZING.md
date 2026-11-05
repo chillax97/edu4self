@@ -135,7 +135,8 @@ Reminders come by mail only. If you've been away (no block saved, no answer or n
 a short mail after 3, 7, 15 and 30 days, then once every 30 days. Each one says what you've done
 so far (hours, what you proved, your shelf) and offers one small thing for today: your next task,
 with a link, and the shortest block you have. Your next block or answer starts the count again.
-Mails go out between 09:00 and 22:00, never while a block runs.
+Mails go out between 09:00 and 22:00, never while a block runs. If one can't be sent (a wrong
+password, a locked Keychain, no network), the dashboard says so, with the reason, until you dismiss it.
 
 Every Sunday from 19:00 (or the first time the dashboard runs before Monday ends) you get a recap of
 the week: minutes, days, what you proved and what's next. It's saved to
