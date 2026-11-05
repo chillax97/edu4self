@@ -10,6 +10,10 @@ Thanks for wanting to help. edu4self is deliberately small. Good contributions k
 - **One writer per file.** `state.json` belongs to the tutor, the logs to the server, `config.json` to
   Settings. New data gets a clear owner.
 - **Proof stays proof.** Nothing may let time spent, clicks or self-reports count as evidence.
+- **An update never changes a saved setting.** Whatever is in a learner's `config.json` keeps its
+  meaning after `git pull`: a new key gets its default only where nothing was saved, and a setting
+  for a removed feature is dropped, never reinterpreted. `test_an_update_keeps_every_setting_the_learner_saved`
+  guards this; extend it when you add a setting.
 - **Keep both views.** A feature that shows data should work in classic and in the bar.
 
 ## Setup

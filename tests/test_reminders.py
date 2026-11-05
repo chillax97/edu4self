@@ -328,11 +328,13 @@ class ServerLoopTest(unittest.TestCase):
         self.assertIsNone(server.reminder_tick(WED))
         self.assertEqual(self.smtp.mails, [])
 
-    def test_an_old_config_keeps_mail_on(self):
-        # up to 1.2, {"notify": true, "mail": false} was the default: mail off meant "not set up", not "no thanks"
-        self.config({"reminders": {"notify": True, "mail": False}})
-        self.assertTrue(server.load_config()[0]["reminders"]["mail"])
-        self.assertNotIn("notify", server.load_config()[0]["reminders"])
+    def test_an_old_config_that_said_no_mail_still_gets_no_mail(self):
+        self.config({"reminders": {"notify": True, "mail": False}})        # saved by 1.2
+        self.assertFalse(server.load_config()[0]["reminders"]["mail"])
+        self.assertNotIn("notify", server.load_config()[0]["reminders"], "a setting for a feature that's gone is dropped")
+        self.assertIsNone(server.reminder_tick(WED))
+        self.assertEqual(self.smtp.mails, [])
+        self.config({"reminders": {"notify": True}})                       # never chose: the default, on
         self.assertEqual(server.reminder_tick(WED)[0], "away")
 
     def test_sunday_writes_the_recap_and_mails_it(self):

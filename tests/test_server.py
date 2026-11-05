@@ -177,6 +177,30 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(code, 400, bad)
             self.assertIn(msg, d["error"])
 
+    def test_an_update_keeps_every_setting_the_learner_saved(self):
+        # what Settings in 1.2 wrote, with every choice away from the default
+        saved = {"name": "Ada", "view": "classic", "theme": "library", "theme_lessons": False, "gifts": False,
+                 "reminders": {"notify": True, "mail": False}, "goals": {"day_minutes": 45, "week_days": 6},
+                 "blocks": {"presets": [15, 40], "kinds": [{"id": "maths", "label": "Maths", "color": "amber", "minutes": 30}]},
+                 "water": {"every": 30}, "obsidian": {"enabled": True, "vault": "notes"},
+                 "bar": {"names": [["Ada's", "open late"]], "voices": {}, "gags": False, "lines": []},
+                 "music": {"source": "scape", "scape": "rain", "stream": {"url": "", "name": ""}, "file": "",
+                           "title": "", "subtitle": "", "autoplay": True}}
+        now = server.clean_config(json.loads(json.dumps(saved)))
+
+        def kept(a, b, where=""):
+            for k, v in a.items():
+                if where + k == "reminders.notify":
+                    continue                              # the desktop notification is gone, so is its switch
+                self.assertIn(k, b, where + k)
+                if isinstance(v, dict):
+                    kept(v, b[k], where + k + ".")
+                else:
+                    self.assertEqual(b[k], v, where + k)
+        kept(saved, now)
+        self.assertEqual(server.clean_config({})["reminders"]["mail"], True, "never chosen: the default applies")
+        self.assertIsNone(server.clean_config({})["gifts"], "never chosen: ask")
+
     def test_config_round_trip_and_new_block_kind(self):
         cfg = {"name": "Ada", "blocks": {"presets": [30], "kinds": [{"id": "deep", "label": "Deep", "color": "#123456", "minutes": 45}]}}
         try:

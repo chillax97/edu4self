@@ -151,7 +151,7 @@ def clean_config(body):
         "theme": c["theme"] if isinstance(c["theme"], str) and themes.THEME_ID.match(c["theme"]) else "bar",
         "theme_lessons": bool(c["theme_lessons"]),
         "gifts": None if c["gifts"] is None else bool(c["gifts"]),
-        "reminders": {"mail": away_mail_on(c["reminders"])},
+        "reminders": {"mail": bool(c["reminders"].get("mail", True))},      # a saved choice always wins
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
                   "week_days": _int(c["goals"].get("week_days"), 1, 7, "weekly goal")},
         "water": {"every": c["water"].get("every") if c["water"].get("every") in (0, 15, 30) else 15},
@@ -757,16 +757,6 @@ def shelf_for_page():
 
 # ---------------------------------------------------------------- reminders (see reminders.py)
 BLOCK_UNTIL = None            # when the block running in the page ends (the page says so when it starts one)
-
-
-def away_mail_on(r):
-    """The away-mail switch. Up to 1.2, mail was off by default because desktop notifications were the
-    main channel ({"notify": ..., "mail": false}); that false meant "not set up", not "no thanks"."""
-    if not isinstance(r, dict):
-        return True
-    if "notify" in r:
-        return True
-    return bool(r.get("mail", True))
 
 
 def reminders_for_page():
