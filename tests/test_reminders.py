@@ -64,15 +64,26 @@ class AwayTest(unittest.TestCase):
         self.assertIsNotNone(reminders.away_due(blocks, [], WED.replace(hour=9), {"away": []}))
         self.assertIsNone(reminders.away_due(blocks, [], WED, {"away": []}, block_until=WED + timedelta(minutes=20)))
 
-    def test_the_mail_praises_what_you_did_then_offers_one_small_thing(self):
+    def test_the_mail_gives_context_so_coming_back_feels_worth_it(self):
         blocks = [blk(WED - timedelta(days=8), 90), blk(WED - timedelta(days=7), 30)]
-        items = [{"name": "bottle cap", "plural": "bottle caps"}] * 2
-        title, body = reminders.away(state_with(), blocks, items, CFG, 7, reminders.last_activity(blocks, []), set(), 4747)
+        items = [{"kind": "day", "name": "bottle cap", "plural": "bottle caps"}] * 2 + \
+                [{"kind": "week", "name": "neon sign", "plural": "neon signs"}, {"kind": "die", "name": "die", "plural": "dies"}]
+        st = state_with()
+        st["topics"][0]["queue"][0]["why"] = "It's how a server streams an answer word by word."
+        st["topics"][0]["milestones"] = [{"title": "Fundamentals", "status": "active", "steps": [{"done": True}, {"done": False}]}]
+        cfg = dict(CFG, blocks={"presets": [25, 50], "kinds": [{"id": "lessons", "label": "Lessons"}]})
+        title, body = reminders.away(st, blocks, items, cfg, 7, reminders.last_activity(blocks, []), set(), 4747)
         self.assertIn("A week away", title)
-        self.assertIn("2 focused hours over 2 days", body)
-        self.assertIn("2 things proven, most recently: Lesson 06: cache size; older", body)
-        self.assertIn("2 bottle caps", body)
+        self.assertIn("30 minutes of Lessons", body, "the last session, in the learner's own words for it")
+        self.assertIn("The last thing you proved: Lesson 06: cache size (Inference)", body)
+        self.assertIn("Inference: Fundamentals, 1 of 2 steps done", body)
+        self.assertIn("2 hours of focused study over 2 days", body)
+        self.assertIn("2 bottle caps, one for each day you reached your daily goal of 60 minutes", body, "a trophy says what it means")
+        self.assertIn("1 neon sign, the week you studied on 4 days", body)
+        self.assertIn("1 die, for your first 10 focused hours", body)
+        self.assertIn("8 hours more and your next die is done", body)
         self.assertIn("Recall check: How big is the cache?, in Inference", body)
+        self.assertIn("Why it matters: It's how a server streams", body)
         self.assertIn("One 25-minute block", body, "the smallest block on offer")
         self.assertIn("http://127.0.0.1:4747/#submit=t-recall", body)
         self.assertNotRegex(body.lower(), r"miss|behind|fail|streak", "no guilt")

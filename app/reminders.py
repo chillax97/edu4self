@@ -98,37 +98,52 @@ OPENERS = {
 }
 
 
+TROPHY_MEANS = {
+    "day": lambda n, cfg: "%s you reached your daily goal of %d minutes" % ("the day" if n == 1 else "one for each day", cfg["goals"]["day_minutes"]),
+    "week": lambda n, cfg: "%s you studied on %d days" % ("the week" if n == 1 else "one for each week", cfg["goals"]["week_days"]),
+    "die": lambda n, cfg: "%s 10 focused hours" % ("for your first" if n == 1 else "one for every"),
+}
+
+
+def _hours(minutes):
+    h = minutes / 60
+    return "%s hour%s" % (("%.1f" % h).rstrip("0").rstrip("."), "" if round(h, 1) == 1 else "s")
+
+
+def _shelf(keepsake_items, cfg):
+    """Each kind of trophy with what it stands for: "7 bottle caps (one for each day you reached ...)"."""
+    out = []
+    for kind in ("day", "week", "die"):
+        items = [i for i in keepsake_items if i.get("kind") == kind]
+        if not items:
+            continue
+        names = {}
+        for i in items:
+            key = (i.get("name") or "trophy", i.get("plural") or i.get("name") or "trophies")
+            names[key] = names.get(key, 0) + 1
+        what = " and ".join("%d %s" % (n, single if n == 1 else plural) for (single, plural), n in names.items())
+        out.append("%s, %s" % (what, TROPHY_MEANS[kind](len(items), cfg)))
+    return out
+
+
 def away(state, blocks, keepsake_items, cfg, step, last, pending_tasks, port):
-    """(title, plain-text body) for an away mail: what you did, then one small thing for today."""
+    """(title, plain-text body) for an away mail. It gives context, so coming back feels worth it and cheap:
+    where you left off, what you've built (with what each trophy stands for), how close the next one is,
+    then one small, named thing for today and why it matters."""
     if step in OPENERS:
         title, opener = OPENERS[step]
     else:
         title = "%d days away. Nothing is lost" % step
         opener = "It's been %d days. Your progress, your trophies and your next step are all where you left them." % step
     days = block_days(blocks)
-    hours = sum(days.values()) / 60
+    total = sum(days.values())
     proven = []
     for t in state.get("topics", []):
         for h in t.get("history", []):
             if h.get("evidence"):
-                proven.append((h.get("date") or "", h.get("title") or ""))
+                proven.append((h.get("date") or "", h.get("title") or "", t.get("title") or ""))
     proven.sort(reverse=True)
-    done = ["%s focused hour%s over %d day%s" % (("%.1f" % hours).rstrip("0").rstrip("."), "" if round(hours, 1) == 1 else "s",
-                                                 len(days), "" if len(days) == 1 else "s")] if days else []
-    if proven:
-        done.append("%d thing%s proven, most recently: %s" % (len(proven), "" if len(proven) == 1 else "s",
-                                                             "; ".join(p[1] for p in proven[:3])))
-    if keepsake_items:
-        counts = {}
-        for i in keepsake_items:
-            k = i.get("plural") or i.get("name") or "trophy"
-            counts[k] = counts.get(k, 0) + 1
-        done.append("On your shelf: " + ", ".join("%d %s" % (n, k) for k, n in counts.items()))
-    lines = [opener, ""]
-    if done:
-        lines += ["What you've done so far:"] + ["- " + d for d in done] + [""]
-    lines.append("Your last session was on %s." % last.strftime("%A %-d %B"))
-    lines.append("")
+    kinds = {k.get("id"): k.get("label") for k in cfg.get("blocks", {}).get("kinds", [])}
     minutes = min(cfg.get("blocks", {}).get("presets") or [25])
     nxt = None
     for t in state.get("topics", []):
@@ -138,12 +153,46 @@ def away(state, blocks, keepsake_items, cfg, step, last, pending_tasks, port):
                 break
         if nxt:
             break
-    lines.append("Something small for today:")
+    lines = [opener, "", "Where you left off:"]
+    stamped = [(local_dt(b.get("ts") or b.get("started") or ""), b) for b in blocks]
+    stamped = [(t, b) for t, b in stamped if t]
+    if stamped:
+        t, b = max(stamped, key=lambda x: x[0])
+        lines.append("- Your last session was on %s: %d minutes of %s." % (
+            t.strftime("%A %-d %B"), b.get("minutes") or 0, kinds.get(b.get("block"), b.get("block") or "study")))
+    else:
+        lines.append("- Your last session was on %s." % last.strftime("%A %-d %B"))
+    if proven:
+        lines.append("- The last thing you proved: %s (%s)." % (proven[0][1], proven[0][2]))
+    topic = nxt[0] if nxt else (state.get("topics") or [{}])[0]
+    for m in topic.get("milestones", []):            # only the milestone the next step belongs to
+        if m.get("status") == "active":
+            steps = m.get("steps", [])
+            lines.append("- %s: %s, %d of %d steps done." % (topic.get("title", ""), m.get("title", ""),
+                                                          len([x for x in steps if x.get("done")]), len(steps)))
+            break
+    built = []
+    if days:
+        built.append("%s of focused study over %d day%s." % (_hours(total), len(days), "" if len(days) == 1 else "s"))
+    if len(proven) > 1:
+        built.append("%d things proven, not just read. Before that last one: %s." % (len(proven), "; ".join(p[1] for p in proven[1:3])))
+    shelf = _shelf(keepsake_items, cfg)
+    if shelf:
+        built.append("On your shelf: " + "; ".join(shelf) + ".")
+    to_die = 600 - total % 600
+    if total:
+        built.append("%s more and your next die is done." % _hours(to_die).capitalize())
+    if built:
+        lines += ["", "What you've built so far:"] + ["- " + x for x in built]
+    lines += ["", "Something small for today:"]
     if nxt:
         t, q = nxt
         name = (q.get("label") + ": " if q.get("label") else "") + q.get("title", "")
-        lines.append("%s, in %s. Open it and do only the first part. One %d-minute block is enough to pick the thread back up."
-                     % (name, t.get("title", ""), minutes))
+        lines.append("%s, in %s." % (name, t.get("title", "")))
+        if q.get("why"):
+            why = q["why"] if len(q["why"]) <= 240 else q["why"][:237].rsplit(" ", 1)[0] + "..."
+            lines.append("Why it matters: " + why)
+        lines.append("Open it and do only the first part. One %d-minute block is enough to pick the thread back up." % minutes)
         lines.append("http://127.0.0.1:%d/#submit=%s" % (port, q.get("id")))
     else:
         lines.append("One %d-minute block of anything you like. It counts." % minutes)
