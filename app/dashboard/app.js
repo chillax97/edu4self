@@ -1764,19 +1764,56 @@
         x = row * W * 0.42 + col * W * 0.84; y = row * h * 0.62; r = (i * 47) % 50 - 25;
       } else { x = ((i * 37) % 5) - 2; y = i * h * 0.86; r = ((i * 53) % 5 - 2) * 0.9; }
       wide = Math.max(wide, x + W); tall = Math.max(tall, y + h);
-      var tag = it.kind === "day" ? "span" : "a", link = tag === "a" ? ' href="/card?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener"' : "";
-      items += "<" + tag + link + ' class="ks-i' + (isNew[it.id] ? " is-new" : "") + '" style="left:' + x.toFixed(1) + "px;bottom:" + y.toFixed(1) + "px;width:" + W + "px;transform:rotate(" + r.toFixed(1) + 'deg)" title="' +
-        esc(cap(it.name) + " · " + ksWhen(it) + (tag === "a" ? " · print the card" : "")) + '">' + art + "</" + tag + ">";
+      items += '<button type="button" data-ks="' + esc(it.id) + '" class="ks-i' + (isNew[it.id] ? " is-new" : "") + '" style="left:' + x.toFixed(1) + "px;bottom:" + y.toFixed(1) + "px;width:" + W + "px;transform:rotate(" + r.toFixed(1) + 'deg)" title="' +
+        esc(cap(it.name) + " · " + ksWhen(it)) + '" aria-label="' + esc(cap(it.name) + ", " + ksWhen(it)) + '">' + art + "</button>";
     });
-    return '<div class="ks-pile ks-' + esc(stack) + '" style="width:' + Math.ceil(wide + 4) + "px;height:" + Math.ceil(tall + 6) + 'px" role="img" aria-label="' +
+    return '<div class="ks-pile ks-' + esc(stack) + '" style="width:' + Math.ceil(wide + 4) + "px;height:" + Math.ceil(tall + 6) + 'px" role="group" aria-label="' +
       esc(n + " " + (n === 1 ? group[0].name : group[0].plural)) + '">' + items + "</div>";
   }
   function ksStanding(it, art, isNew) {
     var W = it.kind === "die" ? 34 : 46;
-    return '<div class="ks-one' + (isNew[it.id] ? " is-new" : "") + '"><a class="ks-art" href="/card?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener" style="width:' + W + 'px" title="' +
-      esc(cap(it.name) + " · " + ksWhen(it) + " · print the card") + '">' + art + "</a>" +
+    return '<div class="ks-one' + (isNew[it.id] ? " is-new" : "") + '"><button type="button" data-ks="' + esc(it.id) + '" class="ks-art" style="width:' + W + 'px" title="' +
+      esc(cap(it.name) + " · " + ksWhen(it)) + '" aria-label="' + esc(cap(it.name) + ", " + ksWhen(it)) + '">' + art + "</button>" +
       (/^gifts\//.test(it.gift || "") ? '<a class="ks-gift" href="/vault/' + esc(it.gift) + '" target="_blank" rel="noopener">a gift</a>' : "") + "</div>";
   }
+  // what a trophy stands for. The same words as the away mail (app/reminders.py TROPHY_MEANS).
+  var KS_MEANS = {
+    day: function () { return "days you reached your daily goal of " + DAY_GOAL_MIN + " minutes"; },
+    week: function () { return "weeks you studied on " + WEEK_GOAL_DAYS + " days or more"; },
+    die: function () { return "one for every 10 focused hours"; },
+  };
+  function ksLong(iso) { return new Date(iso + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
+  function ksFacts(it) {
+    if (it.kind === "day") return "On " + ksLong(it.date) + " you studied " + (it.minutes ? it.minutes + " focused minutes" : "past your goal") + ". The goal is " + DAY_GOAL_MIN + ".";
+    if (it.kind === "week") return "In the week of " + ksLong(it.date) + " you studied on " + (it.days || WEEK_GOAL_DAYS) + " days. The goal is " + WEEK_GOAL_DAYS + ".";
+    return "Your die number " + it.n + ": focused hours " + (it.n - 1) * 10 + " to " + it.n * 10 + ", finished on " + ksLong(it.date) + ".";
+  }
+  function ksStamp(it) {
+    var word = it.stamp || (THEME && it.theme === THEME.meta.id && ksLook(it.kind).stamp) || "earned";
+    var d = new Date(((it.ts || "").slice(0, 10) || it.date) + "T12:00:00");     // the day it was won
+    return word + " " + d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  }
+  function openTrophy(id) {
+    var K = ksData(), it = (K.items || []).filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    var box = $("#ks-detail");
+    box.querySelector(".ks-d-art").innerHTML = K.art[it.art] || "";      // drawings are cleaned by the server (shelf_for_page)
+    box.querySelector(".ks-stamp").textContent = ksStamp(it);
+    $("#ks-d-title").textContent = cap(it.name);
+    box.querySelector(".ks-d-means").textContent = "A " + it.name + " stands for " + (it.kind === "die" ? "10 focused hours" : KS_MEANS[it.kind]().replace(/^days/, "a day").replace(/^weeks/, "a week")) + ".";
+    box.querySelector(".ks-d-facts").textContent = ksFacts(it);
+    var links = it.kind !== "day" ? '<a class="btn" href="/card?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener">Print the card</a>' : "";
+    if (/^gifts\//.test(it.gift || "")) links += '<a class="btn" href="/vault/' + esc(it.gift) + '" target="_blank" rel="noopener">Open the gift</a>';
+    box.querySelector(".ks-d-links").innerHTML = links;
+    // piles overlap, so a click can only reach the top one: step through every trophy of this kind instead
+    var same = (K.items || []).filter(function (x) { return x.kind === it.kind; }).sort(function (a, b) { return (a.ts || "") < (b.ts || "") ? -1 : 1; });
+    var i = same.indexOf(it), nav = function (j, label, sym) {
+      return same[j] ? '<button class="icon-btn" type="button" data-ks="' + esc(same[j].id) + '" aria-label="' + label + '">' + sym + "</button>" : '<span class="icon-btn" aria-hidden="true"></span>';
+    };
+    box.querySelector(".ks-d-nav").innerHTML = same.length > 1 ? nav(i - 1, "Earlier", "‹") + "<span>" + (i + 1) + " of " + same.length + "</span>" + nav(i + 1, "Later", "›") : "";
+    if ($("#ks-detail").hidden) openOverlay("ks-detail");
+  }
+
   function shelfHTML() {
     var K = ksData(), items = K.items || [], seen = ksSeen() || {}, isNew = {};
     items.forEach(function (it) { if (!it.backfill && !seen[it.id]) isNew[it.id] = true; });
@@ -1799,11 +1836,16 @@
     var dieGift = items.filter(function (it) { return it.kind === "die" && /^gifts\//.test(it.gift || ""); }).pop();
     var dice = piles("die") + (dieGift ? '<div class="ks-one"><a class="ks-gift" href="/vault/' + esc(dieGift.gift) + '" target="_blank" rel="noopener">a gift</a></div>' : "");
     var standing = function (kind) { return items.filter(function (it) { return it.kind === kind; }).map(function (it) { return ksStanding(it, K.art[it.art] || "", isNew); }).join(""); };
-    var sum = order.map(function (k) { var c = counts[k]; return c.n + " " + (c.n === 1 ? c.it.name : c.it.plural); }).join(" · ");
+    var sum = ["day", "week", "die"].map(function (kind) {
+      var mine = order.filter(function (k) { return counts[k].it.kind === kind; });
+      if (!mine.length) return "";
+      return '<span class="ks-sum-line">' + esc(mine.map(function (k) { var c = counts[k]; return c.n + " " + (c.n === 1 ? c.it.name : c.it.plural); }).join(", ")) +
+        ": " + esc(KS_MEANS[kind]()) + "</span>";
+    }).join("") + '<span class="ks-sum-hint">Click one to see the day you earned it.</span>';
     // three shelves, like a bookcase: the piles of days, then the weeks, then the piles of dice. Each object
     // brings its own stretch of plank, so a shelf that wraps on a narrow screen still has wood under every row.
     var shelves = [piles("day"), standing("week"), dice].filter(Boolean).map(function (row) { return '<div class="ks-row">' + row + "</div>"; }).join("");
-    return '<div class="ks-shelf">' + shelves + '<p class="ks-sum">' + esc(sum) + "</p></div>";
+    return '<div class="ks-shelf">' + shelves + '<p class="ks-sum">' + sum + "</p></div>";
   }
   // after a paint: say hello to anything new, then remember it. The first visit ever only remembers.
   function shelfNews() {
@@ -2689,11 +2731,12 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks]");
     if (!el) return;
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
     if (el.hasAttribute("data-claude-open")) return openClaude();
     if (el.hasAttribute("data-newtopic")) return openNewTopic();
+    if (el.dataset.ks) return openTrophy(el.dataset.ks);
     if (el.dataset.settings != null) return openSettings(el.dataset.settings);
     if (el.hasAttribute("data-drink")) return drinkWater();
     if (el.hasAttribute("data-note")) return openNote();

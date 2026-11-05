@@ -32,7 +32,7 @@ after(async () => {
 test("day trophies are drawn as real stacks: one drawing per day, ten to a pile, both rooms on one shelf", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.waitForSelector('.room [data-slot="shelf"] .ks-pile');
-  const piles = await page.$$eval('.room [data-slot="shelf"] .ks-pile:has(span.ks-i)', (ps) => ps.map((p) => ({   // day piles (dice are links)
+  const piles = await page.$$eval('.room [data-slot="shelf"] .ks-pile:has(button[data-ks^="day-"])', (ps) => ps.map((p) => ({   // day piles
     n: p.querySelectorAll(".ks-i svg").length,
     label: p.getAttribute("aria-label"),
     tops: [...p.querySelectorAll(".ks-i")].map((i) => i.getBoundingClientRect().top),
@@ -43,7 +43,8 @@ test("day trophies are drawn as real stacks: one drawing per day, ten to a pile,
   assert.ok(piles.some((p) => /books?$/.test(p.label)) && piles.some((p) => /mission patch/.test(p.label)), JSON.stringify(piles.map((p) => p.label)));
   const tall = piles.find((p) => p.n === 10);
   assert.ok(Math.max(...tall.tops) - Math.min(...tall.tops) > 30, "a full pile is visibly taller than one item");
-  assert.match(await page.$eval('.room [data-slot="shelf"] .ks-sum', (e) => e.innerText), /15 books · .* mission patches/);
+  assert.match(await page.$eval('.room [data-slot="shelf"] .ks-sum', (e) => e.innerText), /15 books, \d+ mission patches: days you reached your daily goal of 30 minutes[\s\S]*: one for every 10 focused hours[\s\S]*Click one/,
+    "the caption says what each trophy stands for");
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
@@ -52,11 +53,45 @@ test("dice pile up too: one drawing per finished die, each one opening its own c
   const dies = (await (await fetch(server.url + "api/state")).json()).keepsakes.items.filter((i) => i.kind === "die");
   assert.ok(dies.length >= 2, "the history finishes at least two dies");
   const page = await openPage(browser, server.url, { view: "bar" });
-  await page.waitForSelector('.room [data-slot="shelf"] .ks-pile a.ks-i');
-  const links = await page.$$eval('.room [data-slot="shelf"] .ks-pile a.ks-i', (l) => l.map((a) => ({ href: a.getAttribute("href"), w: a.querySelector("svg").getBoundingClientRect().width })));
-  assert.deepEqual(links.map((l) => l.href).sort(), dies.map((d) => "/card?id=" + d.id).sort());
+  const sel = '.room [data-slot="shelf"] .ks-pile button[data-ks^="die-"]';
+  await page.waitForSelector(sel);
+  const links = await page.$$eval(sel, (l) => l.map((a) => ({ id: a.dataset.ks, w: a.querySelector("svg").getBoundingClientRect().width })));
+  assert.deepEqual(links.map((l) => l.id).sort(), dies.map((d) => d.id).sort());
   assert.ok(links.every((l) => l.w >= 20), "each die is drawn full size, not squeezed: " + JSON.stringify(links));
-  assert.equal(await page.$$eval('.room [data-slot="shelf"] .ks-one a[href^="/card?id=die-"]', (l) => l.length), 0, "no die stands alone any more");
+  assert.equal(await page.$$eval('.room [data-slot="shelf"] .ks-one [data-ks^="die-"]', (l) => l.length), 0, "no die stands alone any more");
+  await page.click(sel + '[data-ks="die-2"]');
+  await page.waitForSelector("#ks-detail:not([hidden])");
+  const text = await page.$eval("#ks-detail", (e) => e.innerText);
+  assert.match(text, /stands for 10 focused hours/);
+  assert.match(text, /die number 2: focused hours 10 to 20/);
+  assert.equal(await page.$eval('#ks-detail a[href^="/card"]', (a) => a.getAttribute("href")), "/card?id=die-2", "the printable card is one click on");
+  await closePage(page);
+});
+
+test("clicking a day trophy shows the day it was earned, stamped in the words of the room it came from", async () => {
+  const items = (await (await fetch(server.url + "api/state")).json()).keepsakes.items;
+  const book = items.find((i) => i.kind === "day" && i.theme === "library");
+  const patch = items.find((i) => i.kind === "day" && i.theme === "space");
+  const page = await openPage(browser, server.url, { view: "bar" });        // the space station is the room now
+  for (const [it, word] of [[book, "checked out"], [patch, "flown"]]) {
+    await page.$eval(`.room [data-slot="shelf"] button[data-ks="${it.id}"]`, (b) => b.click());   // patches fan out; the arrows below reach the hidden ones
+    await page.waitForSelector("#ks-detail:not([hidden])");
+    const stamp = await page.$eval("#ks-detail .ks-stamp", (e) => e.textContent);
+    const date = new Date(it.ts.slice(0, 10) + "T12:00:00").toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    assert.equal(stamp, word + " " + date, "a book keeps the library's stamp in the space station");
+    const text = await page.$eval("#ks-detail", (e) => e.innerText);
+    assert.match(text, /stands for a day you reached your daily goal of 30 minutes/);
+    assert.match(text, /you studied 40 focused minutes\. The goal is 30/);
+    assert.equal(await page.$$eval('#ks-detail a[href^="/card"]', (l) => l.length), 0, "days have no printable card");
+    const days = items.filter((i) => i.kind === "day").sort((a, b) => (a.ts < b.ts ? -1 : 1));
+    const at = days.findIndex((d) => d.id === it.id);
+    assert.match(await page.$eval("#ks-detail .ks-d-nav", (e) => e.innerText), new RegExp(`${at + 1} of ${days.length}`));
+    await page.click('#ks-detail .ks-d-nav [aria-label="Later"]');
+    assert.match(await page.$eval("#ks-detail .ks-d-nav", (e) => e.innerText), new RegExp(`${at + 2} of ${days.length}`), "the arrows step to the next day");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.$eval("#ks-detail", (e) => e.hidden), true);
+  }
+  assert.deepEqual(page.errors, []);
   await closePage(page);
 });
 
@@ -84,7 +119,10 @@ test("a goal met now drops a new trophy onto the shelf, with a line from the roo
 
 test("a week trophy opens its printable card, in the colours of the room it was won in", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
-  const href = await page.$eval('.room [data-slot="shelf"] .ks-one .ks-art', (a) => a.getAttribute("href"));
+  await page.click('.room [data-slot="shelf"] .ks-one .ks-art');
+  await page.waitForSelector("#ks-detail:not([hidden])");
+  assert.match(await page.$eval("#ks-detail", (e) => e.innerText), /a week you studied on 7 days or more[\s\S]*studied on 7 days\. The goal is 7/i);
+  const href = await page.$eval('#ks-detail a[href^="/card"]', (a) => a.getAttribute("href"));
   await closePage(page);
   const card = await browser.newPage();
   card.errors = [];
