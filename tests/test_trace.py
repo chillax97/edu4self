@@ -222,5 +222,45 @@ class TraceTest(unittest.TestCase):
         self.assertFalse(any(h["opened"] for h in d["hints"]), "the record of opened hints goes with it")
 
 
+class TeeTest(unittest.TestCase):
+    """The copy of the checker's output: same text as before, same cap, and no re-counting on every write."""
+
+    def setUp(self):
+        import edu_trace
+        self.t = edu_trace
+
+    def reference(self, chunks):
+        keep = []                      # the old rule: add a chunk while what's kept is under the cap
+        for c in chunks:
+            if sum(len(x) for x in keep) < self.t.OUTPUT_MAX:
+                keep.append(c)
+        return keep
+
+    def tee_pair(self):
+        import io as _io
+        keep, size = [], [0]
+        out, err = _io.StringIO(), _io.StringIO()
+        return keep, out, err, self.t._Tee(out, keep, size), self.t._Tee(err, keep, size)
+
+    def test_keeps_exactly_what_the_old_code_kept_and_passes_everything_through(self):
+        chunks = [("x" * (i % 997)) + "\n" for i in range(700)]       # about 350k characters, well past the cap
+        keep, out, err, to, te = self.tee_pair()
+        for i, c in enumerate(chunks):
+            (to if i % 3 else te).write(c)                              # stdout and stderr share one copy and one cap
+        self.assertEqual(keep, self.reference(chunks))
+        self.assertGreaterEqual(sum(map(len, keep)), self.t.OUTPUT_MAX)
+        self.assertLess(sum(map(len, keep)) - len(keep[-1]), self.t.OUTPUT_MAX, "stops right after the write that crossed the cap")
+        self.assertEqual(len(out.getvalue()) + len(err.getvalue()), sum(map(len, chunks)), "the real streams get every character")
+
+    def test_many_small_writes_stay_fast(self):
+        import time as _time
+        keep, out, err, to, te = self.tee_pair()
+        began = _time.monotonic()
+        for _ in range(40000):                                         # re-summing would take tens of seconds here
+            to.write("ab")
+        self.assertLess(_time.monotonic() - began, 2.0)
+        self.assertEqual("".join(keep), "ab" * 40000)
+
+
 if __name__ == "__main__":
     unittest.main()
