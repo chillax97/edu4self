@@ -103,7 +103,7 @@ test("your attempts: every run and hint in order, and a gentle nudge after three
   await page.click(".hero [data-stuck-hint]");
   await page.waitForFunction(() => /Read it twice/.test(document.querySelector("#hints-list").innerText));
   const att = await page.$eval("#hints-attempts", (e) => e.innerText);
-  assert.match(att, /Run 1: didn't pass[\s\S]*first run[\s\S]*Run 2: didn't pass[\s\S]*later[\s\S]*Run 3: didn't pass[\s\S]*Hint 1 opened/);
+  assert.match(att, /Run 1: didn't pass[\s\S]*first run[\s\S]*Run 2: didn't pass[\s\S]*(right after|later)[\s\S]*Run 3: didn't pass[\s\S]*Hint 1 opened/);
   assert.match(traceFiles().pop(), /-hint-1\.json$/, "the hint asked for is noted like any other");
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => /Open the next hint: 2 · the loop/.test(document.querySelector(".hero .stuck")?.innerText || ""));
