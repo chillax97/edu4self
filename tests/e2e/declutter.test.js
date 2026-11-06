@@ -150,3 +150,17 @@ test("classic view: the coach card shows two lines of a long note and opens on m
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
+
+for (const id of ROOMS) {
+  test(`${id}: each character speaks once, and Claude's voices win over the room's own lines`, async () => {
+    const page = await openRoom(id, 1440, 1000);
+    const names = await page.$$eval('.room [data-slot="voices"] .bx-line .bx-who', (ws) => ws.map((w) => w.textContent.trim()));
+    assert.equal(new Set(names).size, names.length, `${id} repeats a character: ${names.join(", ")}`);
+    // Willpower and the Body have a grade voice here and room lines of their own (the streak, water); the grade's wins
+    const log = await page.$eval('.room [data-slot="voices"]', (e) => e.textContent);
+    assert.match(log, /Frustrated and done beats calm and stuck/);
+    assert.match(log, /Six runs on first_long_words/);
+    assert.deepEqual(page.errors, []);
+    await closePage(page);
+  });
+}
