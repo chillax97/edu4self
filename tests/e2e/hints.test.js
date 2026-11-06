@@ -82,3 +82,44 @@ test("Settings shows the record, explains what deleting costs, and deletes only 
   await closePage(page);
   await sleep(50);
 });
+
+test("your attempts: every run and hint in order, and a gentle nudge after three failing runs", async () => {
+  const proto = fs.readFileSync(new URL("../../docs/PROTOCOL.md", import.meta.url), "utf8");
+  const lines = proto.split("```python\n")[1].split("```")[0].replace('["solution.py"]', '["sol.py"]');
+  const checker = (pass) => fs.writeFileSync(path.join(ex, "check.py"), lines + (pass ? "\nprint('2 of 2 pass')\n" : "\nimport sys\nprint('1 of 2 pass')\nsys.exit(1)\n"));
+  const run = () => { try { execFileSync("python3", [path.join(ex, "check.py")], { stdio: "pipe" }); } catch {} };
+  fs.rmSync(path.join(ex, "trace"), { recursive: true, force: true });
+  checker(false);
+  run(); run();
+  let page = await openPage(browser, server.url, { view: "classic" });
+  assert.equal(await page.$(".hero .stuck"), null, "two failing runs: no nudge yet");
+  await closePage(page);
+  run();
+  const filesBefore = traceFiles().length;
+  page = await openPage(browser, server.url, { view: "classic" });
+  await page.waitForSelector(".hero .stuck");
+  assert.match(await page.$eval(".hero .stuck", (e) => e.innerText), /3 runs in a row haven't passed yet[\s\S]*Open the next hint: 1 · warm-up/);
+  assert.equal(traceFiles().length, filesBefore, "showing the nudge writes nothing");
+  await page.click(".hero [data-stuck-hint]");
+  await page.waitForFunction(() => /Read it twice/.test(document.querySelector("#hints-list").innerText));
+  const att = await page.$eval("#hints-attempts", (e) => e.innerText);
+  assert.match(att, /Run 1: didn't pass[\s\S]*first run[\s\S]*Run 2: didn't pass[\s\S]*later[\s\S]*Run 3: didn't pass[\s\S]*Hint 1 opened/);
+  assert.match(traceFiles().pop(), /-hint-1\.json$/, "the hint asked for is noted like any other");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => /Open the next hint: 2 · the loop/.test(document.querySelector(".hero .stuck")?.innerText || ""));
+  await closePage(page);
+  // the bar shows it too
+  const bar = await openPage(browser, server.url, { view: "bar" });
+  await bar.waitForSelector(".room .bx-stuck");
+  assert.deepEqual(bar.errors, []);
+  await closePage(bar);
+  // a pass resets it
+  checker(true);
+  run();
+  page = await openPage(browser, server.url, { view: "classic" });
+  assert.equal(await page.$(".stuck"), null, "a pass ends the nudge");
+  await page.click('.hero [data-hints="hlw-lesson-01"]');
+  await page.waitForFunction(() => /Run 4: passed/.test(document.querySelector("#hints-attempts").innerText));
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
