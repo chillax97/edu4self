@@ -943,8 +943,6 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 @keyframes ks-drop { from { translate: 0 -60px; opacity: 0; } 60% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ks-i.is-new, .ks-one.is-new .ks-art { animation: none; } }
 
-.set-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 4px; }
-.set-share label.btn { cursor: pointer; }
 
 /* the one-time gifts question */
 .gift-ask { max-width: 440px; padding: 28px 28px 24px; }
