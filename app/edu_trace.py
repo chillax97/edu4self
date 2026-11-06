@@ -29,13 +29,16 @@ OUTPUT_MAX = 200_000             # characters of checker output kept
 class _Tee(io.TextIOBase):
     """Writes through to the real stream and keeps a copy."""
 
-    def __init__(self, real, keep):
-        self.real, self.keep = real, keep
+    def __init__(self, real, keep, size=None):
+        # size: [characters in keep so far], shared by the stdout and stderr tees, so a write never re-counts
+        self.real, self.keep, self.size = real, keep, size if size is not None else [sum(len(x) for x in keep)]
 
     def write(self, s):
         try:
-            if sum(len(x) for x in self.keep) < OUTPUT_MAX:
+            if self.size[0] < OUTPUT_MAX:
+                n = len(s)
                 self.keep.append(s)
+                self.size[0] += n
         except Exception:
             pass
         return self.real.write(s)
@@ -72,7 +75,8 @@ def start(checker_file, code_files):
         began = datetime.now().astimezone()
         keep, state = [], {"exit": 0}
         out, err = sys.stdout, sys.stderr
-        sys.stdout, sys.stderr = _Tee(out, keep), _Tee(err, keep)
+        size = [0]
+        sys.stdout, sys.stderr = _Tee(out, keep, size), _Tee(err, keep, size)
 
         real_exit, real_hook = sys.exit, sys.excepthook
 
