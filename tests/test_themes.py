@@ -224,82 +224,17 @@ class TrophyStackTest(unittest.TestCase):
         themes.clean_keepsakes(raw, errors)
         self.assertTrue(any("stack" in e for e in errors), errors)
 
-class RoomShareTest(unittest.TestCase):
-    """A shared room is a stranger's files: only the four room files, only into themes/<id>/, only if it passes."""
+class NoRoomSharingTest(unittest.TestCase):
+    """Rooms aren't traded: no .room export or import from the page or the CLI (dropped 2026-11-06)."""
 
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="edu4self-share-")
+        self.tmp = tempfile.mkdtemp(prefix="edu4self-noshare-")
         self.vault, self.env = make_vault(self.tmp)
-        self.room = themes.pack(os.path.join(server.THEMES_DIR, "library"), "library")
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def unpack(self, data, **kw):
-        return themes.unpack(self.vault, data, builtin_dir=server.THEMES_DIR, **kw)
-
-    def vault_files(self):
-        out = set()
-        for d, _, fs in os.walk(self.vault):
-            out |= {os.path.relpath(os.path.join(d, f), self.vault) for f in fs}
-        return out
-
-    def test_a_room_travels_and_arrives_working(self):
-        tid, errors = self.unpack(self.room, as_id="reading-room")
-        self.assertEqual((tid, errors), ("reading-room", []))
-        loaded = themes.load(os.path.join(self.vault, "themes", "reading-room"), "reading-room")
-        self.assertEqual(loaded["errors"], [])
-        self.assertEqual(sorted(os.listdir(os.path.join(self.vault, "themes"))), ["reading-room"], "no temp folders left behind")
-
-    def test_refuses_anything_but_the_four_room_files(self):
-        before = self.vault_files()
-        for name in ("CLAUDE.md", "AGENTS.md", ".mcp.json", "../CLAUDE.md", "sub/theme.css", ".claude/settings.json", "x.js"):
-            data = json.loads(json.dumps(self.room))
-            data["files"][name] = "hello"
-            tid, errors = self.unpack(data, as_id="evil")
-            self.assertIsNone(tid, name)
-            self.assertIn("refusing", errors[0], name)
-        self.assertEqual(self.vault_files(), before, "nothing written")
-
-    def test_refuses_bad_names_wrong_format_big_or_broken_rooms(self):
-        self.assertIn("isn't an edu4self room", self.unpack({"files": {}})[1][0])
-        self.assertIn("id must be", self.unpack(dict(self.room, id="../../etc"))[1][0])
-        self.assertIn("text", self.unpack(dict(self.room, id="x", files=dict(self.room["files"], **{"theme.css": 5})))[1][0])
-        big = dict(self.room, id="big", files=dict(self.room["files"], **{"lesson.css": "/*" + "x" * themes.ROOM_MAX + "*/"}))
-        self.assertIn("too big", self.unpack(big)[1][0])
-        broken = dict(self.room, id="broken", files=dict(self.room["files"], **{"layout.html": '<div data-slot="job"></div><script>steal()</script>'}))
-        tid, errors = self.unpack(broken)
-        self.assertIsNone(tid)
-        self.assertTrue(errors)
-        self.assertFalse(os.path.exists(os.path.join(self.vault, "themes", "broken")))
-
-    def test_a_taken_name_is_refused_unless_replacing(self):
-        self.assertIn("already a room called library", self.unpack(self.room)[1][0], "built-ins count as taken")
-        self.assertEqual(self.unpack(self.room, as_id="mine")[0], "mine")
-        self.assertIn("already", self.unpack(self.room, as_id="mine")[1][0])
-        self.assertEqual(self.unpack(self.room, as_id="mine", replace=True), ("mine", []))
-        self.assertEqual(themes.free_id(self.vault, server.THEMES_DIR, "mine"), "mine-2")
-
-    def test_never_writes_through_a_link(self):
-        outside = os.path.join(self.tmp, "outside")
-        os.makedirs(outside)
-        os.makedirs(os.path.join(self.vault, "themes"), exist_ok=True)
-        os.symlink(outside, os.path.join(self.vault, "themes", "linked"))
-        self.assertIn("link", self.unpack(self.room, as_id="linked", replace=True)[1][0])
-        self.assertEqual(os.listdir(outside), [])
-
-    def test_cli_export_then_import(self):
-        out = os.path.join(self.tmp, "tea.room")
-        run = lambda *a: subprocess.run([sys.executable, CLI, "room"] + list(a) + ["--vault", self.vault],
-                                        stdout=subprocess.PIPE, text=True, env=self.env)
-        self.assertEqual(run("export", "tea", "-o", out).returncode, 0)
-        r = run("import", out)
-        self.assertEqual(r.returncode, 1, "tea is a built-in name")
-        r = run("import", out, "--as", "my-tea")
-        self.assertEqual(r.returncode, 0, r.stdout)
-        self.assertTrue(os.path.isfile(os.path.join(self.vault, "themes", "my-tea", "lesson.css")))
-
-    def test_the_server_imports_under_a_free_name_and_exports_a_download(self):
+    def test_the_page_and_the_cli_offer_no_way_to_trade_rooms(self):
         port = free_port()
         httpd = server.make_server(self.vault, port)
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
@@ -311,23 +246,20 @@ class RoomShareTest(unittest.TestCase):
                     h.update({"Content-Type": "application/json", "Origin": "http://127.0.0.1:%d" % port})
                 c.request(method, path, json.dumps(body) if body is not None else None, h)
                 r = c.getresponse()
-                return r.status, dict(r.getheaders()), r.read()
-            code, _, data = req("POST", "/api/themes/import", {"room": self.room})
-            self.assertEqual(code, 201, data)
-            self.assertEqual(json.loads(data)["id"], "library-2")
-            bad = dict(self.room, files=dict(self.room["files"], **{"CLAUDE.md": "x"}))
-            code, _, data = req("POST", "/api/themes/import", {"room": bad})
-            self.assertEqual(code, 400)
-            self.assertFalse(os.path.exists(os.path.join(self.vault, "themes", "library-3")))
-            code, headers, data = req("GET", "/api/themes/export?id=library-2")
-            self.assertEqual(code, 200)
-            self.assertIn('filename="library-2.room"', headers["Content-Disposition"])
-            self.assertEqual(json.loads(data)["files"]["theme.json"], self.room["files"]["theme.json"])
-            self.assertEqual(req("GET", "/api/themes/export?id=..%2Fx")[0], 404)
+                r.read()
+                return r.status
+            self.assertEqual(req("GET", "/api/themes/export?id=library"), 404)
+            room = {"format": "edu4self-room", "id": "x", "files": {"theme.json": "{}"}}
+            self.assertEqual(req("POST", "/api/themes/import", {"room": room}), 404)
+            self.assertFalse(os.path.exists(os.path.join(self.vault, "themes", "x")))
+            self.assertEqual(req("GET", "/api/themes"), 200, "picking a room still works")
         finally:
             httpd.shutdown()
             httpd.server_close()
-
+        r = subprocess.run([sys.executable, CLI, "room", "export", "library", "--vault", self.vault],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=self.env)
+        self.assertEqual(r.returncode, 2, "argparse refuses an unknown command")
+        self.assertFalse(hasattr(themes, "unpack"))
 
 if __name__ == "__main__":
     unittest.main()

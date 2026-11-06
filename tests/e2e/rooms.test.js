@@ -268,37 +268,14 @@ test("a mail that failed shows on the dashboard until dismissed", async () => {
   fs.rmSync(rem);
 });
 
-test("Settings saves a room to share and adds one someone shared", async () => {
-  setConfig({ theme: "tea" });
+test("Settings lets you pick a room but offers no way to trade one", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.click("#btn-settings");
-  await page.waitForSelector("#set-room-export");
-  const href = await page.$eval("#set-room-export", (a) => a.getAttribute("href"));
-  assert.equal(href, "/api/themes/export?id=tea");
-  const file = path.join(v.dir, "shared.room");
-  fs.writeFileSync(file, await (await fetch(server.url + href.slice(1))).text());
-  const input = await page.$("#set-room-import");
-  await input.uploadFile(file);
-  await page.waitForFunction(() => /Added the room|Not added/.test(document.querySelector("#set-room-msg").textContent));
-  assert.match(await page.$eval("#set-room-msg", (e) => e.textContent), /Added the room tea-2/);
-  assert.equal(await page.$eval('input[name="set-theme"][value="tea-2"]', (e) => e.checked), true, "picked, ready to save");
-  await page.click("#set-save");
-  await page.waitForSelector(".room.t-tea-2", { timeout: 5000 });
+  await page.waitForSelector('input[name="set-theme"][value="tea"]');
+  const room = await page.$eval("#set-room", (h) => { let t = "", e = h.nextElementSibling; while (e && e.tagName !== "H3") { t += e.outerHTML; e = e.nextElementSibling; } return t; });
+  assert.doesNotMatch(room, /share|\.room|type="file"|themes\/(export|import)/i);
   assert.deepEqual(page.errors, []);
   await closePage(page);
-  // a fresh page for the bad file, so the upload can't race the settings panel redrawing
-  fs.writeFileSync(file, JSON.stringify({ format: "edu4self-room", id: "evil", files: { "CLAUDE.md": "x" } }));
-  const p2 = await openPage(browser, server.url, { view: "bar" });
-  await p2.click("#btn-settings");
-  await p2.waitForSelector("#set-room-import");
-  await (await p2.$("#set-room-import")).uploadFile(file);
-  await p2.waitForFunction(() => /Added the room|Not added/.test(document.querySelector("#set-room-msg").textContent));
-  assert.match(await p2.$eval("#set-room-msg", (e) => e.textContent), /Not added: a room holds only/);
-  assert.ok(!fs.existsSync(path.join(v.vault, "themes", "evil")));
-  assert.deepEqual(p2.errors.filter((e) => !/status of 400/.test(e)), [], "only the refusal itself");
-  await closePage(p2);
-  fs.rmSync(path.join(v.vault, "themes", "tea-2"), { recursive: true, force: true });
-  setConfig({ theme: "bar" });
 });
 
 test("a broken room of your own shows its problem in Settings and can't be picked", async () => {
