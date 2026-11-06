@@ -54,6 +54,7 @@ class RecallPickTest(unittest.TestCase):
 
     def test_after_three_days_away_only_passed_work_most_recently_passed_first(self):
         st = state(q("q-open", "open"), q("q-a", "a"), q("q-b", "b"), q("q-c", "c"))
+        st["recall"].append(q("q-open-2", "open"))
         entries = [{"id": "s-a", "ts": iso(20), "task": "a", "kind": "answers"},
                    {"id": "s-c", "ts": iso(9), "task": "c", "kind": "answers"},
                    {"id": "s-b", "ts": iso(4), "task": "b", "kind": "answers"},     # the last thing done: 4 days ago
@@ -62,6 +63,8 @@ class RecallPickTest(unittest.TestCase):
         self.assertTrue(p["comeback"])
         self.assertEqual(p["days_away"], 4)
         self.assertEqual(self.ids(p), ["q-b", "q-c", "q-a"], "not the unpassed one, newest pass first")
+        st["recall"] = [q("q-open", "open"), q("q-a", "a")]
+        self.assertEqual(self.ids(server.pick_recall(st, entries, [], NOW)), ["q-a"], "only passed work, even with room to spare")
 
     def test_the_gap_uses_the_away_mail_rule_and_stays_the_same_all_day(self):
         st = state(q("q1", "a"))
@@ -162,6 +165,7 @@ class StuckTest(unittest.TestCase):
     def test_the_timeline_in_time_order_and_the_next_unopened_hint(self):
         self.put("2026-11-06T10-00-00.000-run.json", {"kind": "run", "ts": "2026-11-06T10:00:00+03:00", "exit": 1})
         self.put("2026-11-06T10-02-30.000-run.json", {"kind": "run", "ts": "2026-11-06T10:02:30+03:00", "exit": 1})
+        self.assertFalse(server.attempts(self.task)["stuck"], "two failing runs: not yet")
         self.put("2026-11-06T10-03-00.000-hint-1.json", {"kind": "hint", "ts": "2026-11-06T10:03:00+03:00", "hint": 1, "title": "1 · start"})
         self.put("2026-11-06T10-10-30.000-run.json", {"kind": "run", "ts": "2026-11-06T10:10:30+03:00", "exit": 1})
         with open(os.path.join(self.ex, "trace", "notes.json"), "w") as fh:      # not the record's: ignored
