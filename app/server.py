@@ -52,6 +52,7 @@ MAX_BODY = 64 * 1024
 MAX_MUSIC = 1024 * 1024 * 1024          # 1 GiB: a few hours of compressed audio
 MUSIC_EXTS = {".m4a", ".mp3", ".ogg", ".opus", ".wav", ".flac", ".aac", ".webm"}
 KINDS = {"answers", "done", "note"}
+CONFIDENCE = ("guessed", "shaky", "solid")   # "How sure are you?" on the submit form, asked for answers and done
 INBOX_LOCK = threading.Lock()
 BLOCKS_LOCK = threading.Lock()
 CONFIG_LOCK = threading.Lock()
@@ -571,6 +572,7 @@ def api_state():
     sync_keepsakes()
     entries = inbox_entries()
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
+    derived["calibration"] = calibration(state, entries)
     cfg, cfg_err = load_config()
     return {
         "state": state,
@@ -621,10 +623,33 @@ def clean_submission(body, state):
         raise ValueError("no answers")
     if kind == "note" and not note.strip():
         raise ValueError("empty note")
-    return {
+    entry = {
         "id": uuid.uuid4().hex[:10], "ts": now_iso(), "topic": topic, "task": task, "kind": kind,
         "title": title, "fields": clean_fields, "note": note, "honor": bool(body.get("honor")),
     }
+    if kind in ("answers", "done"):
+        if body.get("confidence") not in CONFIDENCE:
+            raise ValueError("say how sure you are: guessed, shaky or solid")
+        entry["confidence"] = body["confidence"]
+    return entry
+
+
+def calibration(state, entries):
+    """How sure the learner said they were, against how it went. A graded answer is one a history entry
+    names in its `inbox` field; it passed when that entry is evidence."""
+    graded = {}
+    for t in state.get("topics", []):
+        for h in t.get("history", []):
+            if isinstance(h, dict) and isinstance(h.get("inbox"), str):
+                graded[h["inbox"]] = bool(h.get("evidence"))
+    out = {c: {"n": 0, "passed": 0} for c in CONFIDENCE}
+    for e in entries:
+        c = e.get("confidence")
+        if c in out and e.get("id") in graded:
+            out[c]["n"] += 1
+            out[c]["passed"] += graded[e["id"]]
+    out["rated"] = sum(out[c]["n"] for c in CONFIDENCE)
+    return out
 
 
 def clean_block(body):

@@ -182,6 +182,7 @@
           live.map(renderMilestones).join("") +
           renderGates(live) +
           live.map(renderEvidence).join("") +
+          renderCalibration() +
           live.map(renderSkills).join("") +
         '</div>' +
       '</div>';
@@ -522,6 +523,22 @@
       '<ul class="wins">' + wins + '</ul></section>';
   }
 
+  // "How sure are you?" against the grade, once there are a few graded answers (server.py calibration)
+  function renderCalibration() {
+    var c = DATA.derived && DATA.derived.calibration;
+    if (!c || c.rated < 3) return "";
+    var s = c.solid, head = s.n ? "You said solid " + plural(s.n, "time") + ", and " + s.passed + " of those passed."
+      : "You haven't said solid yet.";
+    var rows = ["guessed", "shaky", "solid"].map(function (k) {
+      var x = c[k], pct = x.n ? Math.round(100 * x.passed / x.n) : 0;
+      return '<div class="cal-row"><b>' + cap(k) + '</b><div class="cal-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></div>' +
+        "<span>" + (x.n ? x.passed + " of " + x.n + " passed" : "not used yet") + "</span></div>";
+    }).join("");
+    return '<section class="card cal"><div class="card-head"><span class="card-title">How sure vs how it went</span></div>' +
+      "<p>" + esc(head) + "</p>" + rows +
+      '<small class="muted">Out of ' + plural(c.rated, "graded answer") + '. A pass means Claude logged it as proof. If "solid" often doesn\'t pass, slow down before you hand in.</small></section>';
+  }
+
   function renderSkills(topic) {
     var rows = (topic.regions || []).map(function (r) {
       var bars = "";
@@ -552,7 +569,7 @@
     renderSubmitForm({
       chipClass: "chip-" + t.kind, chip: meta.label, title: submitCtx.title,
       intro: sub.intro || (sub.type === "done" ? "Mark this as done. Add a note if there's anything Claude should know." : "Type your answers below."),
-      rules: t.rules, fields: sub.type === "done" ? [] : (sub.fields || ["Your answer"]), honor: submitCtx.probe, button: meta.submit
+      rules: t.rules, fields: sub.type === "done" ? [] : (sub.fields || ["Your answer"]), honor: submitCtx.probe, button: meta.submit, sure: true
     });
   }
 
@@ -581,6 +598,7 @@
     noteLabel.innerHTML = o.noteLabel ? esc(o.noteLabel) : 'Anything else? <em>optional</em>';
     form.querySelector('textarea[name="__note"]').rows = o.noteRequired ? 6 : 2;
     $("#sub-honor").hidden = !o.honor;
+    $("#sub-sure").hidden = !o.sure;
     $("#sub-error").hidden = true;
     $("#sub-send").textContent = o.button || "Submit";
     $("#sub-send").disabled = false;
@@ -596,17 +614,19 @@
     form.querySelectorAll("#sub-fields textarea").forEach(function (ta) { fields[ta.dataset.label] = ta.value; });
     var note = form.querySelector('textarea[name="__note"]').value;
     var honor = form.querySelector('input[name="__honor"]').checked;
+    var sure = form.querySelector('input[name="__sure"]:checked');
 
     function fail(msg) { err.textContent = msg; err.hidden = false; }
     if (submitCtx.kind === "answers" && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
     if (submitCtx.kind === "note" && !note.trim()) return fail("Write your note first.");
+    if (submitCtx.kind !== "note" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
     if (submitCtx.probe && !honor) return fail("Tick the box to confirm you did it unaided. If you did get help, don't submit this one. Send Claude a note instead and you'll get a fresh probe.");
 
     var btn = $("#sub-send");
     btn.disabled = true; btn.textContent = "Saving…";
     fetch("/api/inbox", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor })
+      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error(res.body.error || "Could not save");
@@ -1886,7 +1906,7 @@
         '<div class="bx-back">' + shelfCard("The shelf") +
           (list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "") +
           live.map(renderMilestones).join("") + renderGates(live) +
-          live.map(renderEvidence).join("") + live.map(renderSkills).join("") +
+          live.map(renderEvidence).join("") + renderCalibration() + live.map(renderSkills).join("") +
           topics.map(renderTopic).join("") + renderLinked() +
         '</div></div></div>';
     }

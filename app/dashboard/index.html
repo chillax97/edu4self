@@ -94,6 +94,15 @@
       <span class="field-label">Anything else? <em>optional</em></span>
       <textarea name="__note" rows="2" placeholder="What felt hard, what you're unsure about, questions for Claude…"></textarea>
     </label>
+    <fieldset class="sure" id="sub-sure" hidden>
+      <legend>How sure are you?</legend>
+      <div class="sure-row">
+        <label><input type="radio" name="__sure" value="guessed"><span>Guessed</span></label>
+        <label><input type="radio" name="__sure" value="shaky"><span>Shaky</span></label>
+        <label><input type="radio" name="__sure" value="solid"><span>Solid</span></label>
+      </div>
+      <small>Claude compares this with how it went. An honest "shaky" helps more than a hopeful "solid".</small>
+    </fieldset>
     <label class="honor" id="sub-honor" hidden>
       <input type="checkbox" name="__honor">
       <span>I did this <strong>without running code, AI or looking things up.</strong> Otherwise it doesn't measure anything.</span>

@@ -83,6 +83,8 @@ for t in s.get("topics", []):
     for h in t.get("history", []):
         if h.get("record") and not os.path.isfile(os.path.join(ROOT, t.get("path", ""), h["record"])):
             err("history record missing: %s" % h["record"])
+        if "inbox" in h and not isinstance(h["inbox"], str):   # the inbox entry this grades (for "How sure are you?")
+            err("history %r: inbox must be the id of the inbox entry it grades" % h.get("title"))
     for m in t.get("milestones", []):
         if m.get("status") not in ("active", "locked", "done"):
             err("milestone %s bad status" % m.get("id"))
