@@ -1002,3 +1002,13 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .cal-bar i { display: block; height: 100%; background: var(--topic); }
 .cal-row span { color: var(--ink-2); font-size: 12.5px; }
 .cal small { display: block; margin-top: 10px; font-size: 12.5px; }
+
+/* the recall warm-up, before Up next */
+.recall h3 { margin: 4px 0 6px; font-size: 18px; }
+.recall p { margin: 0 0 10px; color: var(--ink-2); font-size: 14.5px; }
+.recall ol, .bx-recall ol { margin: 0 0 14px; padding-left: 22px; }
+.recall li, .bx-recall li { margin: 4px 0; }
+.recall.is-comeback { border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+.recall-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.bx-recall { margin-bottom: 12px; }
+.bx-recall h2 { font-size: 20px; }

@@ -171,6 +171,7 @@
       '<div class="grid">' +
         '<div class="col">' +
           renderCoach(st.coach) +
+          recallCard(false) +
           renderHero(hero) +
           renderQueue(all, hero) +
           shelfCard("Your shelf") +
@@ -360,6 +361,41 @@
     }
     return html + '</section>';
   }
+
+  // ---------------------------------------------------------------- the recall warm-up ("From memory")
+  // A few one-line questions the tutor wrote from passed work (state.json recall), picked by the server
+  // (server.py pick_recall). After 3+ days away the same card is the welcome back. Answers go to the
+  // inbox as kind "recall"; "Not now" hides it for today in this browser.
+  var RECALL_KEY = "edu.recall.hidden.v1";
+  function recallToday() {
+    var r = DATA && DATA.derived && DATA.derived.recall;
+    if (!r || !r.questions || !r.questions.length || r.sent_today || store(RECALL_KEY) === dayKey(new Date())) return null;
+    return r;
+  }
+  function recallCard(bar) {
+    var r = recallToday();
+    if (!r) return "";
+    var n = r.questions.length, list = "<ol>" + r.questions.map(function (q) { return "<li>" + esc(q.q) + "</li>"; }).join("") + "</ol>";
+    var head = r.comeback ? "Start with something you already know." : plural(n, "quick question") + " from earlier work.";
+    var sub = r.comeback ? "About 5 minutes, from memory. These come from work you already passed, newest first, so it's an easy start."
+      : "No notes, about two minutes. Whatever comes to mind counts, and \"I don't remember\" is a fine answer.";
+    var buttons = '<div class="recall-actions"><button class="btn btn-topic btn-sm" type="button" data-recall="go">' + (r.comeback ? "Start the warm-up" : "Answer from memory") + "</button>" +
+      '<button class="btn btn-ghost btn-sm" type="button" data-recall="later">Not now</button></div>';
+    if (bar) return '<div class="bx-job bx-recall' + (r.comeback ? " is-comeback" : "") + '"><div class="bx-k">' + (r.comeback ? "Welcome back" : "From memory") + "</div>" +
+      "<h2>" + esc(head) + "</h2><p>" + esc(sub) + "</p>" + list + buttons + "</div>";
+    return '<section class="card recall' + (r.comeback ? " is-comeback" : "") + '" aria-labelledby="recall-title"><div class="card-head"><span class="card-title">' +
+      (r.comeback ? "Warm-up" : "From memory") + '</span><span class="card-sub">' + (r.comeback ? "about 5 minutes" : "before Up next") + "</span></div>" +
+      '<h3 id="recall-title">' + esc(head) + "</h3><p>" + esc(sub) + "</p>" + list + buttons + "</section>";
+  }
+  function openRecall() {
+    var r = recallToday();
+    if (!r) return;
+    submitCtx = { kind: "recall", topic: "general", task: "recall", title: r.comeback ? "Welcome back: from memory" : "From memory", recall: r.questions.map(function (q) { return q.id; }) };
+    renderSubmitForm({ chipClass: "chip-probe", chip: "From memory", title: submitCtx.title,
+      intro: (r.comeback ? "An easy start: this is all work you passed. " : "") + "Answer without looking anything up. A few words each is plenty, and \"I don't remember\" is a real answer: it tells Claude what to bring back.",
+      fields: r.questions.map(function (q) { return q.q; }), honor: false, button: "Send to Claude", sure: false });
+  }
+  function recallLater() { store(RECALL_KEY, dayKey(new Date())); render(); }
 
   // a topic can name the block kind its tasks run under (state.json topics[].block); else the first kind
   function taskBlock(topic) { return topic.block && BLOCKS[topic.block] ? topic.block : Object.keys(BLOCKS)[0]; }
@@ -617,16 +653,16 @@
     var sure = form.querySelector('input[name="__sure"]:checked');
 
     function fail(msg) { err.textContent = msg; err.hidden = false; }
-    if (submitCtx.kind === "answers" && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
+    if ((submitCtx.kind === "answers" || submitCtx.kind === "recall") && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
     if (submitCtx.kind === "note" && !note.trim()) return fail("Write your note first.");
-    if (submitCtx.kind !== "note" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
+    if (submitCtx.kind !== "note" && submitCtx.kind !== "recall" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
     if (submitCtx.probe && !honor) return fail("Tick the box to confirm you did it unaided. If you did get help, don't submit this one. Send Claude a note instead and you'll get a fresh probe.");
 
     var btn = $("#sub-send");
     btn.disabled = true; btn.textContent = "Saving…";
     fetch("/api/inbox", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined })
+      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error(res.body.error || "Could not save");
@@ -1924,7 +1960,7 @@
       timer: active ? '<div class="bx-clock" id="bx-clock" style="--c:' + blockColor(active.block) + '"><b data-bx-time>' + esc(clock(active.end - Date.now())) + "</b>" +
         '<div><div class="bx-mono">' + esc(blockLabel(active.block)) + (active.task && findTask(active.task) ? " · " + esc(findTask(active.task).task.label || findTask(active.task).task.title) : "") + " · ends " + esc(hhmm(active.end)) + "</div>" +
         (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "",
-      voices: barLines2HTML(hero), job: barJob(hero), replies: barReplies(hero),
+      voices: barLines2HTML(hero), job: recallCard(true) + barJob(hero), replies: barReplies(hero),
       keys: "Press <kbd>1</kbd>–<kbd>9</kbd> to reply.",
       block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: shelfHTML()
     };
@@ -2798,8 +2834,9 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n],[data-recall]");
     if (!el) return;
+    if (el.dataset.recall) return el.dataset.recall === "go" ? openRecall() : recallLater();
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
     if (el.hasAttribute("data-claude-open")) return openClaude();
     if (el.hasAttribute("data-newtopic")) return openNewTopic();
