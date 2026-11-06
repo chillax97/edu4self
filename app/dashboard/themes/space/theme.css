@@ -43,7 +43,8 @@
 .room .sp-comms .bx-line { color: #d2ecf8; font-family: var(--sans); }
 .room .sp-comms .bx-line::before { transform: none; border-radius: 3px; }
 .room .sp-comms .bx-who { font-family: var(--bx-mono); }
-.room .sp-mission { border: 1px solid var(--sp-orange); border-radius: 6px; padding: 16px 18px; background: linear-gradient(rgba(255,157,61,.08), rgba(4,9,18,.75)); display: grid; gap: 12px; }
+/* the mission comes first, the comms log under it: a long log never pushes the job off the screen */
+.room .sp-mission { order: -1; border: 1px solid var(--sp-orange); border-radius: 6px; padding: 16px 18px; background: linear-gradient(rgba(255,157,61,.08), rgba(4,9,18,.75)); display: grid; gap: 12px; }
 .room .sp-mission .bx-job { border-left: 0; background: none; padding: 0; }
 .room .sp-mission .bx-job .bx-k { color: var(--sp-orange); }
 .room .sp-mission .bx-job h2 { font: 600 26px/1.15 var(--bx-mono); letter-spacing: .04em; }
@@ -54,6 +55,6 @@
 .room .bx-juke .blk-start { background: var(--sp-orange); }
 .room .bx-music { border-radius: 6px; }
 
-@media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } }
+@media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } .room .sp-mid { order: -1; } }
 @media (max-width: 560px) { .room .sp-bar { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .room .sp-planet { animation: none; } }

@@ -149,6 +149,7 @@
     if (isBar()) {
       if (!THEME || THEME.meta.id !== wantTheme()) { ensureTheme(); if (!THEME) return; }
       app.innerHTML = renderBar(hero, topics, live);
+      markFolds();
       if (topics[0]) document.documentElement.style.setProperty("--topic", topics[0].color);
       mountBlockCard();
       if (away >= IDLE_DAYS && !pick.touched && !active && pick.minutes !== 25) { pick.minutes = 25; paintControls(); }
@@ -187,6 +188,7 @@
           live.map(renderSkills).join("") +
         '</div>' +
       '</div>';
+    markFolds();
     if (topics[0]) document.documentElement.style.setProperty("--topic", topics[0].color);
     mountBlockCard();
     // coming back after a break: the smallest block is already picked, unless you chose one yourself
@@ -319,8 +321,9 @@
 
   function renderCoach(coach) {
     if (!coach) return "";
-    return '<div class="coach"><div class="coach-avatar" aria-hidden="true">C</div><div>' +
-      '<strong>' + esc(coach.headline) + '</strong><p>' + esc(coach.body) + '</p>' +
+    return '<div class="coach' + (foldOpen.coach ? " is-open" : "") + '" data-fold="coach"><div class="coach-avatar" aria-hidden="true">C</div><div>' +
+      '<strong>' + esc(coach.headline) + '</strong><p class="fold fold-2">' + esc(coach.body) + '</p>' +
+      '<button class="fold-more" type="button" aria-expanded="false" hidden>more</button>' +
       '<small>Note from Claude · ' + esc(coach.date || "") + '</small></div></div>';
   }
 
@@ -1554,19 +1557,6 @@
     return '<button class="bx-glass' + (owed ? " full" : "") + '" type="button" data-drink aria-label="' + (owed ? "A " + esc(W("glass")) + " of water. Click once you've drunk it." : "An empty " + esc(W("glass"))) + '"></button>';
   }
 
-  // The active milestone in one sentence: steps done, and when you land at your pace
-  function finishSentence(topic) {
-    var ms = topic && (topic.milestones || []).filter(function (m) { return m.status === "active"; })[0];
-    if (!ms || !(ms.steps || []).length) return "";
-    var left = ms.steps.filter(function (x) { return !x.done; }).length, done = ms.steps.length - left;
-    var perStep = (DATA.state.pace && DATA.state.pace.hours_per_step) || HOURS_PER_STEP, pace = paceHoursPerWeek();
-    var s = ms.id + ": " + done + " of " + ms.steps.length + " steps.";
-    if (!left) return s + " Done.";
-    if (pace < 0.25) return s + " No blocks in four weeks, so no date yet. One block gives you one.";
-    var at = function (h) { return shortDate(new Date(Date.now() + left * perStep / h * 7 * 864e5)); };
-    return s + " At " + pace.toFixed(1) + " h a week you land around " + at(pace) + ". Two more hours a week makes it " + at(pace + 2) + ".";
-  }
-
   // A past proof, a different one each day, from more than three days ago
   function pastProof() {
     var cut = dayKey(new Date(Date.now() - 3 * 864e5)), all = [];
@@ -1677,28 +1667,14 @@
   // Every line comes from real data or from Claude's notes. [voice, html, small print, id]
   function barLines(hero) {
     var st = DATA.state, L = [], t = tonight(), d = dieNow(), away = idleDays(), hr = new Date().getHours(), coach = st.coach, S = blockStats(hero);
-    if (coach) L.push(["bartender", '<b>"' + esc(coach.headline) + '"</b> ' + esc(coach.body || ""), coach.date, "coach"]);
+    if (coach) L.push(["bartender", '<b>"' + esc(coach.headline) + '"</b>', coach.date, "coach", esc(coach.body || "")]);
     ((coach && coach.voices) || []).forEach(function (v, i) { if (VOICES[v.voice]) L.push([v.voice, esc(v.text), "from Claude", "claude-" + i]); });
 
-    var vol;
-    if (away >= IDLE_DAYS) vol = "You've been away " + away + " days. No catching up. One 25-minute block, then see how it feels.";
-    else if (!t.mins) vol = "Nothing on the clock tonight. The goal is " + DAY_GOAL_MIN + " minutes, and 25 is a start.";
-    else if (t.mins < DAY_GOAL_MIN) vol = t.mins + " minutes in. " + (DAY_GOAL_MIN - t.mins) + " more and tonight counts.";
-    else if (hr >= 23 || hr < 5) vol = t.mins + " minutes, the goal is done, and it's " + hhmm(Date.now()) + ". Sleep is where today's work gets saved.";
-    else vol = t.mins + " minutes. The goal was " + DAY_GOAL_MIN + ". You could stop. You won't.";
-    vol += t.hit >= WEEK_GOAL_DAYS ? " The week's already won." : " " + t.hit + " of " + WEEK_GOAL_DAYS + " nights this week; " + plural(WEEK_GOAL_DAYS - t.hit, "more night") + " wins it.";
-    L.push(["volition", esc(vol), null, "vol"]);
-
-    if (hero) {
-      var ht = hero.task, name = (ht.label ? ht.label + ", " : "") + ht.title, pend = pendingFor(ht.id);
-      L.push(["logic", pend ? esc(name) + " is in the inbox, sent " + esc(ago(pend.ts)) + (claudeOK() ? ". Press Grade it now and it gets graded." : '. Tell Claude <b>"check my inbox"</b> and it gets graded.')
-        : "Up next: " + esc(name) + "." + (active && active.task === ht.id ? " The clock is already running on it." : ""), null, "logic"]);
-    } else L.push(["logic", claudeOK() ? "Nothing waiting on you. Grade your inbox, or start a new topic." : 'Nothing waiting on you. Tell Claude <b>"check my inbox"</b> and it lines up the next thing.', null, "logic"]);
-
-    var togo = DIE_TILES - d.etched;
-    var dn = cap(W("die")) + " #" + d.n;
-    L.push(["gpu", !d.etched ? (d.shipped ? dn + " is blank. The last one " + W("shipped") + ". This one wants its first " + W("tile") + "." : "The " + W("die") + " is blank. One 25-minute block adds the first " + W("tile") + ".")
-      : dn + (togo <= 4 ? " is warm: " : " sits at ") + d.etched + " of " + DIE_TILES + ". " + cap(NUM_WORDS[togo]) + " more " + W(togo === 1 ? "tile" : "tiles") + (togo <= 4 ? " and it's done." : " to go."), null, "gpu"]);
+    // No lines that only restate what the room already shows: tonight's minutes and the week's nights
+    // (the tonight and week slots), the next task (the job card, which also says when it's submitted),
+    // the die's count (the die slot), and the finish line and the other open tasks (the finish slot and
+    // the replies). Coming back after a gap is advice, not a number, so it stays.
+    if (away >= IDLE_DAYS) L.push(["volition", esc("You've been away " + away + " days. No catching up. One 25-minute block, then see how it feels."), null, "vol"]);
 
     var shown = {};
     occasionLines(hero, S, t, d).forEach(function (o) {
@@ -1709,11 +1685,6 @@
 
     if (active && active.water) L.push(["physical", '<span data-water-text>' + esc(waterText()) + "</span>", null, "water"]);
     else if (t.glasses && t.glasses < 4) L.push(["physical", t.glasses + " " + W(t.glasses === 1 ? "glass" : "glasses") + " of water tonight. Your neurons noticed.", null, "water"]);
-
-    var enc = finishSentence((st.topics || [])[0]);
-    var side = actionableTasks().filter(function (e) { return e.task.status === "todo" && (!hero || e.task.id !== hero.task.id) && !pendingFor(e.task.id); });
-    if (side.length) enc += " Also open, whenever you like: " + side.map(function (e) { return e.task.label || e.task.title; }).join(", ") + ". Nobody's pushing.";
-    if (enc) L.push(["encyclopedia", esc(enc), null, "enc"]);
 
     var past = pastProof();
     if (past) L.push(["nostalgia", esc(past), null, "nostalgia"]);
@@ -1781,15 +1752,51 @@
     return R.join("");
   }
 
+  // Each line folds to one line (the host's note: its headline and two lines of the rest) so the job
+  // stays near the top. A folded line opens in place on a click, a tap or Enter; markFolds() decides
+  // which ones are actually cut off, after the room is drawn.
   function barLines2HTML(hero) {
     var k = 0;
     return barLines(hero).map(function (l) {
       var v = VOICES[l[0]], key = l[3] || l[0] + "|" + l[1], fresh = !barSeen[key];
       barSeen[key] = true;
-      return '<p class="bx-line' + (fresh ? " is-new" : "") + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
-        '<span class="bx-who">' + esc(v.name) + "</span>" + l[1] + (l[2] ? ' <span class="bx-chk">' + esc(l[2]) + "</span>" : "") + "</p>";
+      var chk = l[2] ? ' <span class="bx-chk">' + esc(l[2]) + "</span>" : "", who = '<span class="bx-who">' + esc(v.name) + "</span>";
+      var inner = l[4] != null ? who + l[1] + '<span class="fold fold-2">' + l[4] + chk + '</span><button class="fold-more" type="button" aria-expanded="false" hidden>more</button>'
+        : '<span class="fold">' + who + l[1] + chk + "</span>";
+      return '<p class="bx-line' + (fresh ? " is-new" : "") + (foldOpen[key] ? " is-open" : "") + '" data-fold="' + esc(key) + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
+        inner + "</p>";
     }).join("");
   }
+
+  var foldOpen = {};
+  function markFolds() {
+    document.querySelectorAll("[data-fold]").forEach(function (box) {
+      var f = box.querySelector(".fold"), more = box.querySelector(".fold-more");
+      if (!f) return;
+      var open = box.classList.contains("is-open"), cut = open || f.scrollHeight > f.clientHeight + 1;
+      box.toggleAttribute("data-clip", cut);
+      if (more) { more.hidden = !cut; more.textContent = open ? "less" : "more"; more.setAttribute("aria-expanded", String(open)); return; }
+      if (cut) { box.tabIndex = 0; box.setAttribute("role", "button"); box.setAttribute("aria-expanded", String(open)); }
+      else { box.removeAttribute("tabindex"); box.removeAttribute("role"); box.removeAttribute("aria-expanded"); }
+    });
+  }
+  function toggleFold(box) {
+    var open = box.classList.toggle("is-open"), more = box.querySelector(".fold-more");
+    foldOpen[box.dataset.fold] = open;
+    if (more) { more.textContent = open ? "less" : "more"; more.setAttribute("aria-expanded", String(open)); }
+    else box.setAttribute("aria-expanded", String(open));
+  }
+  document.addEventListener("click", function (ev) {
+    var box = ev.target.closest("[data-fold][data-clip]");
+    if (!box || (ev.target.closest("a, button, input") && !ev.target.closest(".fold-more")) || String(getSelection()).length) return;
+    toggleFold(box);
+  });
+  document.addEventListener("keydown", function (ev) {
+    if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches && ev.target.matches('[data-fold][data-clip][role="button"]')) { ev.preventDefault(); toggleFold(ev.target); }
+  });
+  var foldTimer;
+  window.addEventListener("resize", function () { clearTimeout(foldTimer); foldTimer = setTimeout(markFolds, 150); });
+  if (document.fonts) document.fonts.addEventListener("loadingdone", function () { markFolds(); });   // a room's fonts move the line breaks
 
   // ---------------------------------------------------------------- the shelf (trophies)
   // The server awards trophies (app/keepsakes.py) and keeps each one's drawing from the room it was won

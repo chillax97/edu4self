@@ -53,6 +53,7 @@
 .room .lb-margin .bx-who { display: block; font: 600 11.5px var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }
 .room .lb-margin .bx-line b { color: #2a2116; }
 .room .lb-margin .bx-chk { color: #8a7a5e; }
+.room .lb-margin .fold { --fold: 2; }
 
 .room .lb-side { display: grid; gap: 16px; align-content: start; }
 .room .lb-lamp { border: 1px solid var(--bx-line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 12px;

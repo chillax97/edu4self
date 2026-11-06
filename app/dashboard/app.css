@@ -752,12 +752,21 @@ body.v-bar code { background: var(--surface-2); }
 .bx-clock > div { flex: 1; min-width: 0; }
 .bx-wbar { height: 5px; background: rgba(255,255,255,.12); margin: 6px 0 2px; }
 .bx-wbar i { display: block; height: 100%; width: 0; background: #6fc3ff; transition: width .5s linear; }
-.bx-log { display: flex; flex-direction: column; gap: 12px; }
-.bx-line { position: relative; margin: 0; padding-left: 44px; min-height: 30px; color: var(--bx-bright); }
+.bx-log { display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }
+.bx-line { position: relative; margin: 0; padding-left: 44px; min-height: 26px; color: var(--bx-bright); }
 .bx-line::before { content: ""; position: absolute; left: 6px; top: 4px; width: 22px; height: 22px; transform: rotate(45deg); background: var(--vc); box-shadow: 0 0 0 3px rgba(0,0,0,.55); }
 .bx-line::after { content: attr(data-ini); position: absolute; left: 6px; top: 4px; width: 22px; height: 22px; display: grid; place-items: center; font: 700 12.5px var(--bx-head); color: #120d0a; }
-.bx-line.is-new { animation: bx-up .34s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(var(--i, 0) * 250ms); }
-.bx-line.is-new::before { animation: bx-ring 1.2s ease-out 2; animation-delay: calc(var(--i, 0) * 250ms); }
+.bx-line.is-new { animation: bx-up .3s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(min(var(--i, 0), 8) * 40ms); }
+.bx-line.is-new::before { animation: bx-ring 1.2s ease-out 2; animation-delay: calc(min(var(--i, 0), 8) * 40ms); }
+/* folded lines: one line each (the host's note: its headline, then two lines), opened in place */
+.fold { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fold, 1); overflow: hidden; }
+.fold-2 { --fold: 2; }
+.is-open > .fold, .is-open .fold { display: block; overflow: visible; }
+[data-clip] { cursor: pointer; }
+[data-clip][role="button"]:focus-visible { outline: 2px solid var(--vc, var(--accent, currentColor)); outline-offset: 3px; }
+.fold-more { all: unset; display: block; width: max-content; cursor: pointer; font: 600 12.5px/1.5 var(--sans); text-decoration: underline; text-underline-offset: 3px; opacity: .85; }
+.fold-more:hover, .fold-more:focus-visible { opacity: 1; }
+.fold-more:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 @keyframes bx-up { from { opacity: 0; transform: translateY(8px); } }
 @keyframes bx-ring { from { box-shadow: 0 0 0 3px rgba(0,0,0,.55), 0 0 0 0 color-mix(in srgb, var(--vc) 70%, transparent); } to { box-shadow: 0 0 0 3px rgba(0,0,0,.55), 0 0 0 12px transparent; } }
 .bx-who { font: 700 14.5px var(--bx-head); letter-spacing: .08em; text-transform: uppercase; color: var(--vc); margin-right: 8px; }
@@ -818,6 +827,17 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 
 @media (max-width: 1180px) { .bx { grid-template-columns: 280px minmax(0, 1fr); } .bx-right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--bx-line2); } .bx-juke { max-width: 420px; margin: 0 auto; } }
 @media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-left { border-right: 0; } .bx-mid { padding: 16px; } }
+/* one column on a phone: the sign and tonight's numbers first, then the talk and the job, and the
+   back bar, finish line, doors and trophies after them, so the job isn't four screens down */
+@media (max-width: 760px) {
+  .bx-left { display: contents; }
+  .bx-left > * { margin: 16px 18px 0; }
+  .bx-left > :first-child { margin-top: 20px; }
+  .bx-left > :nth-child(n+4) { order: 2; }
+  .bx-left > :last-child { margin-bottom: 22px; }
+  .bx-mid { order: 1; }
+  .bx-right { order: 3; }
+}
 
 /* bar view: the jukebox's music player */
 .bx-music { margin-top: 16px; padding: 12px; border: 1px solid var(--bx-line); background: var(--bx-music-bg); display: grid; gap: 8px; }
