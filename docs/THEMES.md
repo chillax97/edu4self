@@ -100,7 +100,7 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 |---|---|---|
 | `name` | yes | the sign: the room's name and tagline; clicking it cycles the names |
 | `rooms` | yes | the tabs between the front room and the back room |
-| `voices` | yes | the conversation: the host and the characters talking |
+| `voices` | yes | the conversation: the host and the characters talking. Each line shows one line (the host's note: its headline and two lines, with "more"), and opens in place on a click, a tap or Enter. A theme can give a folded line more room with `--fold: <lines>` on `.fold` |
 | `job` | yes | what to do now (the next task) |
 | `replies` | yes | the numbered replies: start a block, open a lesson, submit |
 | `block` | yes | the focus block controls |

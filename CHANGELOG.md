@@ -30,10 +30,26 @@ versions follow [Semantic Versioning](https://semver.org).
   file stays the default.
 
 ### Fixed
+
+- The Rules line on a task was nearly invisible in the library, tea and train rooms; each room now
+  gives it a dark ink.
+- The train ticket, the tea scroll and the library's drawers no longer stretch to the height of the
+  tallest column.
 - The work record's copy of the checker output no longer re-adds everything kept on every write, so a
   checker that prints a lot doesn't slow down. Same text, same 200k cap.
 
 ### Changed
+
+- The job comes first in every room. The room's own lines no longer repeat what's already on screen
+  (tonight's minutes, the week's nights, Up next, the die's count, the finish line), which also
+  drops the stray "seen?." full stop. Every line folds to one line with its name; the host's note
+  shows its headline and two lines with "more". Click, tap or press Enter to open one in place. The
+  lines fade in faster. On a phone the bar puts the talk and the job before the back bar, the
+  finish line, the doors and the trophies, and space puts the mission above the comms log. The
+  classic coach card folds the same way.
+- The tutor writes a short coach note: a headline of at most 15 words, a body of at most 40 words,
+  and 2 to 3 one-beat voices. The detail lives in the history entry and the learning record.
+  `edu4self check` warns (and still passes) past 60 words or 4 voices.
 - Gifts from Claude are off until you say yes. Each one is a run on your Claude plan, so setup asks
   (or `--gifts on|off`), and if it didn't, the dashboard asks once. A gift won before you answer waits.
 - Tasks carry no dates. The `opens` field is gone: a spaced recall check sits a few units later in
