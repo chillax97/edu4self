@@ -64,6 +64,11 @@ for t in s.get("topics", []):
             err("task %s is actionable but has neither href nor submit" % k)
         if href and href.startswith("/vault/") and not os.path.isfile(os.path.join(ROOT, href[len("/vault/"):])):
             err("task %s href points at a missing file: %s" % (k, href))
+        ex = task.get("exercise")
+        if ex is not None:   # the folder with check.py, HINTS.md and trace/ (the work record)
+            bad = not isinstance(ex, str) or ex.startswith("/") or ".." in ex.split("/") or ex.split("/")[0] == "_system"
+            if bad or not os.path.isdir(os.path.join(ROOT, ex)):
+                err("task %s exercise must be a folder in the vault: %r" % (k, ex))
         if task.get("status") == "locked" and not task.get("unlock"):
             err("task %s is locked but says nothing about how it unlocks" % k)
         sub = task.get("submit")

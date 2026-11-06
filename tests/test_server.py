@@ -394,7 +394,7 @@ class ClaudeTest(unittest.TestCase):
             self.assertNotIn(bare, allowed)
         self.assertFalse(any(a.startswith("Bash") for a in allowed), allowed)
         self.assertIn("Bash", denied)
-        for f in ("CLAUDE.md", ".claude/**", ".mcp.json"):
+        for f in ("CLAUDE.md", ".claude/**", ".mcp.json", "_system/edu_trace.py", "**/trace/**"):   # the record and its helper too
             self.assertIn("Write(./%s)" % f, denied)
             self.assertIn("Edit(./%s)" % f, denied)
         self.assertNotIn("WebFetch", allowed)      # grading: nothing it reads can leave

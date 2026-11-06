@@ -35,6 +35,7 @@ APP = os.path.dirname(os.path.abspath(__file__))
 DASH = os.path.join(APP, "dashboard")
 THEMES_DIR = os.path.join(DASH, "themes")
 sys.path.insert(0, APP)
+import edu_trace  # noqa: E402  (app/edu_trace.py: what a checker run saves for the tutor)
 import keepsakes
 import reminders  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
 import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
@@ -77,6 +78,7 @@ def configure(vault, port):
     PORT = int(port)
     ALLOWED_HOSTS = {"127.0.0.1:%d" % PORT, "localhost:%d" % PORT}
     ALLOWED_ORIGINS = {"http://" + h for h in ALLOWED_HOSTS}
+    install_trace_helper()
 
 
 # ---------------------------------------------------------------- settings
@@ -285,6 +287,146 @@ def block_kinds():
 
 def now_iso():
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+# ---------------------------------------------------------------- the work record (see edu_trace.py)
+# A checker run saves its output and the learner's code into <exercise>/trace/; a hint opened in the
+# dashboard is saved there too. The tutor reads the folder when the task is handed in.
+TRACE_MARK = "edu4self_trace"
+HINT_FILE = re.compile(r"^.+-hint-(\d+)(?:-\d+)?\.json$")
+
+
+def install_trace_helper():
+    """Copy edu_trace.py into <vault>/_system/, where every checker looks for it."""
+    try:
+        with open(os.path.join(APP, "edu_trace.py"), encoding="utf-8") as fh:
+            src = fh.read()
+        dest = os.path.join(SYSTEM, "edu_trace.py")
+        if os.path.isdir(SYSTEM) and (not os.path.isfile(dest) or read_text(dest) != src):
+            with open(dest, "w", encoding="utf-8") as fh:
+                fh.write(src)
+    except OSError:
+        pass
+
+
+def find_task(state, task_id):
+    for t in state.get("topics", []):
+        for q in t.get("queue", []):
+            if q.get("id") == task_id:
+                return q
+    return None
+
+
+def exercise_dir(task):
+    """The task's exercise folder inside the vault, or None. Never outside it, never into _system."""
+    rel = task.get("exercise") if task else None
+    if not isinstance(rel, str) or not rel or rel.startswith("/"):
+        return None
+    parts = [p for p in rel.split("/") if p]
+    if not parts or parts[0] == "_system" or any(p.startswith(".") for p in parts):
+        return None
+    target = os.path.realpath(os.path.join(ROOT, *parts))
+    root = os.path.realpath(ROOT)
+    return target if target.startswith(root + os.sep) and os.path.isdir(target) else None
+
+
+def parse_hints(text):
+    """HINTS.md: one hint per '## ' heading, in order. Whatever comes before the first heading is the intro."""
+    out, cur = [], None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            cur = {"title": line[3:].strip(), "lines": []}
+            out.append(cur)
+        elif cur is not None:
+            cur["lines"].append(line)
+    return [{"n": i + 1, "title": h["title"][:120], "body": "\n".join(h["lines"]).strip()[:4000]} for i, h in enumerate(out)]
+
+
+def hints_opened(folder):
+    """{hint number: when it was opened}, from the hint files in trace/."""
+    opened, tdir = {}, os.path.join(folder, "trace")
+    for name in sorted(os.listdir(tdir)) if os.path.isdir(tdir) else []:
+        m = HINT_FILE.match(name)
+        if not m:
+            continue
+        try:
+            rec = json.loads(read_text(os.path.join(tdir, name)))
+        except (OSError, ValueError):
+            continue
+        if isinstance(rec, dict) and rec.get(TRACE_MARK):
+            opened.setdefault(int(m.group(1)), rec.get("ts"))
+    return opened
+
+
+def hints_for(task):
+    folder = exercise_dir(task)
+    path = os.path.join(folder, "HINTS.md") if folder else None
+    if not path or not os.path.isfile(path):
+        return None
+    opened = hints_opened(folder)
+    hints = parse_hints(read_text(path))
+    for h in hints:
+        h["opened"] = opened.get(h["n"])
+        if not h["opened"]:
+            del h["body"]                 # a hint is only sent once it's opened, and opening it is noted
+    return hints
+
+
+def open_hint(task, n):
+    folder = exercise_dir(task)
+    hints = parse_hints(read_text(os.path.join(folder, "HINTS.md")))
+    hint = next((h for h in hints if h["n"] == n), None)
+    if not hint:
+        raise ValueError("no hint %r for this task" % n)
+    if n not in hints_opened(folder):
+        tdir = os.path.join(folder, "trace")
+        os.makedirs(tdir, exist_ok=True)
+        now = datetime.now().astimezone()
+        with open(edu_trace.free_name(tdir, edu_trace.stamp(now), "hint-%d" % n), "w", encoding="utf-8") as fh:
+            json.dump({TRACE_MARK: 1, "kind": "hint", "ts": now.isoformat(timespec="seconds"), "task": task.get("id"),
+                       "hint": n, "title": hint["title"]}, fh, ensure_ascii=False, indent=1)
+    hint["opened"] = hints_opened(folder).get(n)
+    return hint
+
+
+def trace_files():
+    """Every file the work record wrote: (path, kind), in vault folders named trace/."""
+    out = []
+    for base, dirs, files in os.walk(ROOT):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and not (base == ROOT and d in ("_system", "themes"))]
+        if os.path.basename(base) != "trace":
+            continue
+        for name in sorted(files):
+            if not name.endswith(".json"):
+                continue
+            path = os.path.join(base, name)
+            try:
+                rec = json.loads(read_text(path))
+            except (OSError, ValueError):
+                continue
+            if isinstance(rec, dict) and rec.get(TRACE_MARK):
+                out.append((path, rec.get("kind")))
+    return out
+
+
+def trace_summary():
+    files = trace_files()
+    return {"runs": len([f for f in files if f[1] == "run"]), "hints": len([f for f in files if f[1] == "hint"]),
+            "exercises": len({os.path.dirname(os.path.dirname(f[0])) for f in files}),
+            "bytes": sum(os.path.getsize(f[0]) for f in files)}
+
+
+def delete_traces():
+    """Delete only files the work record wrote; an emptied trace/ folder goes too."""
+    files = trace_files()
+    for path, _ in files:
+        os.remove(path)
+    for d in {os.path.dirname(p) for p, _ in files}:
+        try:
+            os.rmdir(d)
+        except OSError:
+            pass
+    return len(files)
 
 
 def read_text(path, limit=None):
@@ -608,7 +750,9 @@ def claude_args(prompt, resume, kind="chat"):
              "Skill", "TodoWrite"]
     if kind not in ("grade", "gift"):
         tools += ["WebSearch", "WebFetch"]
-    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json"]
+    # edu_trace.py runs inside every checker, and trace/ is the learner's record: neither is Claude's to change
+    locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json",
+              "_system/edu_trace.py", "**/trace/**"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in ("grade", "gift"):
         deny += ["WebSearch", "WebFetch"]
@@ -1056,6 +1200,17 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         if route.startswith("/api/") and origin is not None and origin not in ALLOWED_ORIGINS:
             return self.send_json(403, {"error": "cross-origin request refused"})
+        if route == "/api/traces":
+            return self.send_json(200, trace_summary())
+        if route == "/api/hints":
+            try:
+                task = find_task(json.loads(read_text(STATE)), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
+            except ValueError:
+                return self.send_json(500, {"error": "state.json is unreadable"})
+            hints = hints_for(task)
+            if hints is None:
+                return self.send_json(404, {"error": "this task has no hints"})
+            return self.send_json(200, {"task": task["id"], "hints": hints})
         if route == "/api/claude":
             return self.send_json(200, claude_status(urllib.parse.parse_qs(parsed.query).get("since", ["0"])[0]))
         if route in ("/", "/index.html"):
@@ -1198,6 +1353,19 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self.send_json(500, {"error": "state.json is unreadable"})
 
+        if route == "/api/traces/delete":
+            if body.get("confirm") is not True:
+                return self.send_json(400, {"error": "say confirm: true"})
+            return self.send_json(200, {"ok": True, "deleted": delete_traces()})
+        if route == "/api/hints":
+            task = find_task(state, body.get("task"))
+            n = body.get("n")
+            if hints_for(task) is None or not isinstance(n, int):
+                return self.send_json(404, {"error": "no such hint"})
+            try:
+                return self.send_json(200, {"ok": True, "hint": open_hint(task, n)})
+            except ValueError as exc:
+                return self.send_json(404, {"error": str(exc)})
         if route == "/api/inbox":
             try:
                 entry = clean_submission(body, state)
