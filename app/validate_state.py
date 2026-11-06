@@ -3,7 +3,7 @@
 
 Run after every edit to state.json:  edu4self check   (or: python3 validate_state.py VAULT)
 """
-import json, os, sys
+import json, os, re, sys
 
 ARG = os.path.abspath(os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("EDU4SELF_VAULT", ".")))
 # accept the vault folder or the state.json file itself
@@ -101,6 +101,28 @@ else:
         elif not isinstance(v.get("text"), str) or not 0 < len(v["text"]) <= 400:
             err("coach.voices: a %s line needs text of 1-400 characters" % v["voice"])
 
+# The recall warm-up (optional): one-line questions from passed work, asked from memory on the dashboard
+recall = s.get("recall", [])
+if not isinstance(recall, list):
+    err("recall must be a list of {id, q, from}")
+    recall = []
+seen = set()
+for r in recall:
+    if not isinstance(r, dict):
+        err("recall: each question must be {id, q, from}")
+        continue
+    rid = r.get("id")
+    if not isinstance(rid, str) or not re.match(r"^[A-Za-z0-9._-]{1,80}$", rid):
+        err("recall question id %r must be letters, digits, . _ or -" % (rid,))
+    elif rid in seen:
+        err("duplicate recall question id %s" % rid)
+    seen.add(rid)
+    q = r.get("q")
+    if not isinstance(q, str) or not 0 < len(q.strip()) <= 300 or "\n" in q:
+        err("recall %s: q must be one line of 1-300 characters" % rid)
+    if r.get("from") not in ids:
+        err("recall %s: from must be the id of the task it tests, got %r" % (rid, r.get("from")))
+
 for link in s.get("linked_topics", []):
     if not os.path.isdir(link.get("root", "")):
         err("linked topic root missing: %s" % link.get("root"))
@@ -112,4 +134,5 @@ if errors:
     for e in errors:
         print("  -", e)
     sys.exit(1)
-print("state.json valid: %d topic(s), %d task(s), %d linked" % (len(s["topics"]), len(ids), len(s.get("linked_topics", []))))
+print("state.json valid: %d topic(s), %d task(s), %d linked%s" % (len(s["topics"]), len(ids), len(s.get("linked_topics", [])),
+                                                                 ", %d recall question(s)" % len(recall) if recall else ""))

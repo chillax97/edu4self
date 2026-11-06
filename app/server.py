@@ -51,7 +51,7 @@ HOST = "127.0.0.1"
 MAX_BODY = 64 * 1024
 MAX_MUSIC = 1024 * 1024 * 1024          # 1 GiB: a few hours of compressed audio
 MUSIC_EXTS = {".m4a", ".mp3", ".ogg", ".opus", ".wav", ".flac", ".aac", ".webm"}
-KINDS = {"answers", "done", "note"}
+KINDS = {"answers", "done", "note", "recall"}
 CONFIDENCE = ("guessed", "shaky", "solid")   # "How sure are you?" on the submit form, asked for answers and done
 INBOX_LOCK = threading.Lock()
 BLOCKS_LOCK = threading.Lock()
@@ -573,6 +573,7 @@ def api_state():
     entries = inbox_entries()
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     derived["calibration"] = calibration(state, entries)
+    derived["recall"] = pick_recall(state, entries, read_jsonl(BLOCKS), datetime.now().astimezone())
     cfg, cfg_err = load_config()
     return {
         "state": state,
@@ -619,7 +620,7 @@ def clean_submission(body, state):
     title = body.get("title") or ""
     if not isinstance(note, str) or len(note) > 8000 or not isinstance(title, str) or len(title) > 200:
         raise ValueError("bad note or title")
-    if kind == "answers" and not any(v.strip() for v in clean_fields.values()):
+    if kind in ("answers", "recall") and not any(v.strip() for v in clean_fields.values()):
         raise ValueError("no answers")
     if kind == "note" and not note.strip():
         raise ValueError("empty note")
@@ -631,7 +632,62 @@ def clean_submission(body, state):
         if body.get("confidence") not in CONFIDENCE:
             raise ValueError("say how sure you are: guessed, shaky or solid")
         entry["confidence"] = body["confidence"]
+    if kind == "recall":
+        known = {q["id"] for q in recall_questions(state)}
+        ids = body.get("recall")
+        if not isinstance(ids, list) or not 1 <= len(ids) <= RECALL_PICK or len(set(ids)) != len(ids) or \
+                not all(isinstance(i, str) and i in known for i in ids):
+            raise ValueError("unknown recall questions")
+        entry["recall"] = ids
+        if pick_recall(state, inbox_entries(), read_jsonl(BLOCKS), datetime.now().astimezone())["comeback"]:
+            entry["comeback"] = True          # the welcome back after a gap, so the tutor knows
     return entry
+
+
+# ---------------------------------------------------------------- the recall warm-up
+# The tutor writes short questions into state.json (recall: [{id, q, from}]) from work the learner passed.
+# The page asks a few each day, from memory. After 3 or more days away it becomes the welcome back:
+# only questions on passed work, the most recently passed first, so the first thing back is a win.
+RECALL_PICK = 3
+
+
+def recall_questions(state):
+    out = state.get("recall") if isinstance(state.get("recall"), list) else []
+    return [q for q in out if isinstance(q, dict) and isinstance(q.get("id"), str) and isinstance(q.get("q"), str)]
+
+
+def pick_recall(state, entries, blocks, now):
+    """{questions, comeback, sent_today}: what the warm-up card asks today.
+
+    A normal day asks the questions not asked for the longest (never asked first, then the oldest).
+    After a gap (the away mail's rule: 3+ days since the last block, answer or note, counted before
+    today so the card stays the same all day) it asks only questions whose task is done, most recently
+    passed first. Passed = the task's status is done; when = its last graded submission."""
+    today = now.date()
+    withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
+    sent = [e for e in entries if e.get("kind") == "recall" and e.get("id") not in withdrawn]
+    asked = {}
+    for e in sent:
+        for qid in e.get("recall") or []:
+            asked[qid] = max(asked.get(qid, ""), e.get("ts") or "")
+    before = lambda items: [x for x in items if (reminders.local_dt(x.get("ts") or x.get("started") or "") or now).date() < today]
+    last = reminders.last_activity(before(blocks), before(entries))
+    comeback = reminders.away_step(last, now) is not None
+    qs = recall_questions(state)
+    if comeback:
+        done = {q.get("id") for t in state.get("topics", []) for q in t.get("queue", []) if q.get("status") == "done"}
+        processed = set(state.get("processed_inbox", []))
+        passed = {}
+        for e in entries:
+            if e.get("id") in processed and e.get("task") in done:
+                passed[e["task"]] = max(passed.get(e["task"], ""), e.get("ts") or "")
+        qs = [q for q in qs if q.get("from") in done]
+        qs.sort(key=lambda q: passed.get(q.get("from"), ""), reverse=True)
+    else:
+        qs.sort(key=lambda q: asked.get(q["id"], ""))       # stable: ties keep the tutor's order
+    return {"questions": [{k: q.get(k) for k in ("id", "q", "from")} for q in qs[:RECALL_PICK]],
+            "comeback": comeback, "days_away": (today - last.date()).days if last else None,
+            "sent_today": any((reminders.local_dt(e.get("ts") or "") or now).date() == today for e in sent)}
 
 
 def calibration(state, entries):
