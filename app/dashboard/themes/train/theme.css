@@ -34,7 +34,7 @@
 .room .bx-num { color: #fff1cf; }
 
 .room .tr-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
-.room .tr-ticket { background: var(--tr-ticket); color: var(--tr-ink); border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;
+.room .tr-ticket { align-self: start; background: var(--tr-ticket); color: var(--tr-ink); border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;
   font: 17px/1.55 var(--serif); position: relative;
   -webkit-mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
   mask: radial-gradient(circle 12px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 12px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; }
@@ -42,6 +42,7 @@
 .room .tr-ticket .bx-job .bx-k { color: #8a2a3a; }
 .room .tr-ticket .bx-job h2 { color: #2a1a10; font-size: 30px; }
 .room .tr-ticket .bx-job p, .room .tr-ticket .bx-meta { color: #4a3420; }
+.room .tr-ticket .bx-rules { color: #8a2a3a; }
 .room .tr-ticket .bx-label { color: #8a2a3a; }
 .room .tr-ticket .bx-r { color: #8a2a3a; }
 .room .tr-ticket .bx-r:hover, .room .tr-ticket .bx-r:focus-visible { background: rgba(138,42,58,.1); color: #5e1a26; }

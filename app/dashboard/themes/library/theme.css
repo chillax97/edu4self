@@ -21,7 +21,7 @@
 .room .lb-shelf i:nth-child(7n) { height: 78px; background: #2f4a36; }
 
 .room .lb-desk { display: grid; grid-template-columns: 250px minmax(0, 1fr) 290px; gap: 22px; padding-top: 22px; }
-.room .lb-cat { background: var(--lb-wood); border-radius: 10px; padding: 12px; display: grid; gap: 12px; align-content: start; box-shadow: inset 0 0 0 2px #3a2614; }
+.room .lb-cat { align-self: start; background: var(--lb-wood); border-radius: 10px; padding: 12px; display: grid; gap: 12px; align-content: start; box-shadow: inset 0 0 0 2px #3a2614; }
 .room .lb-drawer { background: linear-gradient(#7a5532, #5f4126); border-radius: 6px; padding: 12px 12px 22px; box-shadow: 0 3px 0 #3a2614; position: relative; }
 .room .lb-drawer::after { content: ""; position: absolute; left: 50%; bottom: 8px; width: 34px; height: 6px; margin-left: -17px; border-radius: 3px; background: var(--lb-brass); }
 .room .lb-card { background: var(--lb-paper); color: var(--lb-ink); border-radius: 3px; padding: 10px 12px; font: 13px/1.45 var(--bx-mono); }
@@ -41,6 +41,7 @@
 .room .lb-book .bx-job h2 { font: 400 32px/1.1 var(--serif); text-transform: none; color: var(--lb-ink); }
 .room .lb-book .bx-label { color: #7a5a2a; }
 .room .lb-book .bx-job p, .room .lb-book .bx-meta { color: #4a3a26; }
+.room .lb-book .bx-rules { color: #7a3a1a; }
 .room .lb-book .bx-r { color: #2f4a36; }
 .room .lb-book .bx-r:hover, .room .lb-book .bx-r:focus-visible { background: rgba(47,74,54,.1); color: #1d3324; }
 .room .lb-book .bx-n, .room .lb-book .bx-chk, .room .lb-book .bx-keys, .room .lb-book li.is-quiet { color: #7a6a4e; }
@@ -52,8 +53,8 @@
 .room .lb-margin .bx-line::before, .room .lb-margin .bx-line::after { display: none; }
 .room .lb-margin .bx-who { display: block; font: 600 11.5px var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }
 .room .lb-margin .bx-line b { color: #2a2116; }
-.room .lb-margin .bx-chk { color: #8a7a5e; }
 .room .lb-margin .fold { --fold: 2; }
+.room .lb-margin .bx-chk { color: #8a7a5e; }
 
 .room .lb-side { display: grid; gap: 16px; align-content: start; }
 .room .lb-lamp { border: 1px solid var(--bx-line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 12px;
