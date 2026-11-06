@@ -7,6 +7,18 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- "How sure are you?" on the submit form: guessed, shaky or solid, required for answers and done,
+  stored on the inbox entry as `confidence`. The tutor compares it with the grade and the work record
+  and names a mismatch in one line. Once three answers are graded, the progress page shows how often
+  "solid" really passed (a history entry links its grade with `inbox`).
+- A "From memory" warm-up before Up next: 2 or 3 one-line questions the tutor wrote from passed work
+  (`recall` in state.json), the ones not asked for the longest. Answers are typed with only the
+  questions shown and go to the inbox as kind `recall`; "Not now" hides it for today. After 3 or more
+  days away the same card is the welcome back: about 5 minutes, only work already passed, the most
+  recently passed first. Nothing ever asks for a return date.
+- "Your attempts" in the Hints window: every checker run (passed or not, and how long after the one
+  before) and every hint opened, in order. After 3 failing runs in a row the task shows a gentle
+  nudge that offers the next hint. Nothing is written by it.
 - A work record for exercises with a checker. Each run saves what the checker printed and a copy of
   your code, named by its time, in the exercise's `trace/` folder. Hints open one at a time from the
   dashboard (a Hints button on the task, or `#hints=<task>`) and each one opened is noted in the same
@@ -16,6 +28,10 @@ versions follow [Semantic Versioning](https://semver.org).
 - The mail app password can live in the macOS Keychain or a Linux desktop's password store instead of
   the config file. It's optional: `mail setup` lists where it can go and the risk of each, and the
   file stays the default.
+
+### Fixed
+- The work record's copy of the checker output no longer re-adds everything kept on every write, so a
+  checker that prints a lot doesn't slow down. Same text, same 200k cap.
 
 ### Changed
 - Gifts from Claude are off until you say yes. Each one is a run on your Claude plan, so setup asks

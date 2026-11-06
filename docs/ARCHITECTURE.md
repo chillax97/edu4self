@@ -32,7 +32,7 @@ bundler, no network requests beyond its own server (except a radio stream, if th
 ## The vault
 
 ```
-_system/state.json     the tutor's view of the learner: topics, queue, milestones, regions, history, coach
+_system/state.json     the tutor's view of the learner: topics, queue, milestones, regions, history, coach, recall
 _system/inbox.jsonl    submissions and withdrawals (append-only)
 _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
@@ -62,7 +62,10 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/api/health` | | `{ok, now, version}` |
 | GET | `/vault/<path>` | | a vault file (not `_system/`, no dot-folders); `.md` opens in Obsidian when enabled |
 | GET | `/music` | | the configured track, with Range support (206/416) |
-| POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor}` | 201 `{id}` |
+| POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor, confidence?, recall?}` | 201 `{id}`; 400 without `confidence` on answers or done |
+| GET | `/api/hints?task=` | | `{task, hints}`, a body only once opened; 404 without `HINTS.md` |
+| POST | `/api/hints` | `{task, n}` | opens hint n and notes it in `trace/` |
+| GET | `/api/attempts?task=` | | `{events: [{kind: run, ts, passed, since} \| {kind: hint, ts, n, title}], fails_in_a_row, stuck, next_hint}`; 404 without an exercise |
 | POST | `/api/withdraw` | `{id}` | 200, or 404 if not pending |
 | POST | `/api/blocks` | `{block, minutes, started, task?, water_served?, water_drunk?}` | 201 new, 200 duplicate |
 | GET | `/api/themes` | | `{themes: [{id, name, icon, about, lessons, builtin, errors}], active}` |
@@ -91,6 +94,12 @@ so a running timer and playing audio are never interrupted.
 Per-browser state lives in `localStorage` (`edu.*` keys): the running block, unsent blocks, view, room,
 bar name index, water choice, music position and volume, which proofs were already celebrated.
 Everything that should survive a browser change lives in the vault.
+
+**Learner aids** (server-side, so the rules are unit tested; the page only draws them). `/api/state`
+carries three of them in `derived`: `calibration` ("How sure are you?" against graded history entries
+that name their `inbox` entry), `recall` (`pick_recall`: today's warm-up questions, whether it's the
+welcome back after a 3-day gap, whether one was sent today) and `stuck` (`stuck_tasks`: open
+exercises whose last 3 or more runs failed, with the next hint not opened yet). None of them writes.
 
 **Focus blocks.** A running block is stored in `localStorage` so reloads keep it. One exact `setTimeout`
 ends it (background tabs throttle intervals, not that). The finished block is queued locally, then POSTed;
