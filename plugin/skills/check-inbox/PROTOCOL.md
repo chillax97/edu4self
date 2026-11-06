@@ -181,6 +181,11 @@ dashboard shows the headings and opens one hint at a time; each one opened write
 button on the task), so they're noted. The file itself stays readable; nothing can stop someone
 opening it, so an answer about hints is still worth asking for.
 
+**What the learner sees.** The Hints window also shows "Your attempts": each run (passed or not, and
+how long after the one before) and each hint opened, in order. After 3 failing runs in a row with
+no pass since, the task shows a gentle nudge that offers the next hint not opened yet. The nudge
+writes nothing; a hint opened from it is noted like any other, so the record already tells you.
+
 **Grading.** When the task is handed in, read every file in `trace/` in name order (the names sort by
 time) as one story, together with the submission and the learner's comments (in the note and in the
 code). Look for:
