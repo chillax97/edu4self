@@ -45,6 +45,7 @@ test("submit, then Grade: Claude grades in the page and the dashboard updates", 
   await page.click('.bx-replies [data-submit="hlw-lesson-01"]');
   await page.waitForSelector("#submit:not([hidden])");
   await (await page.$$("#sub-fields textarea"))[0].type("ease now vs lasting");
+  await page.click('#sub-sure input[value="shaky"]');
   await page.click("#sub-send");
   await page.waitForSelector("#submit", { hidden: true });
   await page.waitForSelector("#btn-grade:not([hidden])");

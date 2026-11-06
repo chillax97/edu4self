@@ -135,15 +135,44 @@ test("submitting answers lands in the inbox", async () => {
   const areas = await page.$$("#sub-fields textarea");
   assert.equal(areas.length, 3);
   await areas[0].type("How easy it is now vs how long it lasts");
+  await page.click('#sub-sure input[value="solid"]');
   await page.click("#sub-send");
   await page.waitForSelector("#submit", { hidden: true });
   const inbox = readLines(path.join(v.vault, "_system", "inbox.jsonl"));
   assert.equal(inbox.length, 1);
   assert.equal(inbox[0].task, "hlw-lesson-01");
+  assert.equal(inbox[0].confidence, "solid");
   assert.equal(inbox[0].fields["1. Retrieval strength vs storage strength, in your own words"], "How easy it is now vs how long it lasts");
   // Up next moves on to the probe; the lesson waits for Claude
   await page.waitForFunction(() => /How you study now/.test(document.querySelector(".bx-job h2").textContent));
   assert.match(await page.$eval(".bx-replies", (e) => e.textContent), /submitted, waiting for Claude/);
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
+
+test("the submit form asks how sure you are, and won't send until you pick one", async () => {
+  const page = await openPage(browser, server.url, { view: "classic" });
+  await page.click('[data-submit="hlw-probe-01"]');
+  await page.waitForSelector("#submit:not([hidden]) #sub-sure:not([hidden])");
+  assert.match(await page.$eval("#sub-sure", (e) => e.innerText), /How sure are you\?[\s\S]*Guessed[\s\S]*Shaky[\s\S]*Solid/);
+  await (await page.$$("#sub-fields textarea"))[0].type("I re-read my notes");
+  await page.click('#sub-honor input');
+  const before = readLines(path.join(v.vault, "_system", "inbox.jsonl")).length;
+  await page.click("#sub-send");
+  await page.waitForSelector("#sub-error:not([hidden])");
+  assert.match(await page.$eval("#sub-error", (e) => e.textContent), /how sure you are/);
+  assert.equal(readLines(path.join(v.vault, "_system", "inbox.jsonl")).length, before, "nothing sent without a choice");
+  await page.click('#sub-sure input[value="guessed"]');
+  await page.click("#sub-send");
+  await page.waitForSelector("#submit", { hidden: true });
+  const last = readLines(path.join(v.vault, "_system", "inbox.jsonl")).pop();
+  assert.equal(last.task, "hlw-probe-01");
+  assert.equal(last.confidence, "guessed");
+  // a note to Claude doesn't ask
+  await page.evaluate(() => { location.hash = "note"; });
+  await page.waitForSelector("#submit:not([hidden])");
+  assert.equal(await page.$eval("#sub-sure", (e) => e.hidden), true);
+  await page.keyboard.press("Escape");
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });

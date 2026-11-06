@@ -128,22 +128,41 @@ class ServerTest(unittest.TestCase):
 
     # ------------------------------------------------------------ writing
     def test_submission_and_withdraw(self):
-        body = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"Q": "A"}}
+        body = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"Q": "A"}, "confidence": "shaky"}
         code, d, _ = self.req("POST", "/api/inbox", body)
         self.assertEqual(code, 201)
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        self.assertEqual([e for e in saved if e["id"] == d["id"]][0]["confidence"], "shaky")
         code, _, _ = self.req("POST", "/api/withdraw", {"id": d["id"]})
         self.assertEqual(code, 200)
         code, _, _ = self.req("POST", "/api/withdraw", {"id": d["id"]})
         self.assertEqual(code, 404)
 
     def test_bad_submissions(self):
-        good = {"topic": "how-learning-works", "task": "t", "kind": "answers", "fields": {"Q": "A"}}
+        good = {"topic": "how-learning-works", "task": "t", "kind": "answers", "fields": {"Q": "A"}, "confidence": "solid"}
+        sure = "say how sure you are: guessed, shaky or solid"
         for change, msg in (({"topic": "nope"}, "unknown topic"), ({"kind": "grade"}, "bad kind"),
                             ({"task": "../x"}, "bad task id"), ({"fields": {"Q": " "}}, "no answers"),
-                            ({"fields": {"x" * 1001: "A"}}, "bad field")):
+                            ({"fields": {"x" * 1001: "A"}}, "bad field"),
+                            ({"confidence": None}, sure), ({"confidence": "certain"}, sure),
+                            ({"kind": "done", "confidence": ""}, sure)):
             code, d, _ = self.req("POST", "/api/inbox", dict(good, **change))
             self.assertEqual((code, d["error"]), (400, msg))
         self.assertEqual(self.req("POST", "/api/inbox", dict(good, fields={"x" * 1000: "A"}))[0], 201)
+        note = {"topic": "general", "task": "note", "kind": "note", "note": "a question"}
+        self.assertEqual(self.req("POST", "/api/inbox", note)[0], 201, "a note isn't asked how sure")
+
+    def test_calibration_counts_only_graded_answers(self):
+        state = {"topics": [{"history": [
+            {"inbox": "a", "evidence": True}, {"inbox": "b", "evidence": False}, {"inbox": "c", "evidence": True},
+            {"inbox": "d", "evidence": True}, {"title": "no link", "evidence": True}]}]}
+        entries = [{"id": "a", "confidence": "solid"}, {"id": "b", "confidence": "solid"}, {"id": "c", "confidence": "shaky"},
+                   {"id": "d"}, {"id": "e", "confidence": "solid"}]          # d: from before the question; e: not graded yet
+        c = server.calibration(state, entries)
+        self.assertEqual(c["rated"], 3)
+        self.assertEqual(c["solid"], {"n": 2, "passed": 1})
+        self.assertEqual(c["shaky"], {"n": 1, "passed": 1})
+        self.assertEqual(c["guessed"], {"n": 0, "passed": 0})
 
     def test_cross_origin_post_is_refused(self):
         code, d, _ = self.req("POST", "/api/blocks", {"block": "lessons"}, headers={"Origin": "http://evil.example"})
@@ -319,6 +338,15 @@ class ValidatorTest(unittest.TestCase):
         for msg in ("duplicate task id", "missing file", "says nothing about how it unlocks", "level must be 0..4", "coach.voices"):
             self.assertIn(msg, out)
 
+    def test_history_may_name_the_inbox_entry_it_grades(self):
+        h = self.state["topics"][0]["history"][0]
+        h["inbox"] = "7e6286b84a"
+        self.assertEqual(self.check(self.state).returncode, 0)
+        h["inbox"] = 12
+        r = self.check(self.state)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("inbox must be the id", r.stdout)
+
     def test_link_checker_finds_a_broken_link(self):
         with open(os.path.join(self.vault, "Home.md"), "a") as fh:
             fh.write("\n[[how-learning-works/NOPE]]\n")
@@ -364,7 +392,7 @@ class ClaudeTest(unittest.TestCase):
             return [json.loads(l) for l in fh if l.strip()]
 
     def test_grade_runs_claude_in_the_vault_and_checks_after(self):
-        sub = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "x"}}
+        sub = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "x"}, "confidence": "solid"}
         self.assertEqual(self.req("POST", "/api/inbox", sub)[0], 201)
         code, d, _ = self.req("GET", "/api/claude")
         self.assertTrue(d["available"])

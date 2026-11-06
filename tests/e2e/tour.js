@@ -219,6 +219,7 @@ for (let i = 0; i < areas.length; i++) {
   await page.evaluate((i) => document.querySelectorAll("#sub-fields textarea")[i].setAttribute("data-tour", "a" + i), i);
   await typeIn(`[data-tour="a${i}"]`, answers[i], { delay: 18 });
 }
+await tap('#sub-sure input[value="shaky"]', 500);
 await tap("#sub-send", 900);
 await page.waitForSelector("#submit", { hidden: true });
 await say("It lands in your inbox. Up next moves on while Claude hasn't graded it yet.");
