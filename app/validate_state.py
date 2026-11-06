@@ -89,12 +89,20 @@ for t in s.get("topics", []):
         if m.get("status") not in ("active", "locked", "done"):
             err("milestone %s bad status" % m.get("id"))
 
+# The coach note is short (PROTOCOL: a one-sentence headline, a body of at most 40 words). Long ones
+# still pass, with a note, so old notes keep working.
+_body = (s.get("coach") or {}).get("body")
+if isinstance(_body, str) and len(_body.split()) > 60:
+    notes.append("coach.body is %d words; aim for 40 or fewer, and put the detail in history[].detail" % len(_body.split()))
+
 # Lines Claude writes for the bar view's voices, after grading (optional)
 VOICES = {"logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia", "critic", "regular", "jukebox"}
 voices = (s.get("coach") or {}).get("voices", [])
 if not isinstance(voices, list) or len(voices) > 6:
     err("coach.voices must be a list of at most 6 lines")
 else:
+    if len(voices) > 4:
+        notes.append("coach.voices has %d lines; 2 to 3 per grade, 4 at most on a milestone" % len(voices))
     for v in voices:
         if not isinstance(v, dict) or v.get("voice") not in VOICES:
             err("coach.voices: each line needs a voice in %s" % sorted(VOICES))

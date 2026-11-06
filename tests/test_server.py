@@ -338,6 +338,17 @@ class ValidatorTest(unittest.TestCase):
         for msg in ("duplicate task id", "missing file", "says nothing about how it unlocks", "level must be 0..4", "coach.voices"):
             self.assertIn(msg, out)
 
+    def test_a_long_coach_note_warns_but_passes(self):
+        self.state["coach"]["body"] = "word " * 61
+        self.state["coach"]["voices"] = [{"voice": "logic", "text": "One beat."}] * 5
+        r = self.check(self.state)
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("coach.body is 61 words", r.stdout)
+        self.assertIn("coach.voices has 5 lines", r.stdout)
+        self.state["coach"]["body"] = "One change per run. Up next: recall check 06."
+        self.state["coach"]["voices"] = self.state["coach"]["voices"][:3]
+        self.assertNotIn("note:", self.check(self.state).stdout)
+
     def test_history_may_name_the_inbox_entry_it_grades(self):
         h = self.state["topics"][0]["history"][0]
         h["inbox"] = "7e6286b84a"

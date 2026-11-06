@@ -50,10 +50,19 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
      often "solid" really passed);
    - add or refresh `recall` questions from work that just passed (section 3), and retire ones the
      learner has answered right several times;
-   - write the `coach` note: `date`, a one-line `headline`, a short `body` addressed to the learner;
-   - optionally `coach.voices`: up to 6 short lines `{voice, text}` that the bar view's characters say
-     about this grading. `voice` ∈ `logic | volition | gpu | encyclopedia | physical | nostalgia | critic
-     | regular | jukebox`, text 1–400 characters. Make them specific to what was just graded;
+   - write the `coach` note: `date`, a `headline` and a `body` addressed to the learner. The
+     `headline` is the verdict in one sentence of at most 15 words. The `body` is at most 40 words in
+     2 sentences: the one thing to do differently, then what's next. It never repeats a voice;
+   - optionally `coach.voices`: lines `{voice, text}` that the room's characters say about this
+     grading. `voice` ∈ `logic | volition | gpu | encyclopedia | physical | nostalgia | critic
+     | regular | jukebox`. Write 2 to 3 per grade (4 at most on a milestone), only for characters
+     with something to say. Each is at most 25 words and one beat: a jab, an observation or a
+     question. No explanation, and no advice the coach already gave. Make them specific to what was
+     just graded. (The checker still accepts up to 6 lines of 1–400 characters, so old notes pass,
+     and warns past 4 lines or a body past about 60 words.)
+   - the long version (what was right, what was off, the evidence) goes in the `history` entry's
+     `detail` and in the learning record from step 3, not in the coach note. The progress page
+     shows `detail`, and the room folds every line to one line until it's opened;
    - set `updated` to the current local ISO time, e.g. from
      `python3 -c "from datetime import datetime; print(datetime.now().astimezone().isoformat(timespec='seconds'))"`.
 5. Update `PLAN.md` (section 5): repair units for the gaps this grading found, cuts for what was
