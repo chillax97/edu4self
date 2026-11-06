@@ -357,7 +357,7 @@
         (t.submit ? '<button class="btn ' + (t.href ? "btn-ghost" : "btn-topic") + '" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
         hintsButton(t, "btn btn-ghost") +
         (!active ? '<button class="btn btn-ghost" data-start-task="' + esc(t.id) + '">▶ Start ' + taskMinutes(topic) + ' min on this</button>' : "") +
-        '</div>';
+        '</div>' + stuckNudge(t);
     }
     return html + '</section>';
   }
@@ -433,7 +433,7 @@
       return '<div class="q-item' + (locked ? " is-locked" : "") + '" style="--c:var(--' + esc(KIND[t.kind] ? t.kind : "lesson") + ')">' +
         '<div class="q-num">' + n + '</div>' +
         '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span><span class="card-sub">' + esc(t.label || "") + '</span></div>' +
-        '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p></div>' +
+        '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p>' + (locked ? "" : stuckNudge(t)) + '</div>' +
         '<div class="q-actions">' + right + '</div></div>';
     }
     var items = open.map(row).join("");
@@ -1746,7 +1746,7 @@
         (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
         (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
-      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? " " + gradeButton() : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + "</div>" : "") +
+      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? " " + gradeButton() : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + "</div>" : stuckNudge(t, true)) +
       "</div>";
   }
 
@@ -2311,6 +2311,36 @@
   function hintsButton(t, cls) {
     return t.exercise ? '<button class="' + cls + '" type="button" data-hints="' + esc(t.id) + '">Hints</button>' : "";
   }
+  // stuck: the last few checker runs all failed (server.py stuck_tasks). A gentle offer, nothing written.
+  function stuckNudge(t, bar) {
+    var st = DATA && DATA.derived && DATA.derived.stuck && DATA.derived.stuck[t.id];
+    if (!st || pendingFor(t.id)) return "";
+    var h = st.next_hint, say = plural(st.fails, "run") + " in a row haven't passed yet. Getting stuck here is normal.";
+    var act = h ? '<button class="btn btn-soft btn-sm" type="button" data-stuck-hint="' + esc(t.id) + '" data-n="' + h.n + '">Open the next hint: ' + esc(h.title) + "</button>"
+      : '<button class="btn btn-ghost btn-sm" type="button" data-note>Tell Claude where it breaks</button>';
+    return '<div class="stuck' + (bar ? " bx-stuck" : "") + '" role="status"><span>' + esc(say) + (h ? "" : " You've opened every hint already.") + "</span>" + act + "</div>";
+  }
+  function stuckHint(id, n) {      // the learner asked for it with the button, so it opens and is noted like any hint
+    fetch("/api/hints", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: id, n: n }) })
+      .then(function () { openHints(id); load(); }).catch(function () { openHints(id); });
+  }
+  // the attempts so far, from the work record: each run (passed or not, and how long after the one before) and each hint
+  function sinceText(sec) {
+    if (sec == null) return "";
+    return sec < 10 ? "right after" : sec < 60 ? sec + " s later" : sec < 3600 ? Math.round(sec / 60) + " min later" : sec < 86400 ? Math.round(sec / 3600) + " h later" : Math.round(sec / 86400) + " days later";
+  }
+  function paintAttempts(a) {
+    var box = $("#hints-attempts");
+    if (!a || !a.events.length) { box.innerHTML = '<p class="set-hint">No checker runs yet. Each time you run the checker it shows up here.</p>'; return; }
+    var run = 0;
+    box.innerHTML = '<ol class="att">' + a.events.map(function (e) {
+      var when = new Date(e.ts).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      if (e.kind === "hint") return '<li class="att-hint"><b>Hint ' + esc(e.n) + " opened</b><span>" + esc(e.title) + "</span><small>" + esc(when) + "</small></li>";
+      run++;
+      return '<li class="att-run ' + (e.passed ? "is-pass" : "is-fail") + '"><b>Run ' + run + ": " + (e.passed ? "passed" : "didn't pass") + "</b><span>" +
+        esc(e.since == null ? "first run" : sinceText(e.since)) + "</span><small>" + esc(when) + "</small></li>";
+    }).join("") + "</ol>";
+  }
   function hintText(t) {
     return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").split("\n").map(function (l) {
       return /^\s*-\s+/.test(l) ? "<li>" + l.replace(/^\s*-\s+/, "") + "</li>" : l.trim() ? "<p>" + l.trim() + "</p>" : "";
@@ -2332,6 +2362,8 @@
     $("#hints-title").textContent = "Hints: " + (e ? (e.task.label ? e.task.label + ": " : "") + e.task.title : id);
     $("#hints-list").innerHTML = '<p class="set-hint">Loading…</p>';
     openOverlay("hints");
+    fetch("/api/attempts?task=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (j) { paintAttempts(j.error ? null : j); }).catch(function () { paintAttempts(null); });
     fetch("/api/hints?task=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) { return r.json(); })
       .then(function (j) { if (j.error) throw new Error(j.error); paintHints(j.hints); })
       .catch(function (err) { $("#hints-list").innerHTML = '<p class="form-error">' + esc(err.message) + "</p>"; });
@@ -2834,8 +2866,9 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n],[data-recall]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n],[data-recall],[data-stuck-hint]");
     if (!el) return;
+    if (el.dataset.stuckHint) return stuckHint(el.dataset.stuckHint, Number(el.dataset.n));
     if (el.dataset.recall) return el.dataset.recall === "go" ? openRecall() : recallLater();
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
     if (el.hasAttribute("data-claude-open")) return openClaude();

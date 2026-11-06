@@ -1012,3 +1012,15 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .recall-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
 .bx-recall { margin-bottom: 12px; }
 .bx-recall h2 { font-size: 20px; }
+
+/* your attempts (in the Hints window) and the stuck nudge */
+.hints-sub { margin: 16px 0 6px; font: 700 12px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.att { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+.att li { display: grid; grid-template-columns: minmax(9em, auto) 1fr auto; gap: 10px; align-items: baseline; padding: 6px 0 6px 14px; border-left: 3px solid var(--line-2); font-size: 13.5px; }
+.att li span { color: var(--ink-2); }
+.att li small { color: var(--muted); font-size: 12px; }
+.att .is-pass { border-left-color: var(--green); }
+.att .is-fail { border-left-color: var(--amber, #d9822b); }
+.att .att-hint { border-left-style: dashed; }
+.stuck { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
+.bx-stuck { background: rgba(255,233,207,.06); border-color: rgba(255,233,207,.16); color: inherit; }
