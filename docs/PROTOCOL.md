@@ -29,6 +29,10 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    ignore it and judge evidence from the answers themselves.
    If the task has an `exercise` folder, read its work record first (section 6) and grade the
    submission together with it.
+   Answers and done entries carry `confidence`: `guessed`, `shaky` or `solid`, what the learner said
+   before sending. Compare it with your grade and the work record. When they don't match, name it in
+   the feedback in one plain line, for example "You said solid; six failing runs and two hints." or
+   "You said guessed, and it was right. Trust that more." No lecture, one line.
 3. Do the topic bookkeeping (the `teach` skill's formats): a learning record in
    `<topic>/learning-records/` when the result is non-obvious, glossary entries only for terms proven
    without notes, and a line in `<topic>/Dashboard.md`.
@@ -37,7 +41,8 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    - move finished tasks to `status: "done"`, unlock or add the next ones;
    - update `milestones` (step `done`, the `current` step), `regions` (levels move only on evidence),
      the optional `gate`, and `history` (`evidence: true` only for demonstrated learning, never for
-     reading or effort);
+     reading or effort; `inbox`: the id of the entry it grades, so the progress page can show how
+     often "solid" really passed);
    - write the `coach` note: `date`, a one-line `headline`, a short `body` addressed to the learner;
    - optionally `coach.voices`: up to 6 short lines `{voice, text}` that the bar view's characters say
      about this grading. `voice` ∈ `logic | volition | gpu | encyclopedia | physical | nostalgia | critic
@@ -85,7 +90,9 @@ pending submission, across all topics, becomes **Up next**.
   files; question labels are at most 1000 characters. Tasks carry no dates: spacing comes from the
   order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
-- `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md"}`.
+- `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md",
+  inbox?: "<inbox entry id>"}`. `inbox` links a grade to the submission it grades; with `evidence` it
+  counts as a pass for "How sure vs how it went".
 - `linked_topics[]` (optional): read-only courses outside the vault,
   `{id, root, url, title?, color?, read_state?}`. Nothing there is ever written.
 - `pace.hours_per_step`: focused hours per milestone step, for the finish-line date.
