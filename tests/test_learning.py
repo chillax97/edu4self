@@ -136,5 +136,54 @@ class RecallSchemaTest(unittest.TestCase):
         self.assertTrue(e["comeback"])
 
 
+class StuckTest(unittest.TestCase):
+    def test_three_failing_runs_in_a_row_and_a_pass_resets_it(self):
+        f = server.fails_in_a_row
+        self.assertEqual([f([]), f([1, 1]), f([1, 1, 1]), f([1, 1, 1, 0]), f([0, 1, 1, 1]), f([1, 1, 1, 0, 1]), f([0, 2, 1, 1, 1])],
+                         [0, 2, 3, 0, 3, 1, 4])
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="edu4self-stuck-")
+        self.vault, _ = make_vault(self.tmp)
+        server.configure(self.vault, 4798)
+        self.ex = os.path.join(self.vault, "topic", "ex")
+        os.makedirs(os.path.join(self.ex, "trace"))
+        with open(os.path.join(self.ex, "HINTS.md"), "w") as fh:
+            fh.write("# Hints\n\n## 1 · start\n- a\n\n## 2 · the loop\n- b\n\n## 3 · the end\n- c\n")
+        self.task = {"id": "t-ex", "status": "todo", "exercise": "topic/ex"}
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def put(self, name, rec):
+        with open(os.path.join(self.ex, "trace", name), "w") as fh:
+            json.dump(dict(rec, edu4self_trace=1), fh)
+
+    def test_the_timeline_in_time_order_and_the_next_unopened_hint(self):
+        self.put("2026-11-06T10-00-00.000-run.json", {"kind": "run", "ts": "2026-11-06T10:00:00+03:00", "exit": 1})
+        self.put("2026-11-06T10-02-30.000-run.json", {"kind": "run", "ts": "2026-11-06T10:02:30+03:00", "exit": 1})
+        self.put("2026-11-06T10-03-00.000-hint-1.json", {"kind": "hint", "ts": "2026-11-06T10:03:00+03:00", "hint": 1, "title": "1 · start"})
+        self.put("2026-11-06T10-10-30.000-run.json", {"kind": "run", "ts": "2026-11-06T10:10:30+03:00", "exit": 1})
+        with open(os.path.join(self.ex, "trace", "notes.json"), "w") as fh:      # not the record's: ignored
+            fh.write('{"kind": "run", "exit": 0}')
+        before = sorted(os.listdir(os.path.join(self.ex, "trace")))
+        a = server.attempts(self.task)
+        self.assertEqual([(e["kind"], e.get("passed"), e.get("since")) for e in a["events"]],
+                         [("run", False, None), ("run", False, 150), ("hint", None, None), ("run", False, 480)])
+        self.assertTrue(a["stuck"])
+        self.assertEqual(a["next_hint"], {"n": 2, "title": "2 · the loop"}, "hint 1 is already open")
+        self.assertEqual(sorted(os.listdir(os.path.join(self.ex, "trace"))), before, "reading the record writes nothing")
+        state = {"topics": [{"queue": [self.task, {"id": "done-one", "status": "done", "exercise": "topic/ex"}]}]}
+        self.assertEqual(server.stuck_tasks(state), {"t-ex": {"fails": 3, "next_hint": {"n": 2, "title": "2 · the loop"}}})
+        self.put("2026-11-06T10-20-00.000-run.json", {"kind": "run", "ts": "2026-11-06T10:20:00+03:00", "exit": 0})
+        a = server.attempts(self.task)
+        self.assertEqual((a["stuck"], a["fails_in_a_row"], a["events"][-1]["passed"]), (False, 0, True), "a pass resets it")
+        self.assertEqual(server.stuck_tasks(state), {})
+
+    def test_no_exercise_no_timeline(self):
+        self.assertIsNone(server.attempts({"id": "x"}))
+        self.assertIsNone(server.attempts({"id": "x", "exercise": "../outside"}))
+
+
 if __name__ == "__main__":
     unittest.main()
