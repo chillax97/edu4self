@@ -17,8 +17,7 @@ You'll study more in a place you like being in. Pick one of five rooms, each wit
 colours, characters, jokes and sound, and your lessons dress to match. Or describe a place to Claude
 ("a lighthouse in a storm", "my grandmother's kitchen") and it builds one for you, following
 [docs/THEMES.md](docs/THEMES.md). Everything else is yours to change too: your goals, block lengths,
-names, voices, music. All of it is in **⚙ Settings**, no terminal needed. Made a room you like? Save it
-as one file and send it to a friend; they add it from Settings.
+names, voices, music. All of it is in **⚙ Settings**, no terminal needed.
 
 Meeting your goals fills a shelf. Every day you hit your daily goal adds a trophy to a pile, drawn by
 the room you're in: a bottle cap in the bar, a book in the library. Weeks and finished dice get their
