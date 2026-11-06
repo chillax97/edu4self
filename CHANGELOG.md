@@ -39,6 +39,11 @@ versions follow [Semantic Versioning](https://semver.org).
 - A reminder mail that fails shows on the dashboard until you dismiss it, with the reason and a way to
   the mail settings.
 
+### Removed
+- Sharing rooms. The `.room` export and import (Settings buttons, `/api/themes/export`,
+  `/api/themes/import`, `./edu4self room`) are gone. Your rooms and the ones you make with Claude work
+  as before.
+
 ## 1.2.0 - 2026-11-04
 
 ### Added
