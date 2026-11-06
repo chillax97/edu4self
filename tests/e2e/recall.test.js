@@ -119,3 +119,23 @@ test("after three days away the card is the welcome back, from passed work only"
   await ctx.close();
   await c2.close();
 });
+
+test("the progress page shows how often solid passed, once three answers are graded", async () => {
+  const st = readJSON(sys("state.json"));
+  const entry = (id, c) => JSON.stringify({ id, ts: new Date().toISOString(), topic: st.topics[0].id, task: "hlw-lesson-01", kind: "answers", fields: { a: "b" }, confidence: c });
+  fs.writeFileSync(sys("inbox.jsonl"), [entry("g1", "solid"), entry("g2", "solid"), entry("g3", "shaky")].join("\n") + "\n");
+  st.processed_inbox = ["g1", "g2", "g3"];
+  st.topics[0].history = [{ date: "2026-11-01", kind: "lesson", title: "a", evidence: true, inbox: "g1" },
+                          { date: "2026-11-02", kind: "lesson", title: "b", evidence: false, inbox: "g2" }];
+  fs.writeFileSync(sys("state.json"), JSON.stringify(st));
+  let page = await openPage(browser, server.url, { view: "classic" });
+  assert.equal(await page.$(".cal"), null, "two graded answers: not yet");
+  await closePage(page);
+  st.topics[0].history.push({ date: "2026-11-03", kind: "lesson", title: "c", evidence: true, inbox: "g3" });
+  fs.writeFileSync(sys("state.json"), JSON.stringify(st));
+  page = await openPage(browser, server.url, { view: "classic" });
+  await page.waitForSelector(".cal");
+  assert.match(await page.$eval(".cal", (e) => e.innerText), /You said solid 2 times, and 1 of those passed[\s\S]*Shaky[\s\S]*1 of 1 passed/);
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
