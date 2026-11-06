@@ -390,6 +390,64 @@ def open_hint(task, n):
     return hint
 
 
+STUCK_RUNS = 3     # failing checker runs in a row (no pass since) before the page offers the next hint
+
+
+def fails_in_a_row(exits):
+    """How many runs at the end failed, counting back to the last pass."""
+    n = 0
+    for code in reversed(exits):
+        if code == 0:
+            break
+        n += 1
+    return n
+
+
+def attempts(task):
+    """The exercise's work record as a timeline for the learner: each run (passed or not, and the time since
+    the run before) and each hint opened, in time order. Plus the stuck nudge: after STUCK_RUNS failing runs
+    in a row, the next hint not opened yet. Reads only; nothing here writes."""
+    folder = exercise_dir(task)
+    if not folder:
+        return None
+    tdir, events, exits, prev = os.path.join(folder, "trace"), [], [], None
+    for name in sorted(os.listdir(tdir)) if os.path.isdir(tdir) else []:
+        if not name.endswith(".json"):
+            continue
+        try:
+            rec = json.loads(read_text(os.path.join(tdir, name)))
+        except ValueError:
+            continue
+        if not isinstance(rec, dict) or not rec.get(TRACE_MARK):
+            continue
+        if rec.get("kind") == "run":
+            code = rec.get("exit") if isinstance(rec.get("exit"), int) else 1
+            t = reminders.local_dt(rec.get("ts") or "")
+            events.append({"kind": "run", "ts": rec.get("ts"), "passed": code == 0,
+                           "since": round((t - prev).total_seconds()) if t and prev else None})
+            exits.append(code)
+            prev = t or prev
+        elif rec.get("kind") == "hint":
+            events.append({"kind": "hint", "ts": rec.get("ts"), "n": rec.get("hint"), "title": str(rec.get("title") or "")[:120]})
+    fails = fails_in_a_row(exits)
+    hints = hints_for(task) or []
+    nxt = next(({"n": h["n"], "title": h["title"]} for h in hints if not h["opened"]), None)
+    return {"task": task.get("id"), "events": events, "fails_in_a_row": fails, "stuck": fails >= STUCK_RUNS,
+            "next_hint": nxt, "has_hints": bool(hints)}
+
+
+def stuck_tasks(state):
+    """{task id: {fails, next_hint}} for open tasks whose last STUCK_RUNS+ runs all failed."""
+    out = {}
+    for t in state.get("topics", []):
+        for q in t.get("queue", []):
+            if q.get("status") == "todo" and q.get("exercise"):
+                a = attempts(q)
+                if a and a["stuck"]:
+                    out[q["id"]] = {"fails": a["fails_in_a_row"], "next_hint": a["next_hint"]}
+    return out
+
+
 def trace_files():
     """Every file the work record wrote: (path, kind), in vault folders named trace/."""
     out = []
@@ -573,6 +631,7 @@ def api_state():
     entries = inbox_entries()
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     derived["calibration"] = calibration(state, entries)
+    derived["stuck"] = stuck_tasks(state)
     derived["recall"] = pick_recall(state, entries, read_jsonl(BLOCKS), datetime.now().astimezone())
     cfg, cfg_err = load_config()
     return {
@@ -1292,6 +1351,15 @@ class Handler(BaseHTTPRequestHandler):
             if hints is None:
                 return self.send_json(404, {"error": "this task has no hints"})
             return self.send_json(200, {"task": task["id"], "hints": hints})
+        if route == "/api/attempts":
+            try:
+                task = find_task(json.loads(read_text(STATE)), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
+            except ValueError:
+                return self.send_json(500, {"error": "state.json is unreadable"})
+            a = attempts(task)
+            if a is None:
+                return self.send_json(404, {"error": "this task has no exercise"})
+            return self.send_json(200, a)
         if route == "/api/claude":
             return self.send_json(200, claude_status(urllib.parse.parse_qs(parsed.query).get("since", ["0"])[0]))
         if route in ("/", "/index.html"):
