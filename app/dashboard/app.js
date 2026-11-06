@@ -1693,6 +1693,10 @@
       var fi = Math.floor(Date.now() / (40 * 60000)) % pool.length;
       if (VOICES[pool[fi][0]]) L.push([pool[fi][0], esc(pool[fi][1]), null, "flavor-" + fi + "-" + pool.length]);
     }
+    // Each character speaks once: the first line wins, so Claude's note and voices beat the room's own chatter.
+    // Lines from what you just did (barExtra: a block started, water served) are short-lived and stay.
+    var spoke = {};
+    L = L.filter(function (l) { if (spoke[l[0]]) return false; spoke[l[0]] = true; return true; });
     return L.concat(barExtra);
   }
 
