@@ -353,6 +353,7 @@
       html += (running ? '<div class="hero-live" data-hero-clock></div>' : "") +
         '<div class="hero-actions">' + openButton(t, "btn btn-topic") +
         (t.submit ? '<button class="btn ' + (t.href ? "btn-ghost" : "btn-topic") + '" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
+        hintsButton(t, "btn btn-ghost") +
         (!active ? '<button class="btn btn-ghost" data-start-task="' + esc(t.id) + '">▶ Start ' + taskMinutes(topic) + ' min on this</button>' : "") +
         '</div>';
     }
@@ -390,7 +391,8 @@
       var right = "";
       if (locked) right = '<span class="chip">🔒 Locked</span>';
       else if (pend) right = '<span class="chip chip-wait">Submitted</span>';
-      else right = openButton(t, "btn btn-ghost btn-sm") + (t.submit ? ' <button class="btn btn-soft btn-sm" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "");
+      else right = openButton(t, "btn btn-ghost btn-sm") + (t.submit ? ' <button class="btn btn-soft btn-sm" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
+        (t.exercise ? " " + hintsButton(t, "btn btn-ghost btn-sm") : "");
       return '<div class="q-item' + (locked ? " is-locked" : "") + '" style="--c:var(--' + esc(KIND[t.kind] ? t.kind : "lesson") + ')">' +
         '<div class="q-num">' + n + '</div>' +
         '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span><span class="card-sub">' + esc(t.label || "") + '</span></div>' +
@@ -1703,6 +1705,7 @@
       if (pend) act('<button class="bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the submission.]' + chk("only before Claude grades it") + "</button>");
       else {
         if (t.submit) act('<button class="bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
+        if (t.exercise) act('<button class="bx-r" type="button" data-hints="' + esc(t.id) + '">[Ask for a hint.]' + chk("each one is noted for Claude") + "</button>");
         if (!active) act('<button class="bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + taskMinutes(hero.topic) + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
         else if (active.task === t.id) quiet("The clock is running on this one.");
       }
@@ -2248,6 +2251,66 @@
     var inp = $("#cl-input"); if (!CL.busy) inp.focus();
     claudePoll();
   }
+  // ---- hints: one at a time, and each one opened is noted in the exercise's work record (server.py open_hint)
+  function hintsButton(t, cls) {
+    return t.exercise ? '<button class="' + cls + '" type="button" data-hints="' + esc(t.id) + '">Hints</button>' : "";
+  }
+  function hintText(t) {
+    return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").split("\n").map(function (l) {
+      return /^\s*-\s+/.test(l) ? "<li>" + l.replace(/^\s*-\s+/, "") + "</li>" : l.trim() ? "<p>" + l.trim() + "</p>" : "";
+    }).join("").replace(/(<li>[\s\S]*?<\/li>)(?!<li>)/g, "<ul>$1</ul>").replace(/<\/ul><ul>/g, "");
+  }
+  var hintsTask = null;
+  function paintHints(list) {
+    $("#hints-list").innerHTML = list.map(function (h) {
+      var when = h.opened ? new Date(h.opened).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      return '<div class="hint' + (h.opened ? " is-open" : "") + '"><div class="hint-head"><b>' + esc(h.title) + "</b>" +
+        (h.opened ? '<small>opened ' + esc(new Date(h.opened).toLocaleDateString([], { day: "numeric", month: "short" })) + " " + esc(when) + "</small>"
+          : '<button class="btn btn-soft btn-sm" type="button" data-hint-n="' + h.n + '">Open this hint</button>') + "</div>" +
+        (h.opened ? '<div class="hint-body">' + hintText(h.body || "") + "</div>" : "") + "</div>";
+    }).join("") || '<p class="set-hint">No hints for this one.</p>';
+  }
+  function openHints(id) {
+    var e = findTask(id);
+    hintsTask = id;
+    $("#hints-title").textContent = "Hints: " + (e ? (e.task.label ? e.task.label + ": " : "") + e.task.title : id);
+    $("#hints-list").innerHTML = '<p class="set-hint">Loading…</p>';
+    openOverlay("hints");
+    fetch("/api/hints?task=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) { return r.json(); })
+      .then(function (j) { if (j.error) throw new Error(j.error); paintHints(j.hints); })
+      .catch(function (err) { $("#hints-list").innerHTML = '<p class="form-error">' + esc(err.message) + "</p>"; });
+  }
+  function revealHint(n) {
+    fetch("/api/hints", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task: hintsTask, n: n }) })
+      .then(function (r) { return r.json(); }).then(function (j) { if (j.error) throw new Error(j.error); openHints(hintsTask); })
+      .catch(function (err) { $("#hints-list").insertAdjacentHTML("afterbegin", '<p class="form-error">' + esc(err.message) + "</p>"); });
+  }
+
+  // ---- the work record in Settings: what's kept, and deleting it after saying what that costs
+  function kb(b) { return b < 1024 ? b + " bytes" : b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(1) + " MB"; }
+  function paintTraceSettings(confirming) {
+    var box = $("#set-trace");
+    if (!box) return;
+    fetch("/api/traces", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (s) {
+      var none = !s.runs && !s.hints;
+      box.innerHTML = '<p class="set-hint">' + (none ? "Nothing saved yet." :
+        "Saved now: " + s.runs + " checker run" + (s.runs === 1 ? "" : "s") + " and " + s.hints + " hint" + (s.hints === 1 ? "" : "s") +
+        " opened, across " + s.exercises + " exercise" + (s.exercises === 1 ? "" : "s") + " (" + kb(s.bytes) + ").") + "</p>" +
+        (none ? "" : confirming
+          ? '<div class="set-warn"><p><b>Delete your whole work record?</b> Grades you already got stay. But Claude can no longer look back at how you worked through those exercises: ' +
+            "where you got stuck, what you tried, which hints you opened. Anything not graded yet gets graded from your answers alone, and spotting patterns in your mistakes starts over. This can't be undone.</p>" +
+            '<button class="btn btn-sm" type="button" id="set-trace-yes">Yes, delete it</button> <button class="btn btn-ghost btn-sm" type="button" id="set-trace-no">Keep it</button></div>'
+          : '<button class="btn btn-ghost btn-sm" type="button" id="set-trace-del">Delete my work record…</button>');
+    }).catch(function () { box.innerHTML = ""; });
+  }
+  function deleteTraces() {
+    fetch("/api/traces/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirm: true }) })
+      .then(function (r) { return r.json(); }).then(function (j) {
+        paintTraceSettings(false);
+        toast("<span>🗑</span><span><b>Deleted " + j.deleted + " saved file" + (j.deleted === 1 ? "" : "s") + ".</b> New checker runs start a fresh record.</span>", 6000);
+      });
+  }
+
   // replies are plain text with a little markdown: paragraphs, **bold**, `code`, and - lists
   function clText(t) {
     return esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>")
@@ -2475,6 +2538,12 @@
         (mailReady() ? "" : ' <small class="set-hint">not set up: run <code>./edu4self mail setup</code> in a terminal</small>') + "</label>" +
       mailErrors() +
 
+      '<h3 id="set-record">Your work record</h3>' +
+      '<p class="set-hint">Every time you run an exercise\'s checker, its output and a copy of your code are saved in the exercise folder (<code>trace/</code>), ' +
+        "and so is every hint you open here. When you hand the exercise in, Claude reads them in order to see where you really got stuck, not just the final answer, " +
+        "and plans what comes next from that. It all stays on your computer, and other AI tools never see it.</p>" +
+      '<div id="set-trace"></div>' +
+
       '<h3 id="set-blocks">Focus blocks</h3>' +
       '<div class="set-field"><span class="field-label">Durations to pick from (minutes)</span><div class="set-presets">' + presets + "</div></div>" +
       '<div class="set-field"><span class="field-label">Kinds of block</span><div class="set-kinds">' + kinds + "</div>" +
@@ -2537,6 +2606,7 @@
       '<label class="set-check"><input type="checkbox" id="set-obs"' + (c.obsidian.enabled ? " checked" : "") + "> Open notes (.md files) in Obsidian</label>" +
       fieldRow("Obsidian vault name", '<input type="text" id="set-obs-vault" maxlength="120" value="' + esc(c.obsidian.vault) + '" placeholder="' + esc((DATA && DATA.server && DATA.server.vault) || "") + '">', "Off: notes open as plain text in the browser.");
     $("#set-error").hidden = true;
+    paintTraceSettings(false);
   }
 
   // read the form back into the draft
@@ -2633,6 +2703,10 @@
       readSettings();
       setDraft.blocks.kinds.splice(Number(ev.target.closest(".set-kind").dataset.kind), 1);
       paintSettings();
+    } else if (ev.target.id === "set-trace-del" || ev.target.id === "set-trace-no") {
+      paintTraceSettings(ev.target.id === "set-trace-del");
+    } else if (ev.target.id === "set-trace-yes") {
+      deleteTraces();
     } else if (ev.target.id === "set-mu-del") {
       if (!confirm("Remove the track from the jukebox and delete its file from _system/music/?")) return;
       postConfig({ config: DATA.config, remove_music: true }).then(function (j) {
@@ -2731,12 +2805,14 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n]");
     if (!el) return;
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
     if (el.hasAttribute("data-claude-open")) return openClaude();
     if (el.hasAttribute("data-newtopic")) return openNewTopic();
     if (el.dataset.ks) return openTrophy(el.dataset.ks);
+    if (el.dataset.hints) return openHints(el.dataset.hints);
+    if (el.dataset.hintN) return revealHint(Number(el.dataset.hintN));
     if (el.dataset.settings != null) return openSettings(el.dataset.settings);
     if (el.hasAttribute("data-drink")) return drinkWater();
     if (el.hasAttribute("data-note")) return openNote();
@@ -2794,11 +2870,12 @@
     if (celebrateNext) showCelebration();
   });
 
-  // deep links: #submit=<task-id>, #note, #help, #settings, #settings=<section>, #claude, #newtopic
+  // deep links: #submit=<task-id>, #hints=<task-id>, #note, #help, #settings, #settings=<section>, #claude, #newtopic
   function followHash() {
     var h = location.hash.slice(1);
     if (!h || !DATA || DATA.error) return;
     if (h.indexOf("submit=") === 0) openSubmit(decodeURIComponent(h.slice(7)));
+    else if (h.indexOf("hints=") === 0) openHints(decodeURIComponent(h.slice(6)));
     else if (h === "note") openNote();
     else if (h === "claude") openClaude();
     else if (h === "newtopic") openNewTopic();

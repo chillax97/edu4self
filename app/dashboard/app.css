@@ -976,3 +976,14 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .ks-d-nav { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; color: var(--muted); font-size: 13px; }
 .ks-d-nav:empty { display: none; }
 .ks-d-nav span.icon-btn { visibility: hidden; }
+
+/* hints: one at a time, each one opened is noted */
+.hints-dialog { max-width: 560px; padding: 24px 28px 22px; }
+.hints-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.hints-head h2 { margin: 0 0 8px; font-size: 20px; }
+.hint { border-top: 1px solid var(--line); padding: 12px 0; }
+.hint-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.hint-head small { color: var(--muted); }
+.hint-body { margin-top: 8px; font-size: 14.5px; }
+.hint-body ul { margin: 0; padding-left: 20px; }
+.hint-body p { margin: 0 0 6px; }
