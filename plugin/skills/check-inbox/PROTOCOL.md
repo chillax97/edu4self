@@ -33,6 +33,11 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    before sending. Compare it with your grade and the work record. When they don't match, name it in
    the feedback in one plain line, for example "You said solid; six failing runs and two hints." or
    "You said guessed, and it was right. Trust that more." No lecture, one line.
+   A `recall` entry is the dashboard's warm-up: `fields` maps each question to what the learner
+   typed from memory, `recall` lists the question ids (section 3), and `comeback: true` marks the
+   welcome back after a gap. Grade each answer right, partly or missed against what its task taught.
+   A missed one is knowledge that has faded: pull the next recall check on that material forward in
+   `PLAN.md` (the next slot of its track) and say so. Keep feedback on a comeback short and warm.
 3. Do the topic bookkeeping (the `teach` skill's formats): a learning record in
    `<topic>/learning-records/` when the result is non-obvious, glossary entries only for terms proven
    without notes, and a line in `<topic>/Dashboard.md`.
@@ -43,6 +48,8 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
      the optional `gate`, and `history` (`evidence: true` only for demonstrated learning, never for
      reading or effort; `inbox`: the id of the entry it grades, so the progress page can show how
      often "solid" really passed);
+   - add or refresh `recall` questions from work that just passed (section 3), and retire ones the
+     learner has answered right several times;
    - write the `coach` note: `date`, a one-line `headline`, a short `body` addressed to the learner;
    - optionally `coach.voices`: up to 6 short lines `{voice, text}` that the bar view's characters say
      about this grading. `voice` ∈ `logic | volition | gpu | encyclopedia | physical | nostalgia | critic
@@ -93,6 +100,14 @@ pending submission, across all topics, becomes **Up next**.
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md",
   inbox?: "<inbox entry id>"}`. `inbox` links a grade to the submission it grades; with `evidence` it
   counts as a pass for "How sure vs how it went".
+- `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from}`.
+  `id` is unique (`[A-Za-z0-9._-]`), `q` is one line (at most 300 characters) answerable from memory
+  in under a minute, and `from` is the id of the task it tests. Write them only from passed work, a
+  handful per lesson, and keep about 5 to 15. The page asks up to 3 a day before Up next, the ones
+  not asked for the longest. After 3 or more days without a block, answer or note (the away mail's
+  rule) the card becomes the welcome back: about 5 minutes, only questions whose `from` task is
+  `done`, the most recently passed first, so the first thing back is a win. Never ask the learner to
+  pick a return date or promise a time, here or anywhere.
 - `linked_topics[]` (optional): read-only courses outside the vault,
   `{id, root, url, title?, color?, read_state?}`. Nothing there is ever written.
 - `pace.hours_per_step`: focused hours per milestone step, for the finish-line date.
