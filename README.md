@@ -191,7 +191,9 @@ jukebox, the page connects to that station while it plays. Your submissions, blo
 reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms. If you connect
 any AI tool over MCP (Claude included), it sees your progress and sends it to its own model under its
 own terms; the tool is asked to tell you so when it first reads it ([details](docs/MCP.md)).
-If you set up mail, reminders go out through your own mail account; its app password stays outside
+When you run an exercise's checker, its output and a copy of your code are saved in that exercise's
+`trace/` folder, with the hints you open, for your tutor to read when you hand it in; Settings can
+delete all of it. If you set up mail, reminders go out through your own mail account; its app password stays outside
 the vault, in `~/.config/edu4self/` or, if you choose, the macOS Keychain or your Linux password store
 ([risks of each](docs/CUSTOMIZING.md#reminders-and-the-sunday-recap)).
 

@@ -27,6 +27,8 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    it reveals, not effort. `honor` only means something on probes and checkpoints (the only kinds that
    ask for it): `honor: false` there means assisted. On lessons and other kinds it is always `false`;
    ignore it and judge evidence from the answers themselves.
+   If the task has an `exercise` folder, read its work record first (section 6) and grade the
+   submission together with it.
 3. Do the topic bookkeeping (the `teach` skill's formats): a learning record in
    `<topic>/learning-records/` when the result is non-obvious, glossary entries only for terms proven
    without notes, and a line in `<topic>/Dashboard.md`.
@@ -78,7 +80,8 @@ pending submission, across all topics, becomes **Up next**.
 - `topics[].queue[]`: `id` (unique, `[A-Za-z0-9._-]`), `kind` ∈ `lesson | probe | checkpoint |
   reading | project | mock`, `status` ∈ `todo | done | locked`, `title`, `label`, `why`, `href`,
   `effort`, `rules`, `unlock` (required when locked), `submit: {type: "answers" | "done", intro,
-  fields: [labels]}`. A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
+  fields: [labels]}`, `exercise` (optional: the vault folder holding the task's `check.py`, `HINTS.md`
+  and `trace/`, e.g. `"python/exercises/p03b"`; see section 6). A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
   files; question labels are at most 1000 characters. Tasks carry no dates: spacing comes from the
   order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
@@ -123,3 +126,52 @@ writes the next lesson when asked lets whole tracks go quiet without anyone noti
 - **Split hard topics** into short parts, one idea each, each with its own exercise.
 - Update `PLAN.md` in the same turn as `state.json`. The plan is the order; `state.json` shows the
   part of it that is open now.
+
+## 6. Exercises with a checker: the work record
+
+Grading only the final answer hides how it was reached. So every exercise that has a checker keeps
+a record of the attempt, and the tutor reads it before grading.
+
+**Writing the exercise.** Put the checker, the learner's file and `HINTS.md` in one folder and set the
+task's `exercise` to that folder. Start every `check.py` with these lines, naming the learner's
+file(s) in the last call. They are safe to copy as they are: they never stop or change the checker.
+
+```python
+# edu4self: save this run for your tutor (see _system/edu_trace.py). It never stops the checker.
+try:
+    import os as _os, sys as _sys
+    _d = _os.path.dirname(_os.path.abspath(__file__))
+    while not _os.path.isfile(_os.path.join(_d, "_system", "edu_trace.py")) and _os.path.dirname(_d) != _d:
+        _d = _os.path.dirname(_d)
+    _sys.path.insert(0, _os.path.join(_d, "_system"))
+    import edu_trace
+    edu_trace.start(__file__, ["solution.py"])
+except Exception:
+    pass
+```
+
+Each run then writes `<exercise>/trace/<time>-run.json`: the arguments, how long it took, the exit
+code, everything the checker printed and a copy of the learner's file(s) at that moment.
+
+**Hints.** Write `HINTS.md` with one `## ` heading per hint (`## 2 · running_total`), in order. The
+dashboard shows the headings and opens one hint at a time; each one opened writes
+`<exercise>/trace/<time>-hint-<n>.json`. Tell the learner to open hints from the dashboard (the Hints
+button on the task), so they're noted. The file itself stays readable; nothing can stop someone
+opening it, so an answer about hints is still worth asking for.
+
+**Grading.** When the task is handed in, read every file in `trace/` in name order (the names sort by
+time) as one story, together with the submission and the learner's comments (in the note and in the
+code). Look for:
+- where it broke: the check that stayed red longest, and what finally fixed it;
+- what kind of mistake it was: a slip (fixed next run), a missing tool (a stall, often a hint, then a
+  fix: give a short drill), or a wrong idea (the same mistake coming back: give a repair unit);
+- hints: which, and when compared to the stuck point;
+- a sudden complete solution after a long gap: don't accuse; add one short closed-book follow-up.
+
+Say what you saw in the grade, write the mistake kind into the learning record when it matters, and
+let it decide the next unit in `PLAN.md` (section 5). An empty or missing `trace/` means the learner
+deleted it or the checker predates this; grade from the submission alone and say so.
+
+**The learner owns the record.** It stays in the vault and never goes to other tools over MCP. Settings
+can delete all of it; grades already given stay, but the tutor can no longer look back at how those
+attempts went.

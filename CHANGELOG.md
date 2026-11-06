@@ -6,6 +6,13 @@ versions follow [Semantic Versioning](https://semver.org).
 ## Unreleased
 
 ### Added
+
+- A work record for exercises with a checker. Each run saves what the checker printed and a copy of
+  your code, named by its time, in the exercise's `trace/` folder. Hints open one at a time from the
+  dashboard (a Hints button on the task, or `#hints=<task>`) and each one opened is noted in the same
+  folder. When you hand the exercise in, the tutor reads the whole attempt with your comments and
+  plans from where you actually got stuck. Settings shows what's kept and can delete it, after saying
+  what that costs. New `exercise` field on tasks; checkers start with a few lines from PROTOCOL.md.
 - The mail app password can live in the macOS Keychain or a Linux desktop's password store instead of
   the config file. It's optional: `mail setup` lists where it can go and the risk of each, and the
   file stays the default.
