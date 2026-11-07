@@ -123,7 +123,7 @@ Each principle comes from evidence or from a failure observed while building the
 | file | writer | contract |
 |---|---|---|
 | `_system/state.json` | tutor only | [PROTOCOL.md §3](PROTOCOL.md#3-schema-reference) |
-| `_system/inbox.jsonl` | dashboard, append-only | `{id, ts, topic, task, kind, title, fields, note, honor, confidence?}`, a recall `{…, kind: "recall", task: "recall", recall: [ids], comeback?}` and `{id, ts, kind: "withdraw", ref}` |
+| `_system/inbox.jsonl` | dashboard, append-only | `{id, ts, topic, task, kind, title, fields, note, honor, confidence?, calc?}`, a recall `{…, kind: "recall", task: "recall", recall: [ids], comeback?}` and `{id, ts, kind: "withdraw", ref}` |
 | `_system/blocks.jsonl` | dashboard, append-only | `{id, ts, started, block, minutes, task?, water_served?, water_drunk?}` |
 | `_system/config.json` | Settings panel or learner | [CUSTOMIZING.md](CUSTOMIZING.md) |
 

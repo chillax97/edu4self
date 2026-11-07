@@ -62,7 +62,7 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/api/health` | | `{ok, now, version}` |
 | GET | `/vault/<path>` | | a vault file (not `_system/`, no dot-folders); `.md` opens in Obsidian when enabled |
 | GET | `/music` | | the configured track, with Range support (206/416) |
-| POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor, confidence?, recall?}` | 201 `{id}`; 400 without `confidence` on answers or done |
+| POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor, confidence?, recall?, calc?}` | 201 `{id}`; 400 without `confidence` on answers or done, or with a bad `calc` (at most 50 `{expr, result}`) |
 | GET | `/api/hints?task=` | | `{task, hints}`, a body only once opened; 404 without `HINTS.md` |
 | POST | `/api/hints` | `{task, n}` | opens hint n and notes it in `trace/` |
 | GET | `/api/attempts?task=` | | `{events: [{kind: run, ts, passed, since} \| {kind: hint, ts, n, title}], fails_in_a_row, stuck, next_hint}`; 404 without an exercise |

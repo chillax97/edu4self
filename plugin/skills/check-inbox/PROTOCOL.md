@@ -33,6 +33,9 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    before sending. Compare it with your grade and the work record. When they don't match, name it in
    the feedback in one plain line, for example "You said solid; six failing runs and two hints." or
    "You said guessed, and it was right. Trust that more." No lecture, one line.
+   An entry may carry `calc: [{expr, result}]`, the calculator lines the learner ran (on tasks with
+   `calculator: true`), oldest first. Read it as the working: when the total is wrong, name the wrong
+   step (for example 4 bytes per value where the task uses 2), not only the wrong total.
    A `recall` entry is the dashboard's warm-up: `fields` maps each question to what the learner
    typed from memory, `recall` lists the question ids (section 3), and `comeback: true` marks the
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught.
@@ -102,14 +105,17 @@ pending submission, across all topics, becomes **Up next**.
   reading | project | mock`, `status` ∈ `todo | done | locked`, `title`, `label`, `why`, `href`,
   `effort`, `rules`, `unlock` (required when locked), `submit: {type: "answers" | "done", intro,
   fields: [labels]}`, `exercise` (optional: the vault folder holding the task's `check.py`, `HINTS.md`
-  and `trace/`, e.g. `"python/exercises/p03b"`; see section 6). A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
+  and `trace/`, e.g. `"python/exercises/p03b"`; see section 6), `calculator` (optional, `true` puts a
+  small calculator in the answer form: set it when the rules allow a calculator, never when the question
+  tests mental arithmetic). A `todo` task needs `href` or `submit`. `href` is `/vault/<path>` for vault
   files; question labels are at most 1000 characters. Tasks carry no dates: spacing comes from the
   order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md",
   inbox?: "<inbox entry id>"}`. `inbox` links a grade to the submission it grades; with `evidence` it
   counts as a pass for "How sure vs how it went".
-- `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from}`.
+- `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from,
+  calculator?}` (`calculator` as on a task).
   `id` is unique (`[A-Za-z0-9._-]`), `q` is one line (at most 300 characters) answerable from memory
   in under a minute, and `from` is the id of the task it tests. Write them only from passed work, a
   handful per lesson, and keep about 5 to 15. The page asks up to 3 a day before Up next, the ones

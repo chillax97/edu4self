@@ -29,6 +29,12 @@ versions follow [Semantic Versioning](https://semver.org).
   stored on the inbox entry as `confidence`. The tutor compares it with the grade and the work record
   and names a mismatch in one line. Once three answers are graded, the progress page shows how often
   "solid" really passed (a history entry links its grade with `inbox`).
+- A small calculator in the answer form, only for tasks (and recall questions) whose state.json entry
+  says `calculator: true`, which the tutor sets when the rules allow one. It reads `+ - * / ( )`, `^` or
+  `**`, `%` as a remainder, `1e9`, and the byte units KiB, MiB, GiB (1024s) and KB, MB, GB (1000s), with
+  its own parser. Results get thousands separators and a short form ("16,384 (16 KiB)"). The job card
+  says "Calculator allowed". The sums go to the inbox with the answer as `calc: [{expr, result}]` (at
+  most 50), so the tutor can name the wrong step, not only the wrong total.
 - A "From memory" warm-up before Up next: 2 or 3 one-line questions the tutor wrote from passed work
   (`recall` in state.json), the ones not asked for the longest. Answers are typed with only the
   questions shown and go to the inbox as kind `recall`; "Not now" hides it for today. After 3 or more
