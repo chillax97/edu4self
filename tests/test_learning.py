@@ -81,6 +81,13 @@ class RecallPickTest(unittest.TestCase):
         self.assertTrue(p["sent_today"])
         self.assertEqual(server.pick_recall({"topics": []}, [], [], NOW)["questions"], [])
 
+    def test_the_calculator_flag_reaches_the_page(self):
+        st = state(q("q1", "a"), q("q2", "a"))
+        st["recall"][0]["calculator"] = True
+        st["recall"][1]["calculator"] = "yes"          # not a boolean: dropped (validate_state rejects it anyway)
+        qs = server.pick_recall(st, [], [], NOW)["questions"]
+        self.assertEqual([x.get("calculator") for x in qs], [True, None])
+
     def test_at_most_three(self):
         st = state(*[q("q%d" % i, "a") for i in range(6)])
         self.assertEqual(len(server.pick_recall(st, [], [], NOW)["questions"]), 3)
@@ -105,11 +112,14 @@ class RecallSchemaTest(unittest.TestCase):
         r = self.check()
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertIn("1 recall question", r.stdout)
+        self.state["recall"][0]["calculator"] = True
+        self.assertEqual(self.check().returncode, 0)
         for bad, msg in (([{"id": "r1", "q": "x", "from": "nope"}], "from must be the id of the task"),
                          ([{"id": "r 1", "q": "x", "from": "hlw-lesson-01"}], "must be letters"),
                          ([{"id": "r1", "q": "two\nlines", "from": "hlw-lesson-01"}], "one line"),
                          ([{"id": "r1", "q": "x" * 301, "from": "hlw-lesson-01"}], "one line"),
                          ([{"id": "r1", "q": "a", "from": "hlw-lesson-01"}, {"id": "r1", "q": "b", "from": "hlw-lesson-01"}], "duplicate recall"),
+                         ([{"id": "r1", "q": "x", "from": "hlw-lesson-01", "calculator": "yes"}], "calculator must be true or false"),
                          ({"r1": "x"}, "recall must be a list")):
             self.state["recall"] = bad
             r = self.check()

@@ -152,6 +152,22 @@ class ServerTest(unittest.TestCase):
         note = {"topic": "general", "task": "note", "kind": "note", "note": "a question"}
         self.assertEqual(self.req("POST", "/api/inbox", note)[0], 201, "a note isn't asked how sure")
 
+    def test_calculator_history_rides_with_the_answer(self):
+        good = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"Q": "A"}, "confidence": "solid"}
+        calc = [{"expr": "2*32*128*2", "result": "16384"}, {"expr": "(1+2)*3^2", "result": "27"}]
+        code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=calc))
+        self.assertEqual(code, 201)
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        self.assertEqual([e for e in saved if e["id"] == d["id"]][0]["calc"], calc)
+        code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=[]))
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        self.assertNotIn("calc", [e for e in saved if e["id"] == d["id"]][0], "an empty history sends nothing")
+        self.assertEqual(self.req("POST", "/api/inbox", dict(good, calc=[{"expr": "1", "result": "1"}] * 50))[0], 201)
+        for bad in ([{"expr": "1", "result": "1"}] * 51, [{"expr": "x" * 201, "result": "1"}], [{"expr": "1", "result": "9" * 101}],
+                    "2*3", [["2*3", "6"]], [{"expr": "1"}], [{"expr": "1", "result": 1}], [{"expr": "1", "result": "1", "more": "x"}]):
+            code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=bad))
+            self.assertEqual((code, d["error"]), (400, "bad calculator history"), bad)
+
     def test_calibration_counts_only_graded_answers(self):
         state = {"topics": [{"history": [
             {"inbox": "a", "evidence": True}, {"inbox": "b", "evidence": False}, {"inbox": "c", "evidence": True},
@@ -373,6 +389,15 @@ class ValidatorTest(unittest.TestCase):
         r = self.check(self.state)
         self.assertEqual(r.returncode, 1)
         self.assertIn("inbox must be the id", r.stdout)
+
+    def test_a_task_may_allow_the_calculator(self):
+        t = self.state["topics"][0]["queue"][0]
+        t["calculator"] = True
+        self.assertEqual(self.check(self.state).returncode, 0)
+        t["calculator"] = "yes"
+        r = self.check(self.state)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("calculator must be true or false", r.stdout)
 
     def test_link_checker_finds_a_broken_link(self):
         with open(os.path.join(self.vault, "Home.md"), "a") as fh:
