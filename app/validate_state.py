@@ -69,6 +69,8 @@ for t in s.get("topics", []):
             bad = not isinstance(ex, str) or ex.startswith("/") or ".." in ex.split("/") or ex.split("/")[0] == "_system"
             if bad or not os.path.isdir(os.path.join(ROOT, ex)):
                 err("task %s exercise must be a folder in the vault: %r" % (k, ex))
+        if "calculator" in task and not isinstance(task["calculator"], bool):   # the answer form's calculator
+            err("task %s calculator must be true or false, got %r" % (k, task["calculator"]))
         if task.get("status") == "locked" and not task.get("unlock"):
             err("task %s is locked but says nothing about how it unlocks" % k)
         sub = task.get("submit")
@@ -128,6 +130,8 @@ for r in recall:
     q = r.get("q")
     if not isinstance(q, str) or not 0 < len(q.strip()) <= 300 or "\n" in q:
         err("recall %s: q must be one line of 1-300 characters" % rid)
+    if "calculator" in r and not isinstance(r["calculator"], bool):
+        err("recall %s: calculator must be true or false, got %r" % (rid, r["calculator"]))
     if r.get("from") not in ids:
         err("recall %s: from must be the id of the task it tests, got %r" % (rid, r.get("from")))
 

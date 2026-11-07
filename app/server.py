@@ -755,7 +755,8 @@ def pick_recall(state, entries, blocks, now):
         qs.sort(key=lambda q: passed.get(q.get("from"), ""), reverse=True)
     else:
         qs.sort(key=lambda q: asked.get(q["id"], ""))       # stable: ties keep the tutor's order
-    return {"questions": [{k: q.get(k) for k in ("id", "q", "from")} for q in qs[:RECALL_PICK]],
+    return {"questions": [dict({k: q.get(k) for k in ("id", "q", "from")}, **({"calculator": True} if q.get("calculator") is True else {}))
+                          for q in qs[:RECALL_PICK]],
             "comeback": comeback, "days_away": (today - last.date()).days if last else None,
             "sent_today": any((reminders.local_dt(e.get("ts") or "") or now).date() == today for e in sent)}
 
