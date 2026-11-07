@@ -1518,6 +1518,21 @@
   // this browser's choice, else the default view from Settings
   function isBar() { var v = store(VIEW_KEY); return v ? v !== "classic" : cfg().view !== "classic"; }
   function barRoom() { return store(ROOM_KEY) === "back" ? "back" : "front"; }
+  // A name's subtitle is a string, or a list that rotates: one entry per 30 seconds, held while a block runs.
+  var SUB_STEP = 30000, SUB_LAST = null;
+  function subLines(nm) { return Array.isArray(nm[1]) ? nm[1].filter(Boolean) : nm[1] ? [nm[1]] : []; }
+  function subIndex(nm) {
+    var n = subLines(nm).length;
+    if (n < 2) return 0;
+    var key = nm[0] + "|" + n;
+    if (active && SUB_LAST && SUB_LAST.key === key) return SUB_LAST.i;
+    SUB_LAST = { key: key, i: Math.floor(Date.now() / SUB_STEP) % n };
+    return SUB_LAST.i;
+  }
+  function subHTML(nm) {
+    var l = subLines(nm);
+    return l.length ? '<small data-sub data-i="' + subIndex(nm) + '">' + esc(l[subIndex(nm)]) + "</small>" : "";
+  }
   function barName() { return BAR_NAMES[(Number(store(NAME_KEY)) || 0) % BAR_NAMES.length]; }
   function plural(n, one, many) { return n + " " + (n === 1 ? one : (many || one + "s")); }
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -1957,7 +1972,7 @@
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
       '<button type="button" data-room="front" aria-pressed="' + (room === "front") + '">' + esc(W("front_icon")) + " " + esc(W("front")) + "</button>" +
       '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">' + esc(W("back_icon")) + " " + esc(W("back")) + "</button></div>";
-    var neon = '<button class="bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + (nm[1] ? "<small>" + esc(nm[1]) + "</small>" : "") + "</button>";
+    var neon = '<button class="bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
     if (room === "back") {
       var list = allBlocks();
       return '<div class="room t-' + esc(THEME.meta.id) + ' is-back"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
@@ -2245,8 +2260,20 @@
   // browsers only allow sound after a click on the page
   document.addEventListener("pointerdown", function () { if (soundsOn()) unlockAudio(); });
 
+  function subTick() {
+    var el = $("[data-sub]");
+    if (!el || active) return;
+    var nm = barName(), l = subLines(nm), i = subIndex(nm);
+    if (l.length < 2 || String(i) === el.dataset.i) return;
+    el.dataset.i = String(i);
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = l[i]; return; }
+    el.style.opacity = "0";
+    setTimeout(function () { el.textContent = l[i]; el.style.opacity = ""; }, 600);
+  }
+
   function barTick() {
     if (!isBar()) return;
+    subTick();
     var wc = $('.room [data-slot="clock"]');
     paintPhase();
     if (!active) {
@@ -2956,8 +2983,11 @@
       '<label class="set-check"><input type="checkbox" id="set-mu-auto"' + (m.autoplay ? " checked" : "") + "> Start playing when the bar opens (browsers still need one click first)</label>" +
 
       '<h3 id="set-bar">Sign, jokes and voices</h3>' +
-      fieldRow("Names on the neon sign", '<textarea id="set-names" rows="5">' + esc(c.bar.names.map(function (n) { return n[0] + (n[1] ? " | " + n[1] : ""); }).join("\n")) + "</textarea>",
-        "One per line: <code>Name | tagline</code>. Click the sign in the bar to cycle through them. Other rooms bring their own names.") +
+      fieldRow("Names on the neon sign", '<textarea id="set-names" rows="5">' + esc(c.bar.names.map(function (n) {
+        var l = Array.isArray(n[1]) ? n[1] : n[1] ? [n[1]] : [];
+        return n[0] + (l.length ? " | " + l[0] : "") + l.slice(1).map(function (x) { return "\n| " + x; }).join("");
+      }).join("\n")) + "</textarea>",
+        "One per line: <code>Name | tagline</code>. One line per subtitle; several lines rotate every 30 seconds: put each extra one on its own line starting with <code>|</code>. Click the sign in the bar to cycle through the names. Other rooms bring their own names.") +
       '<label class="set-check"><input type="checkbox" id="set-gags"' + (c.bar.gags ? " checked" : "") + "> Room jokes (a new one every 40 minutes)</label>" +
       fieldRow("Your own lines", '<textarea id="set-lines" rows="4" placeholder="regular: The coffee machine has been broken since the last exam.">' + esc(c.bar.lines.map(function (l) { return l.voice + ": " + l.text; }).join("\n")) + "</textarea>",
         "One per line, <code>voice: text</code>. They rotate in with the jokes. Voices: " + voices.map(function (v) { return "<code>" + v + "</code>"; }).join(" ") + ".") +
@@ -3000,9 +3030,14 @@
     c.music.title = $("#set-mu-title").value;
     c.music.subtitle = $("#set-mu-sub").value;
     c.music.autoplay = $("#set-mu-auto").checked;
-    c.bar.names = $("#set-names").value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
-      var i = l.indexOf("|"); return i < 0 ? [l, ""] : [l.slice(0, i).trim(), l.slice(i + 1).trim()];
+    var names = [];
+    $("#set-names").value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean).forEach(function (l) {
+      if (l[0] === "|" && names.length) { var x = l.slice(1).trim(); if (x) names[names.length - 1][1].push(x); return; }
+      var i = l.indexOf("|");
+      names.push(i < 0 ? [l, []] : [l.slice(0, i).trim(), i + 1 < l.length && l.slice(i + 1).trim() ? [l.slice(i + 1).trim()] : []]);
     });
+    // one line stays a string, so older configs keep their shape; several become a list
+    c.bar.names = names.map(function (n) { return [n[0], n[1].length > 1 ? n[1] : n[1][0] || ""]; });
     c.bar.gags = $("#set-gags").checked;
     c.bar.lines = $("#set-lines").value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
       var m = /^([a-z]+)\s*:\s*(.+)$/.exec(l);
@@ -3232,4 +3267,5 @@
     if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding(); else askGifts();
   });
   setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
+  setInterval(function () { if (!document.hidden && !active) barTick(); }, 2000);   // the sign's rotating subtitle between polls
 })();
