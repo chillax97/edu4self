@@ -1541,16 +1541,17 @@
   // this browser's choice, else the default view from Settings
   function isBar() { var v = store(VIEW_KEY); return v ? v !== "classic" : cfg().view !== "classic"; }
   function barRoom() { return store(ROOM_KEY) === "back" ? "back" : "front"; }
-  // A name's subtitle is a string, or a list that rotates: one entry per 30 seconds, held while a block runs.
-  var SUB_STEP = 30000, SUB_LAST = null;
+  // A name's subtitle is a string, or a list that rotates: the next line each time the neon blinks (it swaps
+  // while the sign is dim), held while a block runs. Without the flicker (reduced motion), every 30 seconds.
+  var SUB_STEP = 30000, SUB = { key: "", i: 0 }, blinkTimer = 0;
+  var BLINKS = [0.20, 0.63];   // where bx-flicker dims the neon, as a share of its cycle (app.css)
   function subLines(nm) { return Array.isArray(nm[1]) ? nm[1].filter(Boolean) : nm[1] ? [nm[1]] : []; }
   function subIndex(nm) {
     var n = subLines(nm).length;
     if (n < 2) return 0;
     var key = nm[0] + "|" + n;
-    if (active && SUB_LAST && SUB_LAST.key === key) return SUB_LAST.i;
-    SUB_LAST = { key: key, i: Math.floor(Date.now() / SUB_STEP) % n };
-    return SUB_LAST.i;
+    if (SUB.key !== key) SUB = { key: key, i: Math.floor(Date.now() / SUB_STEP) % n };   // a fresh page starts somewhere new
+    return SUB.i % n;
   }
   function subHTML(nm) {
     var l = subLines(nm);
@@ -2146,6 +2147,7 @@
     var now = roomCounts(), was = stage.seen, ev = [];
     stage.seen = now;
     paintPhase();
+    armBlinks();
     var r = $(".room");
     if (!r) return;
     $$(".room .bx-pips.h i, .room .bx-pips.m i, .room .bx-cab .die i, .room .bx-bottles i").forEach(function (e) {
@@ -2284,20 +2286,37 @@
   // browsers only allow sound after a click on the page
   document.addEventListener("pointerdown", function () { if (soundsOn()) unlockAudio(); });
 
-  function subTick() {
-    var el = $("[data-sub]");
+  // the next subtitle, swapped in place; the stage's copy of the slot is updated so a poll doesn't redraw it
+  function swapSub() {
+    var el = $(".room [data-sub]");
     if (!el || active) return;
-    var nm = barName(), l = subLines(nm), i = subIndex(nm);
-    if (l.length < 2 || String(i) === el.dataset.i) return;
-    el.dataset.i = String(i);
-    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = l[i]; return; }
-    el.style.opacity = "0";
-    setTimeout(function () { el.textContent = l[i]; el.style.opacity = ""; }, 600);
+    var l = subLines(barName());
+    if (l.length < 2) return;
+    SUB.i = (subIndex(barName()) + 1) % l.length;
+    el.textContent = l[SUB.i];
+    el.dataset.i = String(SUB.i);
+    var slot = el.closest("[data-slot]");
+    if (slot && stage.slots[slot.dataset.slot] != null) stage.slots[slot.dataset.slot] = slot.innerHTML;
+  }
+  // wait for the neon's next blink, read from its own animation clock
+  function armBlinks() {
+    clearTimeout(blinkTimer);
+    var neon = $(".room .bx-neon");
+    if (!neon || !neon.querySelector("[data-sub]") || subLines(barName()).length < 2) return;
+    var a = neon.getAnimations ? neon.getAnimations().filter(function (x) { return x.animationName === "bx-flicker"; })[0] : null;
+    var dur = a && a.effect && a.effect.getTiming().duration;
+    if (!a || a.playState !== "running" || !(dur > 0) || reducedMotion()) {
+      blinkTimer = setTimeout(function () { swapSub(); armBlinks(); }, SUB_STEP);
+      return;
+    }
+    var t = a.currentTime % dur, wait = null;
+    BLINKS.forEach(function (b) { if (wait === null && b * dur > t + 20) wait = b * dur - t; });
+    if (wait === null) wait = dur - t + BLINKS[0] * dur;
+    blinkTimer = setTimeout(function () { swapSub(); armBlinks(); }, wait);
   }
 
   function barTick() {
     if (!isBar()) return;
-    subTick();
     var wc = $('.room [data-slot="clock"]');
     paintPhase();
     if (!active) {
@@ -3055,7 +3074,7 @@
         var l = Array.isArray(n[1]) ? n[1] : n[1] ? [n[1]] : [];
         return n[0] + (l.length ? " | " + l[0] : "") + l.slice(1).map(function (x) { return "\n| " + x; }).join("");
       }).join("\n")) + "</textarea>",
-        "One per line: <code>Name | tagline</code>. One line per subtitle; several lines rotate every 30 seconds: put each extra one on its own line starting with <code>|</code>. Click the sign in the bar to cycle through the names. Other rooms bring their own names.") +
+        "One per line: <code>Name | tagline</code>. One line per subtitle; several lines take turns, the next one each time the neon blinks: put each extra one on its own line starting with <code>|</code>. Click the sign in the bar to cycle through the names. Other rooms bring their own names.") +
       '<label class="set-check"><input type="checkbox" id="set-gags"' + (c.bar.gags ? " checked" : "") + "> Room jokes (a new one every 40 minutes)</label>" +
       fieldRow("Your own lines", '<textarea id="set-lines" rows="4" placeholder="regular: The coffee machine has been broken since the last exam.">' + esc(c.bar.lines.map(function (l) { return l.voice + ": " + l.text; }).join("\n")) + "</textarea>",
         "One per line, <code>voice: text</code>. They rotate in with the jokes. Voices: " + voices.map(function (v) { return "<code>" + v + "</code>"; }).join(" ") + ".") +
@@ -3358,5 +3377,5 @@
     if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding(); else askGifts();
   });
   setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
-  setInterval(function () { if (!document.hidden && !active) barTick(); }, 2000);   // the sign's rotating subtitle between polls
+  setInterval(function () { if (!document.hidden && !active) barTick(); }, 2000);
 })();
