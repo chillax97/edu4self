@@ -286,25 +286,29 @@ class ServerTest(unittest.TestCase):
     def upload(self, name, data, ctype="audio/mpeg"):
         return self.req("POST", "/api/music", raw=data, headers={"Content-Type": ctype, "X-Filename": name})
 
-    def test_music_upload_seek_replace_remove(self):
-        data = bytes(range(256)) * 40
+    def test_music_upload_seek_add_remove(self):
+        data = b"ID3" + bytes(range(256)) * 40
         self.assertEqual(self.upload("notes.txt", data, "text/plain")[0], 415)
         code, d, _ = self.upload("My%20Song!.mp3", data)
         self.assertEqual(code, 201)
-        self.assertEqual(d["config"]["music"]["file"], "My-Song.mp3")
+        self.assertEqual(d["config"]["music"]["files"], [{"file": "My-Song.mp3", "title": "My Song"}])
+        self.assertEqual(d["config"]["music"]["file"], "My-Song.mp3", "the first song, for older readers")
         self.assertEqual(d["config"]["music"]["source"], "file", "an upload switches the jukebox to it")
         code, body, r = self.req("GET", "/music", headers={"Range": "bytes=100-199"})
         self.assertEqual((code, body), (206, data[100:200]))
         self.assertEqual(r.getheader("Content-Range"), "bytes 100-199/%d" % len(data))
         self.assertEqual(self.req("GET", "/music", headers={"Range": "bytes=999999-"})[0], 416)
-        # a new upload replaces the old file, one track at a time
-        self.assertEqual(self.upload("other.m4a", data, "audio/mp4")[0], 201)
-        self.assertEqual(sorted(os.listdir(self.sys_path("music"))), ["other.m4a"])
-        # reset keeps the track; remove deletes it
+        # a second upload is added to the list; the first stays
+        m4a = b"\0\0\0\x20ftypM4A " + data
+        self.assertEqual(self.upload("other.m4a", m4a, "audio/mp4")[0], 201)
+        self.assertEqual(sorted(os.listdir(self.sys_path("music"))), ["My-Song.mp3", "other.m4a"])
+        self.assertEqual(self.req("GET", "/music?f=other.m4a")[1], m4a)
+        self.assertEqual(self.req("GET", "/music?f=nope.mp3")[0], 404, "only listed songs are served")
+        # reset keeps the songs; remove_music deletes them
         code, d, _ = self.req("POST", "/api/config", {"reset": True})
-        self.assertEqual(d["config"]["music"]["file"], "other.m4a")
+        self.assertEqual([t["file"] for t in d["config"]["music"]["files"]], ["My-Song.mp3", "other.m4a"])
         code, d, _ = self.req("POST", "/api/config", {"config": d["config"], "remove_music": True})
-        self.assertEqual((code, d["config"]["music"]["file"]), (200, ""))
+        self.assertEqual((code, d["config"]["music"]["files"], d["config"]["music"]["file"]), (200, [], ""))
         self.assertEqual(d["config"]["music"]["source"], "scape", "no file left: back to the soundscape")
         self.assertEqual(os.listdir(self.sys_path("music")), [])
         self.assertEqual(self.req("GET", "/music")[0], 404)
