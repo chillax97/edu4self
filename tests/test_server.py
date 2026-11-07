@@ -196,6 +196,10 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(code, 400, bad)
             self.assertIn(msg, d["error"])
 
+    def test_room_sounds_are_off_until_turned_on(self):
+        self.assertIs(server.clean_config({})["room_sounds"], False)
+        self.assertIs(server.clean_config({"room_sounds": True})["room_sounds"], True)
+
     def test_an_update_keeps_every_setting_the_learner_saved(self):
         # what Settings in 1.2 wrote, with every choice away from the default
         saved = {"name": "Ada", "view": "classic", "theme": "library", "theme_lessons": False, "gifts": False,

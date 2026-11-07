@@ -90,6 +90,7 @@ DEFAULT_CONFIG = {
     "view": "bar",                  # default look: "bar" (the room) or "classic" (each browser can switch)
     "theme": "bar",                 # which room: a folder in app/dashboard/themes/ or <vault>/themes/
     "theme_lessons": True,          # lesson pages wear the room's look (False: the plain default)
+    "room_sounds": False,           # small synthesized sounds with the room's motion (off until you turn it on)
     "gifts": None,                  # a week or a die won starts one Claude run that makes a gift (uses your account);
                                     # None = not asked yet: the page asks, and gifts wait until you answer
     "reminders": {"mail": True},    # mail after 3, 7, 15, 30 days away (needs `edu4self mail setup`; see reminders.py)
@@ -153,6 +154,7 @@ def clean_config(body):
         "view": c["view"] if c["view"] in ("bar", "classic") else "bar",
         "theme": c["theme"] if isinstance(c["theme"], str) and themes.THEME_ID.match(c["theme"]) else "bar",
         "theme_lessons": bool(c["theme_lessons"]),
+        "room_sounds": bool(c["room_sounds"]),
         "gifts": None if c["gifts"] is None else bool(c["gifts"]),
         "reminders": {"mail": bool(c["reminders"].get("mail", True))},      # a saved choice always wins
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
