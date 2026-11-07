@@ -1,4 +1,4 @@
-// The neon sign's subtitle: a name can carry several lines that rotate every 30 seconds.
+// The neon sign's subtitle: a name can carry several lines; the next one shows each time the neon blinks.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -22,22 +22,27 @@ after(async () => {
 });
 
 const sub = (page) => page.$eval(".bx-neon [data-sub]", (e) => e.textContent);
-const want = (page) => page.evaluate((l) => l[Math.floor(Date.now() / 30000) % l.length], LINES);
+// what the sign shows, and how bright the neon is, every 40 ms for a while
+const watch = (page, ms) => page.evaluate((ms) => new Promise((done) => {
+  const out = [], t0 = performance.now(), neon = document.querySelector(".bx-neon");
+  const id = setInterval(() => {
+    out.push([document.querySelector(".bx-neon [data-sub]").textContent, Number(getComputedStyle(neon).opacity)]);
+    if (performance.now() - t0 > ms) { clearInterval(id); done(out); }
+  }, 40);
+}), ms);
 
-test("the sign shows one line, and the next one 30 seconds later", async () => {
+test("the sign moves to the next line each time the neon blinks, while it's dim", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   try {
     await page.waitForSelector(".bx-neon [data-sub]");
-    // a clock we can push forward: Date.now is read at call time, so the page picks it up
-    await page.evaluate(() => { const real = Date.now; window.__skew = 0; Date.now = () => real() + window.__skew; });
-    await page.waitForFunction((l) => l.includes(document.querySelector(".bx-neon [data-sub]").textContent), {}, LINES);
-    const first = await want(page);
-    await page.waitForFunction((t) => document.querySelector(".bx-neon [data-sub]").textContent === t, { timeout: 5000 }, first);
-    await page.evaluate(() => { window.__skew += 30000; });
-    const next = await want(page);
-    assert.notEqual(next, first);
-    await page.waitForFunction((t) => document.querySelector(".bx-neon [data-sub]").textContent === t, { timeout: 6000 }, next);
-    assert.equal(await sub(page), next);
+    const seen = await watch(page, 7500);   // the neon blinks twice every 7 s
+    const changes = [];
+    for (let k = 1; k < seen.length; k++) if (seen[k][0] !== seen[k - 1][0]) changes.push([seen[k - 1][0], seen[k][0], seen[k][1]]);
+    assert.ok(changes.length >= 2 && changes.length <= 3, "changes in 7.5 s: " + JSON.stringify(changes));
+    for (const [from, to, opacity] of changes) {
+      assert.equal(LINES.indexOf(to), (LINES.indexOf(from) + 1) % LINES.length, "one step at a time");
+      assert.ok(opacity < 0.9, "it swapped while the neon was bright: " + opacity);
+    }
     assert.deepEqual(page.errors, []);
   } finally { await closePage(page); }
 });
@@ -46,11 +51,8 @@ test("a running block holds the line it had", async () => {
   const page = await openPage(browser, server.url, { view: "bar", block: true });
   try {
     await page.waitForSelector(".bx-neon [data-sub]");
-    await page.evaluate(() => { const real = Date.now; window.__skew = 0; Date.now = () => real() + window.__skew; });
-    const held = await sub(page);
-    await page.evaluate(() => { window.__skew += 30000; });
-    await sleep(2800);
-    assert.equal(await sub(page), held);
+    const seen = await watch(page, 7500);
+    assert.equal(new Set(seen.map((s) => s[0])).size, 1);
   } finally { await closePage(page); }
 });
 
