@@ -1708,7 +1708,7 @@
     if (hero && hero.task.kind === "probe") add(41, "logic", 'It\'s a probe: it measures, it doesn\'t judge. "I don\'t know" is a real answer.', "probe");
     if (music && !music.paused && music.currentTime > 3600) add(25, "jukebox", (musicTitle() || "This track") + ", " + Math.floor(music.currentTime / 3600) + " h " + Math.floor(music.currentTime % 3600 / 60) + " min in. You've been in it longer than some people stay at jobs.", "music");
     else if (music && music.paused && musicPrefs().on === false) add(24, "jukebox", LINE("music_quiet", "The jukebox is quiet. Press play, or enjoy the silence like a monk."), "music");
-    else if (!musicPlayable() && hr >= 18) add(23, "jukebox", LINE("music_none", "No tape in the jukebox.") + " Settings → Music has a soundscape, radio, or your own file.", "music");
+    else if (!musicPlayable() && hr >= 18) add(23, "jukebox", LINE("music_none", "No tape in the jukebox.") + " Settings → Music has a soundscape, radio, or your own songs.", "music");
     if (S.total >= 600) add(20, "encyclopedia", hm(S.total) + " of focus logged since " + shortDate(new Date(S.first)) + ".", "lifetime");
     return O.sort(function (a, b) { return b[0] - a[0]; });
   }
@@ -2329,9 +2329,10 @@
 
   // ---------------------------------------------------------------- jukebox music (bar view only)
   // Three sources (Settings → Music): a soundscape made live in the browser (the default, offline),
-  // a radio station, or one track of your own on loop (stored in _system/music/). A track picks up
-  // where you left off (saved every few seconds), and the scrubber, ±1 min and "random spot" choose
-  // where it plays. Only one tab plays at a time.
+  // a radio station, or your own songs (stored in _system/music/), played in turn and back to the first
+  // after the last; one song alone plays on loop. A song picks up where you left off (the song and the
+  // spot are saved every few seconds), and the scrubber, ±1 min and "random spot" choose where it
+  // plays. Only one tab plays at a time.
   var MUSIC_KEY = "edu.music.v1", MUSIC_OWNER_KEY = "edu.music.owner.v1";
   var SCAPES = window.EduScapes.list;   // scapes.js
   // stations that publish their stream addresses for other players, checked to play in a browser
@@ -2343,7 +2344,18 @@
   ];
   function musicConf() { return cfg().music || {}; }
   function musicSrc() { var m = musicConf(); return m.source || (m.file ? "file" : "scape"); }
-  function musicFile() { return musicConf().file || ""; }
+  // the song list; a config from before lists names one file, which is a list of one
+  function musicFiles() {
+    var m = musicConf();
+    return Array.isArray(m.files) && m.files.length ? m.files : m.file ? [{ file: m.file, title: m.title || "" }] : [];
+  }
+  // which song is on: the one this browser saved, found by name so reordering keeps it; else the first
+  function musicTrack() {
+    var fs = musicFiles(), p = readJSON(MUSIC_KEY) || {}, want = p.track || p.file;
+    for (var i = 0; i < fs.length; i++) if (fs[i].file === want) return i;
+    return 0;
+  }
+  function musicFile() { var fs = musicFiles(); return fs.length ? fs[musicTrack()].file : ""; }
   function musicStream() { return musicConf().stream || {}; }
   function musicScape() { return SCAPES[musicConf().scape] ? musicConf().scape : "night"; }
   // what is loaded; a different one resets the player. A file keeps its bare name, so positions saved
@@ -2358,18 +2370,21 @@
     var s = musicSrc();
     if (s === "scape") return SCAPES[musicScape()].name;
     if (s === "radio") return musicStream().name || streamHost() || "Radio";
-    return musicConf().title || musicFile().replace(/\.[^.]+$/, "");
+    var t = musicFiles()[musicTrack()] || {};
+    return t.title || (t.file || "").replace(/\.[^.]+$/, "");
   }
   function musicSub() {
     var s = musicSrc();
     if (s === "scape") return SCAPES[musicScape()].sub + " · offline";
     if (s === "radio") return "live radio · " + streamHost();
+    if (musicFiles().length > 1) return musicConf().subtitle || "your songs";   // the prev/next row shows "2 / 3"
     return (musicConf().subtitle ? musicConf().subtitle + " · " : "") + "on loop";
   }
   var TAB_ID = Math.random().toString(36).slice(2);
   var music = null, musicReady = false, musicWaiting = false, musicErr = false, musicSaveT = 0, musicDrag = false, musicDuck = 0, musicQueued = null;
   var musicEl = document.createElement("div");
   musicEl.className = "bx-music";
+  window.__jukebox = function () { return music; };   // the player, for the tests
 
   // position, volume and on/off for this browser; the position belongs to one file and resets for a new one
   function musicPrefs() {
@@ -2382,6 +2397,7 @@
     if (music && music.dataset.file !== m.file) return;   // a stale player for a track that was replaced
     if (music && musicReady && !music.seeking) m.t = music.currentTime;
     if (music && !musicDuck) m.vol = music.volume;
+    if (musicSrc() === "file") m.track = m.file;
     for (var k in extra || {}) m[k] = extra[k];
     writeJSON(MUSIC_KEY, m);
   }
@@ -2404,7 +2420,7 @@
     }
     music = new Audio();
     music.preload = "metadata";
-    music.loop = true;
+    music.loop = musicFiles().length < 2;   // one song loops; a list moves on at the end
     music.volume = musicPrefs().vol;
     music.addEventListener("loadedmetadata", function () {
       if (this !== music) return;
@@ -2432,10 +2448,25 @@
     music.addEventListener("playing", function () {
       if (this !== music) return;
       musicErr = false; paintMusic(); });
+    music.addEventListener("ended", function () {
+      if (this !== music || musicSrc() !== "file") return;
+      musicGo(musicTrack() + 1);
+    });
     if (musicSrc() === "radio") { music.loop = false; music.preload = "none"; music.src = musicStream().url; }
     else music.src = "/music?f=" + encodeURIComponent(musicFile());
     music.dataset.file = musicKey();
     return music;
+  }
+
+  // play song i of the list (wrapping both ways), from its start
+  function musicGo(i) {
+    var fs = musicFiles();
+    if (fs.length < 2) return;
+    var f = fs[(i % fs.length + fs.length) % fs.length].file, m = readJSON(MUSIC_KEY) || {};
+    m.file = m.track = f; m.t = 0; m.on = true;
+    writeJSON(MUSIC_KEY, m);
+    musicWaiting = false;
+    musicSync();   // a new song is a new key: the old player goes, the new one starts
   }
 
   function musicStart() {
@@ -2493,7 +2524,7 @@
   function paintMusicShell() {
     musicEl.dataset.file = musicKey();
     if (!musicPlayable()) {
-      musicEl.innerHTML = '<div class="bx-mu-empty"><b>No tape loaded.</b><span>The jukebox plays one track of your own on loop, and remembers where it stopped.</span>' +
+      musicEl.innerHTML = '<div class="bx-mu-empty"><b>No tape loaded.</b><span>The jukebox plays your own songs in turn, and remembers where it stopped.</span>' +
         '<button class="bx-mu-add" type="button" data-settings="music">Add music in Settings</button></div>';
       return;
     }
@@ -2505,13 +2536,17 @@
         '<input class="bx-mu-seek" type="range" min="0" max="1" step="1" value="0" data-mu-seek aria-label="Where in the track to play">' +
         '<div class="bx-mu-row"><span class="bx-mu-time" data-mu-time>–</span>' +
           '<button type="button" data-mu="back" title="Back one minute">−1m</button><button type="button" data-mu="fwd" title="Forward one minute">+1m</button>' +
-          '<button type="button" data-mu="rand" title="Jump to a random spot">⤨ random</button></div>'
+          '<button type="button" data-mu="rand" title="Jump to a random spot">⤨ random</button></div>' +
+        (musicFiles().length > 1 ?
+          '<div class="bx-mu-row bx-mu-skip"><button type="button" data-mu="prev" title="Previous song" aria-label="Previous song">\u23ee\ufe0e prev</button>' +
+            '<span>' + (musicTrack() + 1) + " / " + musicFiles().length + "</span>" +
+            '<button type="button" data-mu="next" title="Next song" aria-label="Next song">next \u23ed\ufe0e</button></div>' : "")
       : musicSrc() === "scape" ?
         '<div class="bx-mu-row bx-mu-scapes">' + Object.keys(SCAPES).map(function (id) {
           return '<button type="button" data-scape="' + id + '" aria-pressed="' + (id === musicScape()) + '">' + esc(SCAPES[id].name) + "</button>";
         }).join("") + "</div>"
       : "") +
-      '<button class="bx-mu-change" type="button" data-settings="music">' + (musicSrc() === "file" ? "change music" : musicSrc() === "radio" ? "change station" : "radio or your own music") + "</button>" +
+      '<button class="bx-mu-change" type="button" data-settings="music">' + (musicSrc() === "file" ? "change songs" : musicSrc() === "radio" ? "change station" : "radio or your own music") + "</button>" +
       '<label class="bx-mu-vol"><span>vol</span><input type="range" min="0" max="1" step="0.05" data-mu-vol aria-label="Music volume"></label>' +
       '<p class="bx-mu-hint" data-mu-hint hidden>Click anywhere to start the music. Browsers need one click first.</p>';
   }
@@ -2549,7 +2584,9 @@
     if (sc) return switchScape(sc.dataset.scape);
     var b = ev.target.closest("[data-mu]");
     if (!b) return;
-    var a = ensureMusic(), what = b.dataset.mu;
+    var what = b.dataset.mu;
+    if (what === "next" || what === "prev") return musicGo(musicTrack() + (what === "next" ? 1 : -1));
+    var a = ensureMusic();
     if (what === "toggle") {
       if (a.paused) { saveMusic({ on: true }); musicWaiting = false; musicStart(); }
       else { a.pause(); saveMusic({ on: false }); }
@@ -2917,6 +2954,15 @@
     }).join("");
     var m = c.music, src = m.source || (m.file ? "file" : "scape"), scape = SCAPES[m.scape] ? m.scape : "night";
     m.stream = m.stream || { url: "", name: "" };
+    if (!Array.isArray(m.files)) m.files = m.file ? [{ file: m.file, title: m.title || "" }] : [];
+    var tracks = m.files.map(function (t, i, all) {
+      return '<div class="set-track" data-track="' + i + '" data-file="' + esc(t.file) + '"><span class="set-tr-n">' + (i + 1) + "</span>" +
+        '<input type="text" maxlength="80" data-tr-title value="' + esc(t.title) + '" placeholder="' + esc(t.file.replace(/\.[^.]+$/, "")) + '" aria-label="Title of song ' + (i + 1) + '">' +
+        "<code>" + esc(t.file) + "</code>" +
+        '<button class="icon-btn" type="button" data-tr-move="-1" aria-label="Move ' + esc(t.title || t.file) + ' up"' + (i ? "" : " disabled") + ">▲</button>" +
+        '<button class="icon-btn" type="button" data-tr-move="1" aria-label="Move ' + esc(t.title || t.file) + ' down"' + (i < all.length - 1 ? "" : " disabled") + ">▼</button>" +
+        '<button class="icon-btn" type="button" data-tr-del aria-label="Take ' + esc(t.title || t.file) + ' off the list">✕</button></div>';
+    }).join("");
     var station = m.stream.url ? STATIONS.map(function (st) { return st.url; }).indexOf(m.stream.url) : -1;
     if (station < 0 && m.stream.url) station = "other";
     $("#set-body").innerHTML =
@@ -2971,7 +3017,7 @@
       '<div class="set-src" role="radiogroup" aria-label="Music source">' +
         [["scape", "Soundscape", "Made live in your browser. Offline, nothing to download."],
          ["radio", "Radio", "A live station from the internet."],
-         ["file", "Your own track", "An audio file you own, on loop."]].map(function (o) {
+         ["file", "Your songs", "Audio files you own, played in turn."]].map(function (o) {
           return '<label class="set-src-opt"><input type="radio" name="set-mu-src" value="' + o[0] + '"' + (src === o[0] ? " checked" : "") + '>' +
             "<b>" + o[1] + "</b><small>" + o[2] + "</small></label>";
         }).join("") + "</div>" +
@@ -2993,15 +3039,13 @@
           'Radio Paradise is listener-supported and ad-free; if it keeps you company, <a href="https://radioparadise.com" target="_blank" rel="noopener">radioparadise.com</a> takes donations.</small>' +
       "</div>" +
       '<div class="set-mu-pane" data-pane="file"' + (src === "file" ? "" : " hidden") + ">" +
-      (m.file ? '<div class="set-track"><b>' + esc(m.title || m.file) + '</b><code>' + esc(m.file) + '</code><button class="btn btn-ghost btn-sm" type="button" id="set-mu-del">Remove</button></div>'
-              : '<p class="set-hint">No track yet. Pick a file and it starts playing in the bar, on loop, remembering where it stopped.</p>') +
-      '<label class="set-upload"><input type="file" id="set-mu-file" accept="audio/*,.m4a,.mp3,.ogg,.opus,.wav,.flac,.aac,.webm"><span class="btn btn-soft btn-sm">' + (m.file ? "Replace the track…" : "Choose an audio file…") + "</span>" +
-        '<span class="set-prog" id="set-mu-prog" hidden><i></i></span></label>' +
-      '<small class="set-hint">Any audio file you own, up to 1 GB. It is copied into <code>_system/music/</code> and never leaves this computer.</small>' +
-      '<div class="set-two">' +
-        fieldRow("Title", '<input type="text" id="set-mu-title" maxlength="80" value="' + esc(m.title) + '">') +
-        fieldRow("Subtitle", '<input type="text" id="set-mu-sub" maxlength="80" value="' + esc(m.subtitle) + '" placeholder="artist, album, mood">') +
-      "</div>" +
+      (tracks ? '<div class="set-tracks">' + tracks + "</div>"
+              : '<p class="set-hint">No songs yet. Add some and they play in the bar, one after another, remembering where they stopped.</p>') +
+      '<label class="set-upload"><input type="file" id="set-mu-file" multiple accept="audio/*,.m4a,.mp3,.aac,.ogg,.oga,.opus,.wav,.flac,.webm"' + (m.files.length >= 100 ? " disabled" : "") + '><span class="btn btn-soft btn-sm">Add songs…</span>' +
+        '<span class="set-prog" id="set-mu-prog" hidden><i></i></span><small class="set-hint" id="set-mu-up" hidden></small></label>' +
+      '<small class="set-hint">Pick one file or several: mp3, m4a/aac, ogg, opus, wav, flac or webm, up to 1 GB each and 100 songs in all. ' +
+        "They are copied into <code>_system/music/</code> and never leave this computer. ✕ takes a song off the list; its file stays in that folder.</small>" +
+      fieldRow("Subtitle", '<input type="text" id="set-mu-sub" maxlength="80" value="' + esc(m.subtitle) + '" placeholder="artist, album, mood">', "Shown under every song while it plays.") +
       "</div>" +
       '<label class="set-check"><input type="checkbox" id="set-mu-auto"' + (m.autoplay ? " checked" : "") + "> Start playing when the bar opens (browsers still need one click first)</label>" +
 
@@ -3050,7 +3094,9 @@
     var mst = document.querySelector('input[name="set-mu-station"]:checked');
     if (mst && mst.value === "other") c.music.stream = { url: $("#set-mu-url").value.trim(), name: $("#set-mu-sname").value.trim() };
     else if (mst) c.music.stream = { url: STATIONS[Number(mst.value)].url, name: STATIONS[Number(mst.value)].name };
-    c.music.title = $("#set-mu-title").value;
+    c.music.files = [].map.call(document.querySelectorAll(".set-track[data-track]"), function (row) {
+      return { file: row.dataset.file, title: row.querySelector("[data-tr-title]").value };
+    });
     c.music.subtitle = $("#set-mu-sub").value;
     c.music.autoplay = $("#set-mu-auto").checked;
     var names = [];
@@ -3108,7 +3154,7 @@
       .then(function () { btn.disabled = false; btn.textContent = "Save"; });
   });
   $("#set-reset").addEventListener("click", function () {
-    if (!confirm("Reset every setting to its default? Your music file stays.")) return;
+    if (!confirm("Reset every setting to its default? Your songs stay.")) return;
     postConfig({ reset: true }).then(function () {
       try { localStorage.removeItem(VIEW_KEY); localStorage.removeItem(WATER_KEY); localStorage.removeItem(NAME_KEY); } catch (e) {}
       closeOverlay($("#settings")); toast("Settings are back to the defaults."); return load();
@@ -3127,11 +3173,15 @@
       paintTraceSettings(ev.target.id === "set-trace-del");
     } else if (ev.target.id === "set-trace-yes") {
       deleteTraces();
-    } else if (ev.target.id === "set-mu-del") {
-      if (!confirm("Remove the track from the jukebox and delete its file from _system/music/?")) return;
-      postConfig({ config: DATA.config, remove_music: true }).then(function (j) {
-        setDraft.music = j.config.music; readSettings(); paintSettings(); load();
-      }).catch(function (e) { setError(e.message); });
+    } else if (ev.target.closest("[data-tr-move], [data-tr-del]")) {
+      // reorder or take off the list, in the draft: Save keeps it, and no file is deleted
+      var b = ev.target.closest("[data-tr-move], [data-tr-del]"), i = Number(b.closest(".set-track").dataset.track);
+      readSettings();
+      var fs = setDraft.music.files, j = b.hasAttribute("data-tr-del") ? -1 : i + Number(b.dataset.trMove);
+      if (j < 0) fs.splice(i, 1); else fs.splice(j, 0, fs.splice(i, 1)[0]);
+      paintSettings();
+      var again = document.querySelector('.set-track[data-track="' + (j < 0 ? Math.min(i, fs.length - 1) : j) + '"] ' + (j < 0 ? "[data-tr-del]" : '[data-tr-move="' + b.dataset.trMove + '"]'));
+      if (again && !again.disabled) again.focus(); else $("#set-mu-file").focus();
     }
   });
   $("#set-body").addEventListener("change", function (ev) {
@@ -3147,29 +3197,46 @@
       document.querySelectorAll(".set-mu-pane").forEach(function (p) { p.hidden = p.dataset.pane !== t.value; });
     } else if (t.id === "set-mu-url" && t.value.trim()) {
       var o = document.querySelector('input[name="set-mu-station"][value="other"]'); if (o) o.checked = true;
-    } else if (t.id === "set-mu-file" && t.files[0]) uploadMusic(t.files[0]);
+    } else if (t.id === "set-mu-file" && t.files.length) uploadMusic([].slice.call(t.files));
   });
 
-  // straight to disk, with a progress bar; saved as soon as it lands
-  function uploadMusic(file) {
-    var prog = $("#set-mu-prog"), bar = prog.querySelector("i"), x = new XMLHttpRequest();
-    if (file.size > 1024 * 1024 * 1024) return setError("That file is over 1 GB.");
-    prog.hidden = false; bar.style.width = "0%";
-    x.open("POST", "/api/music");
-    x.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    x.setRequestHeader("X-Filename", encodeURIComponent(file.name));
-    x.upload.onprogress = function (e) { if (e.lengthComputable) bar.style.width = (100 * e.loaded / e.total).toFixed(1) + "%"; };
-    x.onload = function () {
-      var j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
-      if (x.status >= 300) { prog.hidden = true; return setError("Upload failed: " + (j.error || x.status)); }
+  // straight to disk, one file after another, with a progress bar. Each song is added to the server's list
+  // as soon as it lands, and to the end of the list here, so unsaved edits to the others stay.
+  function uploadMusic(files) {
+    var prog = $("#set-mu-prog"), bar = prog.querySelector("i"), note = $("#set-mu-up"), added = [], i = 0, err = "";
+    function done() {
+      prog.hidden = true; note.hidden = true;
+      if (err) setError(err);
+      if (!added.length) return;
       readSettings();
-      setDraft.music = j.config.music;
+      added.forEach(function (t) { setDraft.music.files.push(t); });
+      setDraft.music.source = "file";
       paintSettings();
-      toast("<span>♪</span><span><b>" + esc(j.config.music.title || j.config.music.file) + "</b> is in the jukebox.</span>", 4000);
+      if (err) setError(err);   // painting hid it
+      toast("<span>♪</span><span><b>" + (added.length > 1 ? added.length + " songs are" : esc(added[0].title || added[0].file) + " is") + "</b> in the jukebox.</span>", 4000);
       load();
-    };
-    x.onerror = function () { prog.hidden = true; setError("Upload failed. Is the server running?"); };
-    x.send(file);
+    }
+    function next() {
+      var file = files[i++];
+      if (!file) return done();
+      if (file.size > 1024 * 1024 * 1024) { err = file.name + " is over 1 GB."; return done(); }
+      prog.hidden = false; bar.style.width = "0%";
+      if (files.length > 1) { note.hidden = false; note.textContent = i + " of " + files.length; }
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/music");
+      x.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+      x.setRequestHeader("X-Filename", encodeURIComponent(file.name));
+      x.upload.onprogress = function (e) { if (e.lengthComputable) bar.style.width = (100 * e.loaded / e.total).toFixed(1) + "%"; };
+      x.onload = function () {
+        var j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status >= 300) { err = "Upload failed: " + (j.error || x.status); return done(); }
+        added.push(j.track);
+        next();
+      };
+      x.onerror = function () { err = "Upload failed. Is the server running?"; done(); };
+      x.send(file);
+    }
+    next();
   }
 
   // ---------------------------------------------------------------- loading

@@ -287,6 +287,87 @@ class ServerTest(unittest.TestCase):
                 server.clean_config({"music": bad})
             self.assertIn(msg, str(cm.exception), bad)
 
+    def test_an_old_single_file_config_plays_as_a_list_of_one(self):
+        old = {"music": {"file": "Night-Drive.m4a", "title": "Night Drive", "subtitle": "no lyrics"}}
+        m = server.clean_config(json.loads(json.dumps(old)))["music"]
+        self.assertEqual(m["files"], [{"file": "Night-Drive.m4a", "title": "Night Drive"}])
+        self.assertEqual((m["source"], m["file"], m["title"], m["subtitle"], m["autoplay"]),
+                         ("file", "Night-Drive.m4a", "Night Drive", "no lyrics", True), "plays exactly as before")
+        self.assertEqual(server.clean_config({"music": {"file": "Night_Drive-2.mp3"}})["music"]["files"][0]["title"],
+                         "Night Drive 2", "no title: the file name")
+        self.assertEqual(server.clean_config({})["music"]["files"], [])
+
+    def test_loading_an_old_config_never_rewrites_it(self):
+        path = self.sys_path("config.json")
+        os.makedirs(self.sys_path("music"), exist_ok=True)
+        with open(self.sys_path("music", "Old.mp3"), "wb") as fh:
+            fh.write(b"ID3" + b"\0" * 64)
+        raw = json.dumps({"music": {"file": "Old.mp3", "title": "Old one"}})
+        with open(path, "w") as fh:
+            fh.write(raw)
+        try:
+            d = self.req("GET", "/api/config")[1]
+            self.assertEqual(d["config"]["music"]["files"], [{"file": "Old.mp3", "title": "Old one"}])
+            self.assertEqual(self.req("GET", "/music")[0], 200)
+            self.req("GET", "/api/state")
+            with open(path) as fh:
+                self.assertEqual(fh.read(), raw, "only a save in Settings writes the new shape")
+        finally:
+            os.remove(self.sys_path("music", "Old.mp3"))
+            self.req("POST", "/api/config", {"reset": True})
+            self.req("POST", "/api/config", {"config": {}})
+
+    def test_music_files_round_trip(self):
+        os.makedirs(self.sys_path("music"), exist_ok=True)
+        names = ["b.mp3", "a.ogg", "c.flac"]
+        for n in names:
+            with open(self.sys_path("music", n), "wb") as fh:
+                fh.write(b"x")
+        files = [{"file": "b.mp3", "title": "Second song"}, {"file": "a.ogg", "title": ""}, {"file": "c.flac", "title": "Third"}]
+        try:
+            code, d, _ = self.req("POST", "/api/config", {"config": {"music": {"source": "file", "files": files, "subtitle": "mix"}}})
+            self.assertEqual(code, 200, d)
+            want = [{"file": "b.mp3", "title": "Second song"}, {"file": "a.ogg", "title": "a"}, {"file": "c.flac", "title": "Third"}]
+            on_disk = read_json(self.sys_path("config.json"))["music"]
+            self.assertEqual(on_disk["files"], want, "order and titles kept, a blank title is the file name")
+            self.assertEqual((on_disk["file"], on_disk["title"]), ("b.mp3", "Second song"))
+            self.assertEqual(server.clean_config({"music": on_disk})["music"], on_disk, "it reads back the same")
+            self.assertEqual(self.req("GET", "/api/config")[1]["config"]["music"]["files"], want)
+            # a listed song must be on disk
+            code, d, _ = self.req("POST", "/api/config", {"config": {"music": {"source": "file", "files": [{"file": "gone.mp3"}]}}})
+            self.assertEqual(code, 400)
+            self.assertIn("gone.mp3", d["error"])
+        finally:
+            for n in names:
+                os.remove(self.sys_path("music", n))
+            self.req("POST", "/api/config", {"config": {}})
+
+    def test_the_song_list_is_checked_and_capped(self):
+        def files(fs):
+            return server.clean_config({"music": {"source": "file", "files": fs}})["music"]["files"]
+        self.assertEqual(len(files([{"file": "t%d.mp3" % i} for i in range(server.MAX_TRACKS)])), 100)
+        for bad, msg in (([{"file": "t%d.mp3" % i} for i in range(101)], "at most 100 songs"),
+                         ("a.mp3", "a list"),
+                         (["a.mp3"], "each song"),
+                         ([{"file": "../a.mp3"}], "bad music file name"),
+                         ([{"file": "a.txt"}], "bad music file name"),
+                         ([{"file": "a.mp3"}, {"file": "a.mp3"}], "twice"),
+                         ([{"file": "a.mp3", "title": "x" * 81}], "song title"),
+                         ([], "upload a song first")):
+            with self.assertRaises(ValueError, msg=bad) as cm:
+                files(bad)
+            self.assertIn(msg, str(cm.exception), bad)
+
+    def test_a_full_jukebox_refuses_one_more_upload(self):
+        with open(self.sys_path("config.json"), "w") as fh:
+            json.dump({"music": {"files": [{"file": "t%d.mp3" % i} for i in range(server.MAX_TRACKS)]}}, fh)
+        try:
+            code, d, _ = self.upload("one-more.mp3", b"ID3" + b"\0" * 64)
+            self.assertEqual(code, 409)
+            self.assertIn("100 songs", d["error"])
+        finally:
+            self.req("POST", "/api/config", {"config": {}})
+
     def test_broken_config_file_falls_back_to_defaults(self):
         with open(self.sys_path("config.json"), "w") as fh:
             fh.write("{not json")
@@ -302,28 +383,63 @@ class ServerTest(unittest.TestCase):
     def upload(self, name, data, ctype="audio/mpeg"):
         return self.req("POST", "/api/music", raw=data, headers={"Content-Type": ctype, "X-Filename": name})
 
-    def test_music_upload_seek_replace_remove(self):
-        data = bytes(range(256)) * 40
+    def test_music_upload_seek_add_remove(self):
+        data = b"ID3" + bytes(range(256)) * 40
         self.assertEqual(self.upload("notes.txt", data, "text/plain")[0], 415)
         code, d, _ = self.upload("My%20Song!.mp3", data)
         self.assertEqual(code, 201)
-        self.assertEqual(d["config"]["music"]["file"], "My-Song.mp3")
+        self.assertEqual(d["config"]["music"]["files"], [{"file": "My-Song.mp3", "title": "My Song"}])
+        self.assertEqual(d["config"]["music"]["file"], "My-Song.mp3", "the first song, for older readers")
         self.assertEqual(d["config"]["music"]["source"], "file", "an upload switches the jukebox to it")
         code, body, r = self.req("GET", "/music", headers={"Range": "bytes=100-199"})
         self.assertEqual((code, body), (206, data[100:200]))
         self.assertEqual(r.getheader("Content-Range"), "bytes 100-199/%d" % len(data))
         self.assertEqual(self.req("GET", "/music", headers={"Range": "bytes=999999-"})[0], 416)
-        # a new upload replaces the old file, one track at a time
-        self.assertEqual(self.upload("other.m4a", data, "audio/mp4")[0], 201)
-        self.assertEqual(sorted(os.listdir(self.sys_path("music"))), ["other.m4a"])
-        # reset keeps the track; remove deletes it
+        # a second upload is added to the list; the first stays
+        m4a = b"\0\0\0\x20ftypM4A " + data
+        self.assertEqual(self.upload("other.m4a", m4a, "audio/mp4")[0], 201)
+        self.assertEqual(sorted(os.listdir(self.sys_path("music"))), ["My-Song.mp3", "other.m4a"])
+        self.assertEqual(self.req("GET", "/music?f=other.m4a")[1], m4a)
+        self.assertEqual(self.req("GET", "/music?f=nope.mp3")[0], 404, "only listed songs are served")
+        # reset keeps the songs; remove_music deletes them
         code, d, _ = self.req("POST", "/api/config", {"reset": True})
-        self.assertEqual(d["config"]["music"]["file"], "other.m4a")
+        self.assertEqual([t["file"] for t in d["config"]["music"]["files"]], ["My-Song.mp3", "other.m4a"])
         code, d, _ = self.req("POST", "/api/config", {"config": d["config"], "remove_music": True})
-        self.assertEqual((code, d["config"]["music"]["file"]), (200, ""))
+        self.assertEqual((code, d["config"]["music"]["files"], d["config"]["music"]["file"]), (200, [], ""))
         self.assertEqual(d["config"]["music"]["source"], "scape", "no file left: back to the soundscape")
         self.assertEqual(os.listdir(self.sys_path("music")), [])
         self.assertEqual(self.req("GET", "/music")[0], 404)
+
+    def test_a_same_name_upload_gets_a_suffix_and_overwrites_nothing(self):
+        try:
+            one, two = b"RIFF\0\0\0\0WAVE" + b"1" * 100, b"RIFF\0\0\0\0WAVE" + b"2" * 100
+            self.assertEqual(self.upload("Tone.wav", one, "audio/wav")[0], 201)
+            code, d, _ = self.upload("Tone.wav", two, "audio/wav")
+            self.assertEqual(code, 201)
+            self.assertEqual(d["track"], {"file": "Tone-2.wav", "title": "Tone"})
+            self.assertEqual([t["file"] for t in d["config"]["music"]["files"]], ["Tone.wav", "Tone-2.wav"])
+            with open(self.sys_path("music", "Tone.wav"), "rb") as fh:
+                self.assertEqual(fh.read(), one, "the first file is untouched")
+            with open(self.sys_path("music", "Tone-2.wav"), "rb") as fh:
+                self.assertEqual(fh.read(), two)
+            self.assertEqual(self.upload("Tone.wav", one, "audio/wav")[1]["track"]["file"], "Tone-3.wav")
+        finally:
+            self.req("POST", "/api/config", {"config": {}, "remove_music": True})
+
+    def test_a_non_audio_upload_is_refused(self):
+        # an audio name and type, but the bytes are a text file: refused, and nothing is kept
+        code, d, _ = self.upload("song.mp3", b"just some notes, not music\n" * 50)
+        self.assertEqual(code, 415)
+        self.assertIn("isn't an audio file", d["error"])
+        self.assertEqual(self.upload("song.exe", b"ID3" + b"x" * 100, "application/octet-stream")[0], 415)
+        self.assertEqual(self.upload("song.mp3", b"ID3" + b"x" * 100, "text/html")[0], 415)
+        music = self.sys_path("music")
+        self.assertEqual(os.listdir(music) if os.path.isdir(music) else [], [])
+        for head in (b"ID3", b"\xff\xfb\x90", b"\xff\xf1\x50", b"\0\0\0\x18ftypM4A ", b"OggS", b"fLaC",
+                     b"\x1a\x45\xdf\xa3", b"RIFF\0\0\0\0WAVE"):
+            self.assertTrue(server.looks_like_audio(head + b"\0" * 16), head)
+        for head in (b"<html>", b"PK\3\4", b"%PDF-1.4", b"RIFF\0\0\0\0AVI ", b"\0" * 16):
+            self.assertFalse(server.looks_like_audio(head), head)
 
     def test_music_too_big_is_refused_before_reading(self):
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)

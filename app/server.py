@@ -50,7 +50,10 @@ VERSION = "1.2.0"
 HOST = "127.0.0.1"
 MAX_BODY = 64 * 1024
 MAX_MUSIC = 1024 * 1024 * 1024          # 1 GiB: a few hours of compressed audio
-MUSIC_EXTS = {".m4a", ".mp3", ".ogg", ".opus", ".wav", ".flac", ".aac", ".webm"}
+MUSIC_EXTS = {".m4a", ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".aac", ".webm"}
+MAX_TRACKS = 100                        # songs in the jukebox's list
+MUSIC_NAME = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
+MUSIC_LOCK = threading.Lock()           # one upload at a time picks a name and adds itself to the list
 KINDS = {"answers", "done", "note", "recall"}
 CONFIDENCE = ("guessed", "shaky", "solid")   # "How sure are you?" on the submit form, asked for answers and done
 INBOX_LOCK = threading.Lock()
@@ -121,7 +124,7 @@ DEFAULT_CONFIG = {
     },
     # source: "scape" (built in, made in the browser, offline), "radio" (a stream URL) or "file" (an upload)
     "music": {"source": "scape", "scape": "night", "stream": {"url": "", "name": ""},
-              "file": "", "title": "", "subtitle": "", "autoplay": False},
+              "files": [], "file": "", "title": "", "subtitle": "", "autoplay": False},
 }
 MUSIC_SOURCES = ("scape", "radio", "file")
 SCAPES = ("night", "rain", "noise")
@@ -145,6 +148,39 @@ def _subtitle(v):
     if not 1 <= len(v) <= 20:
         raise ValueError("bar subtitle list: give 1 to 20 lines")
     return [_text(x, 80, "each bar subtitle line") for x in v]
+
+
+def track_title(name):
+    """A song's default title: its file name without the extension, dashes and underscores as spaces."""
+    return re.sub(r"[-_]+", " ", os.path.splitext(name)[0]).strip()[:80]
+
+
+def _music_file(f, what="music file name"):
+    if not isinstance(f, str) or not MUSIC_NAME.match(f) or os.path.splitext(f)[1].lower() not in MUSIC_EXTS:
+        raise ValueError("bad %s: %r" % (what, f) if isinstance(f, str) else "bad " + what)
+    return f
+
+
+def _tracks(m, raw):
+    """The jukebox's song list. A config from before lists existed names one "file": it is a list of one."""
+    if "files" not in raw:
+        f = m.get("file") or ""
+        return [{"file": _music_file(f), "title": _text(m.get("title") or "", 80, "track title") or track_title(f)}] if f else []
+    files = raw["files"]
+    if not isinstance(files, list):
+        raise ValueError("music files must be a list of songs")
+    if len(files) > MAX_TRACKS:
+        raise ValueError("at most %d songs in the jukebox" % MAX_TRACKS)
+    out, seen = [], set()
+    for t in files:
+        if not isinstance(t, dict):
+            raise ValueError("each song is {\"file\": ..., \"title\": ...}")
+        f = _music_file(t.get("file"))
+        if f in seen:
+            raise ValueError("%s is in the list twice" % f)
+        seen.add(f)
+        out.append({"file": f, "title": _text(t.get("title") or "", 80, "song title") or track_title(f)})
+    return out
 
 
 def _int(v, lo, hi, what):
@@ -236,9 +272,8 @@ def clean_config(body):
     out["bar"] = {"names": cn, "voices": cv, "gags": bool(bar.get("gags", True)), "lines": cl}
     m = c["music"]
     raw = body.get("music") if isinstance(body.get("music"), dict) else {}
-    f = m.get("file") or ""
-    if f and (not isinstance(f, str) or not re.match(r"^[A-Za-z0-9._-]{1,120}$", f) or os.path.splitext(f)[1].lower() not in MUSIC_EXTS):
-        raise ValueError("bad music file name")
+    files = _tracks(m, raw)
+    f = files[0]["file"] if files else ""
     # configs from before sources existed name only a file; they keep playing it
     source = raw.get("source") or ("file" if f else "scape")
     if source not in MUSIC_SOURCES:
@@ -253,13 +288,23 @@ def clean_config(body):
     if source == "radio" and not url:
         raise ValueError("pick a station or paste its address")
     if source == "file" and not f:
-        raise ValueError("upload a track first")
+        raise ValueError("upload a song first, or pick another music source")
     out["music"] = {"source": source, "scape": scape, "stream": {"url": url, "name": _text(st.get("name") or "", 60, "station name")},
-                    "file": f, "title": _text(m.get("title") or "", 80, "track title"),
+                    # "file" and "title" repeat the first song, so an older edu4self still plays it
+                    "files": files, "file": f, "title": files[0]["title"] if files else _text(m.get("title") or "", 80, "track title"),
                     "subtitle": _text(m.get("subtitle") or "", 80, "track subtitle"),
                     # a soundscape waits for a click; older configs and real music keep their autoplay default
                     "autoplay": bool(raw["autoplay"]) if "autoplay" in raw else source != "scape"}
     return out
+
+
+def looks_like_audio(head):
+    """The first bytes of a file a browser can play: mp3, aac, m4a, ogg/opus, wav, flac or webm."""
+    return (head[:3] == b"ID3"                                          # mp3 (or flac/aac) with a tag
+            or (len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0)   # an mp3 or aac frame
+            or head[4:8] == b"ftyp"                                     # m4a, mp4
+            or head[:4] in (b"OggS", b"fLaC", b"\x1a\x45\xdf\xa3")         # ogg/oga/opus, flac, webm
+            or (head[:4] == b"RIFF" and head[8:12] == b"WAVE"))
 
 
 def merged_config(user):
@@ -1423,8 +1468,10 @@ class Handler(BaseHTTPRequestHandler):
             cfg, err = load_config()
             return self.send_json(200, {"config": cfg, "defaults": DEFAULT_CONFIG, "error": err})
         if route == "/music":
-            f = load_config()[0]["music"]["file"]
-            target = self.within(MUSIC_DIR, f) if f else None
+            # ?f= one of the listed songs; without it, the first
+            listed = [t["file"] for t in load_config()[0]["music"]["files"]]
+            f = urllib.parse.parse_qs(parsed.query).get("f", [listed[0] if listed else ""])[0]
+            target = self.within(MUSIC_DIR, f) if f in listed else None
             if not target or not os.path.isfile(target):
                 return self.send_error(404)
             return self.send_file(target)
@@ -1550,7 +1597,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_json(404, {"error": "no such endpoint"})
 
     def post_config(self, body):
-        """Save settings. {"reset": true} goes back to the defaults; "remove_music" deletes the track."""
+        """Save settings. {"reset": true} goes back to the defaults; "remove_music" empties the song list
+        and deletes those files (Settings only takes songs off the list and leaves the files)."""
         try:
             if body.get("reset"):
                 cfg = merged_config({})
@@ -1560,20 +1608,23 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self.send_json(400, {"error": str(exc)})
         if body.get("remove_music"):
-            old = load_config()[0]["music"]["file"]
-            target = self.within(MUSIC_DIR, old) if old else None
-            if target and os.path.isfile(target):
-                os.remove(target)
-            cfg["music"]["file"] = ""
+            for t in load_config()[0]["music"]["files"]:
+                target = self.within(MUSIC_DIR, t["file"])
+                if target and os.path.isfile(target):
+                    os.remove(target)
+            cfg["music"].update(files=[], file="", title="")
             if cfg["music"]["source"] == "file":
                 cfg["music"]["source"] = "scape"
-        elif cfg["music"]["file"] and not os.path.isfile(os.path.join(MUSIC_DIR, cfg["music"]["file"])):
-            return self.send_json(400, {"error": "that music file isn't in _system/music/"})
+        else:
+            for t in cfg["music"]["files"]:
+                if not os.path.isfile(os.path.join(MUSIC_DIR, t["file"])):
+                    return self.send_json(400, {"error": "%s isn't in _system/music/" % t["file"]})
         save_config(cfg)
         return self.send_json(200, {"ok": True, "config": cfg})
 
     def upload_music(self):
-        """Raw audio body, file name in X-Filename. Streams to disk, then swaps it in."""
+        """Raw audio body, file name in X-Filename. Streams to disk, then adds the song to the end of the list.
+        A name already in _system/music/ gets -2, -3, ... so no file is ever overwritten."""
         ctype = self.headers.get("Content-Type", "")
         name = os.path.basename(urllib.parse.unquote(self.headers.get("X-Filename", "")))
         ext = os.path.splitext(name)[1].lower()
@@ -1584,40 +1635,48 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             length = -1
         if length <= 0 or length > MAX_MUSIC:
-            return self.send_json(413, {"error": "music files can be up to 1 GB"})
+            return self.send_json(413, {"error": "each music file can be up to 1 GB"})
+        if len(load_config()[0]["music"]["files"]) >= MAX_TRACKS:
+            return self.send_json(409, {"error": "the jukebox holds %d songs; take one off the list first" % MAX_TRACKS})
         stem = re.sub(r"[^A-Za-z0-9._-]+", "-", os.path.splitext(name)[0]).strip("-.")[:80] or "track"
-        final = stem + ext
         os.makedirs(MUSIC_DIR, exist_ok=True)
         tmp = os.path.join(MUSIC_DIR, ".upload-%s" % uuid.uuid4().hex[:8])
-        left = length
+        left, head = length, b""
         try:
             with open(tmp, "wb") as fh:
                 while left > 0:
                     chunk = self.rfile.read(min(left, 1 << 20))
                     if not chunk:
                         raise OSError("upload cut short")
-                    fh.write(chunk)
+                    if not head:
+                        head = chunk[:16]
+                    if looks_like_audio(head):           # not audio: read the rest, keep none of it
+                        fh.write(chunk)
                     left -= len(chunk)
         except OSError as exc:
             if os.path.exists(tmp):
                 os.remove(tmp)
             return self.send_json(400, {"error": str(exc)})
-        cfg = load_config()[0]
-        old = cfg["music"]["file"]
-        os.replace(tmp, os.path.join(MUSIC_DIR, final))
-        if old and old != final and os.path.isfile(os.path.join(MUSIC_DIR, old)):
-            os.remove(os.path.join(MUSIC_DIR, old))      # one track at a time
-        cfg["music"]["file"] = final
-        cfg["music"]["source"] = "file"
-        if not cfg["music"]["title"] or old:
-            cfg["music"]["title"] = re.sub(r"[-_]+", " ", stem).strip()[:80]
-        save_config(cfg)
-        return self.send_json(201, {"ok": True, "config": cfg})
+        if not looks_like_audio(head):
+            os.remove(tmp)
+            return self.send_json(415, {"error": "%s isn't an audio file a browser can play" % name})
+        with MUSIC_LOCK:
+            final, n = stem + ext, 2
+            while os.path.exists(os.path.join(MUSIC_DIR, final)):
+                final, n = "%s-%d%s" % (stem, n, ext), n + 1
+            os.replace(tmp, os.path.join(MUSIC_DIR, final))
+            cfg = load_config()[0]
+            track = {"file": final, "title": track_title(stem + ext)}
+            cfg["music"]["files"].append(track)
+            cfg["music"].update(file=cfg["music"]["files"][0]["file"], title=cfg["music"]["files"][0]["title"], source="file")
+            save_config(cfg)
+        return self.send_json(201, {"ok": True, "config": cfg, "track": track})
 
 
 def add_types():
     for ctype, ext in (("text/javascript", ".js"), ("text/css", ".css"), ("audio/mp4", ".m4a"), ("audio/mpeg", ".mp3"),
-                       ("audio/ogg", ".ogg"), ("audio/ogg", ".opus"), ("audio/flac", ".flac"), ("audio/aac", ".aac"),
+                       ("audio/ogg", ".ogg"), ("audio/ogg", ".oga"), ("audio/ogg", ".opus"), ("audio/flac", ".flac"), ("audio/aac", ".aac"),
+                       ("audio/wav", ".wav"), ("audio/webm", ".webm"),
                        ("font/woff2", ".woff2"), ("image/svg+xml", ".svg"), ("text/plain", ".md")):
         mimetypes.add_type(ctype, ext)
 

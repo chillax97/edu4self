@@ -32,7 +32,7 @@ Saving from Settings writes a fresh, valid file.
 | Open notes in Obsidian | `obsidian.enabled`, `obsidian.vault` | `true`/`false`, vault name | off |
 
 The look (bar or classic) and the water setting are also remembered per browser once you switch them
-on the page itself. **Reset to defaults** in Settings clears both, and keeps your music file.
+on the page itself. **Reset to defaults** in Settings clears both, and keeps your songs.
 
 ### Rotating subtitles on the sign
 
@@ -99,19 +99,28 @@ at a time, and the classic view is silent.
   address (an `http://` or `https://` URL that a browser can play, usually ending in `.mp3`, `.aac` or a
   port). This is the only part of edu4self that uses the internet: while it plays, the page connects to
   that station.
-- **Your own track**: **Choose an audio file…** copies a file you own (m4a, mp3, ogg, opus, wav, flac,
-  aac, webm; up to 1 GB) into `_system/music/`. It plays on loop and resumes where it stopped, per
-  browser. The scrubber, −1m / +1m and "random" choose where it plays.
+- **Your songs**: **Add songs…** copies audio files you own into `_system/music/`: mp3, m4a/aac,
+  ogg/oga, opus, wav, flac or webm audio, up to 1 GB each and 100 songs in all. Pick one file or several
+  at once; each upload goes to the end of the list. A file with the same name as one already in the
+  folder gets `-2`, `-3`, … so nothing is overwritten, and a file that isn't audio is refused. In the
+  list you can rename a song, move it with ▲ / ▼ and take it off with ✕ (its file stays in
+  `_system/music/`); **Save** keeps the order. The jukebox plays the songs in order and goes back to
+  the first after the last; ⏮ prev and next ⏭ skip. One song alone plays on loop. It resumes the
+  same song at the same spot, per browser. The scrubber, −1m / +1m and "random" choose where it plays.
 
 ```json
 "music": {"source": "scape", "scape": "rain", "autoplay": false}
 "music": {"source": "radio", "stream": {"url": "https://stream.radioparadise.com/mellow-128", "name": "Radio Paradise · Mellow"}}
-"music": {"source": "file", "file": "Night-Drive.m4a", "title": "Night Drive", "subtitle": "three hours, no lyrics", "autoplay": true}
+"music": {"source": "file", "files": [{"file": "Night-Drive.m4a", "title": "Night Drive"}, {"file": "Rain.mp3", "title": "Rain"}],
+          "subtitle": "three hours, no lyrics", "autoplay": true}
 ```
 
 `source` is `scape`, `radio` or `file`; `scape` is `night`, `rain` or `noise`. Radio needs
-`stream.url`; a file must already be in `_system/music/` (upload it in Settings). A config that names
-only a `file`, from before sources existed, keeps playing that file.
+`stream.url`. `files` is a list of up to 100 `{file, title}`; each file must already be in
+`_system/music/` (upload it in Settings), and a blank `title` shows the file name without its extension.
+`subtitle` is shown under every song. A config that names only one `file` (and its `title`), from before
+lists existed, plays that file exactly as before, as a list of one; it is written in the new shape the
+next time you save Settings. Saved configs also keep `file` and `title` set to the first song.
 
 Browsers block sound until you click on the page once; with `autoplay` on, the first click anywhere
 starts it. A soundscape starts paused unless you turn `autoplay` on. edu4self ships no recorded music.

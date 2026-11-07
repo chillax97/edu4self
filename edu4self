@@ -218,10 +218,10 @@ def check_config(vault):
     except ValueError as exc:
         print("config.json: FAILED: %s" % exc)
         return False
-    track = cfg["music"]["file"]
-    if track and not os.path.isfile(os.path.join(server.MUSIC_DIR, track)):
-        print("config.json: FAILED: music file %s isn't in _system/music/" % track)
-        return False
+    for track in cfg["music"]["files"]:
+        if not os.path.isfile(os.path.join(server.MUSIC_DIR, track["file"])):
+            print("config.json: FAILED: music file %s isn't in _system/music/" % track["file"])
+            return False
     print("config.json: OK")
     return True
 

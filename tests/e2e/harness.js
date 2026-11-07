@@ -100,15 +100,15 @@ export async function closePage(page) {
   await page.close();
 }
 
-// A short, valid WAV file: one second of a quiet 440 Hz tone.
-export function wavFile(dir, seconds = 3) {
+// A short, valid WAV file: a few seconds of a quiet 440 Hz tone, named "Test Tone.wav" unless you pick a name.
+export function wavFile(dir, seconds = 3, name = "Test Tone.wav") {
   const rate = 8000, n = rate * seconds, buf = Buffer.alloc(44 + n * 2);
   buf.write("RIFF", 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write("WAVE", 8);
   buf.write("fmt ", 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22);
   buf.writeUInt32LE(rate, 24); buf.writeUInt32LE(rate * 2, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34);
   buf.write("data", 36); buf.writeUInt32LE(n * 2, 40);
   for (let i = 0; i < n; i++) buf.writeInt16LE(Math.round(3000 * Math.sin(2 * Math.PI * 440 * i / rate)), 44 + i * 2);
-  const p = path.join(dir, "Test Tone.wav");
+  const p = path.join(dir, name);
   fs.writeFileSync(p, buf);
   return p;
 }
