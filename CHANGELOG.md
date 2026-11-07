@@ -8,7 +8,7 @@ versions follow [Semantic Versioning](https://semver.org).
 ### Added
 
 - A name on the bar's neon sign can have several subtitle lines (`bar.names`: `[name, [line, ...]]`, up to 20,
-  80 characters each). They rotate every 30 seconds and hold still during a block. A single line is still a plain string.
+  80 characters each). The next one shows each time the neon blinks, and they hold still during a block. A single line is still a plain string.
 - The room is drawn once and patched after that: a poll rewrites only the slots that changed, so
   nothing restarts every 15 seconds. In the bar, what changed moves: a fuel segment gulps in, a week
   tile flips, a die stone is set with a spark, a new voice line leans in, a new job card clips on, an

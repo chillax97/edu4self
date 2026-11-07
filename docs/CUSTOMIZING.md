@@ -36,9 +36,9 @@ on the page itself. **Reset to defaults** in Settings clears both, and keeps you
 
 ### Rotating subtitles on the sign
 
-A name's subtitle may be a list. The sign shows one entry at a time and moves to the next every
-30 seconds (the entry is `floor(clock / 30 s)` modulo the list length, so it is the same on every
-open tab). It holds still while a focus block is running, and fades with a plain opacity change.
+A name's subtitle may be a list. The sign shows one entry at a time and moves to the next each time
+the neon blinks (twice every 7 seconds), swapping while the sign is dim. It holds still while a focus
+block is running. With reduced motion the neon doesn't flicker, so the entry moves every 30 seconds.
 
 ```json
 "bar": { "names": [["Bad Tokens", ["line one", "line two", "line three"]], ["Cache Miss", "a plain string still works"]] }
