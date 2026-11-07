@@ -213,7 +213,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   await input.uploadFile(wav);
   await page.waitForSelector(".set-track");
   assert.match(await page.$eval(".set-track", (e) => e.textContent), /Test-Tone\.wav/);
-  await set("#set-mu-title", "Test Tone");
+  await set(".set-track [data-tr-title]", "Test Tone");
 
   await tap(page, "#set-save");
   await page.waitForSelector("#settings", { hidden: true });
@@ -227,6 +227,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   assert.deepEqual(cfg.bar.names[0], ["The Test Bar", "open late"]);
   assert.deepEqual(cfg.bar.lines, [{ voice: "regular", text: "The test regular has a test drink." }]);
   assert.equal(cfg.bar.voices.volition.name, "Grit");
+  assert.deepEqual(cfg.music.files, [{ file: "Test-Tone.wav", title: "Test Tone" }]);
   assert.equal(cfg.music.file, "Test-Tone.wav");
   assert.equal(cfg.music.title, "Test Tone");
   assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")));
@@ -289,16 +290,90 @@ test("the jukebox plays the track, remembers the spot, and a bad setting is refu
   assert.match(r.body.error, /daily goal/);
   page.errors = page.errors.filter((e) => !/status of 400/.test(e));   // that 400 was the point
 
-  // Settings → Remove deletes the file and empties the jukebox
+  // Settings → ✕ takes the song off the list; its file stays on disk
   await page.click("#btn-settings");
-  await page.waitForSelector("#set-mu-del");
-  await tap(page, "#set-mu-del");
+  await page.waitForSelector("#settings:not([hidden]) .set-track [data-tr-del]");
+  await tap(page, ".set-track [data-tr-del]");
   await page.waitForFunction(() => !document.querySelector(".set-track"));
-  assert.equal(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")), false);
-  await tap(page, "#settings [data-close]");
-  // no file left: back to the soundscape
+  await tap(page, 'input[name="set-mu-src"][value="scape"]');
+  await tap(page, "#set-save");
+  await page.waitForSelector("#settings", { hidden: true });
+  assert.deepEqual(readJSON(path.join(v.vault, "_system", "config.json")).music.files, []);
+  assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")), "the file is still there");
+  // no song left: back to the soundscape
   await page.waitForFunction(() => /Night shift|Rain|Brown noise/.test(document.querySelector(".bx-music").textContent));
   assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.source, "scape");
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
+
+test("your songs: add several, reorder, rename, remove; the jukebox plays them in turn", async () => {
+  const dir = fs.mkdtempSync(path.join(v.dir, "songs-"));
+  const song = (name) => wavFile(dir, 2, name);
+  const page = await openPage(browser, server.url, { view: "bar" });
+  await page.click("#btn-settings");
+  await page.waitForSelector('#settings:not([hidden]) input[name="set-mu-src"][value="file"]');
+  await tap(page, 'input[name="set-mu-src"][value="file"]');
+  const rows = () => page.$$eval(".set-track", (rs) => rs.map((r) => r.dataset.file + "=" + r.querySelector("[data-tr-title]").value));
+  const upload = async (files, count) => {
+    await (await page.$("#set-mu-file")).uploadFile(...files);
+    await page.waitForFunction((n) => document.querySelectorAll(".set-track").length === n, {}, count);
+  };
+  // two uploads one at a time, then two files at once; "Test Tone.wav" is already in the folder
+  await upload([song("Song A.wav")], 1);
+  await upload([song("Song B.wav")], 2);
+  await upload([song("Song C.wav"), song("Test Tone.wav")], 4);
+  assert.deepEqual(await rows(), ["Song-A.wav=Song A", "Song-B.wav=Song B", "Song-C.wav=Song C", "Test-Tone-2.wav=Test Tone"]);
+  assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")), "the same name never overwrites");
+  assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone-2.wav")));
+  // a text file is refused with a reason
+  fs.writeFileSync(path.join(dir, "notes.mp3"), "not music at all\n".repeat(20));
+  await (await page.$("#set-mu-file")).uploadFile(path.join(dir, "notes.mp3"));
+  await page.waitForSelector("#set-error:not([hidden])");
+  assert.match(await page.$eval("#set-error", (e) => e.textContent), /isn't an audio file/);
+  page.errors = page.errors.filter((e) => !/status of 415/.test(e));
+  // B up, A renamed, C off the list
+  await tap(page, '.set-track[data-track="1"] [data-tr-move="-1"]');
+  const title = '.set-track[data-file="Song-A.wav"] [data-tr-title]';
+  await page.$eval(title, (e) => (e.value = ""));
+  await page.type(title, "Alpha");
+  await tap(page, '.set-track[data-file="Song-C.wav"] [data-tr-del]');
+  assert.deepEqual(await rows(), ["Song-B.wav=Song B", "Song-A.wav=Alpha", "Test-Tone-2.wav=Test Tone"]);
+  await tap(page, "#set-save");
+  await page.waitForSelector("#settings", { hidden: true });
+  const m = readJSON(path.join(v.vault, "_system", "config.json")).music;
+  assert.equal(m.source, "file");
+  assert.deepEqual(m.files, [{ file: "Song-B.wav", title: "Song B" }, { file: "Song-A.wav", title: "Alpha" }, { file: "Test-Tone-2.wav", title: "Test Tone" }]);
+  assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Song-C.wav")), "off the list, still on disk");
+  await page.click("#btn-settings");
+  await page.waitForSelector("#settings:not([hidden]) .set-track");
+  assert.deepEqual(await rows(), ["Song-B.wav=Song B", "Song-A.wav=Alpha", "Test-Tone-2.wav=Test Tone"], "Settings shows what was saved");
+  await tap(page, "#settings [data-close]");
+
+  // the jukebox: song 1, then each "ended" moves on, and after the last it goes back to the first
+  const now = () => page.$eval(".bx-music .bx-mu-title b", (e) => e.textContent);
+  const playing = (t) => page.waitForFunction((t) => document.querySelector(".bx-music .bx-mu-title b").textContent === t, {}, t);
+  const end = () => page.evaluate(() => window.__jukebox().dispatchEvent(new Event("ended")));
+  await playing("Song B");
+  assert.match(await page.$eval(".bx-mu-skip", (e) => e.textContent), /1 \/ 3/);
+  if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
+  await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
+  for (const t of ["Alpha", "Test Tone", "Song B"]) { await end(); await playing(t); }
+  // it really plays the new song: the player loads it and starts
+  await page.waitForFunction(() => /Song-B\.wav/.test(window.__jukebox().src) && !window.__jukebox().paused, { timeout: 8000 });
+  assert.match(await page.$eval(".bx-mu-skip", (e) => e.textContent), /1 \/ 3/);
+  assert.equal(await page.$eval(".bx-music [data-mu-state]", (e) => e.textContent), "your songs");
+  await tap(page, '.bx-music [data-mu="next"]');
+  await playing("Alpha");
+  await tap(page, '.bx-music [data-mu="prev"]');
+  await tap(page, '.bx-music [data-mu="prev"]');
+  await playing("Test Tone");
+  // a reload comes back to the same song
+  await page.reload({ waitUntil: "networkidle0" });
+  await playing("Test Tone");
+  assert.equal((await page.evaluate(() => JSON.parse(localStorage.getItem("edu.music.v1")))).track, "Test-Tone-2.wav");
+  assert.equal(await now(), "Test Tone");
+  if (await page.evaluate(() => document.body.classList.contains("music-on"))) await page.click('.bx-music [data-mu="toggle"]');
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
