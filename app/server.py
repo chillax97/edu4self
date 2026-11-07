@@ -138,6 +138,15 @@ def _text(v, limit, what):
     return v.strip()
 
 
+def _subtitle(v):
+    """A sign subtitle: one string, or a list of up to 20 strings (each at most 80 characters) that rotate."""
+    if not isinstance(v, list):
+        return _text(v, 80, "bar subtitle")
+    if not 1 <= len(v) <= 20:
+        raise ValueError("bar subtitle list: give 1 to 20 lines")
+    return [_text(x, 80, "each bar subtitle line") for x in v]
+
+
 def _int(v, lo, hi, what):
     if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= hi:
         raise ValueError("%s must be a whole number from %d to %d" % (what, lo, hi))
@@ -195,7 +204,7 @@ def clean_config(body):
             raise ValueError("each bar name is [name, tagline]")
         nm = _text(n[0], 40, "bar name")
         if nm:
-            cn.append([nm, _text(n[1] if len(n) > 1 else "", 80, "bar tagline")])
+            cn.append([nm, _subtitle(n[1] if len(n) > 1 else "")])
     if not cn:
         raise ValueError("give the bar at least one name")
     voices = bar.get("voices") or {}
