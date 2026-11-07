@@ -1745,7 +1745,8 @@
     // Each character speaks once: the first line wins, so Claude's note and voices beat the room's own chatter.
     // Lines from what you just did (barExtra: a block started, water served) are short-lived and stay.
     var spoke = {};
-    L = L.filter(function (l) { if (spoke[l[0]]) return false; spoke[l[0]] = true; return true; });
+    // by the name on screen, since a room may give two voices one name (the tea room's kettle)
+    L = L.filter(function (l) { var who = VOICES[l[0]] ? VOICES[l[0]].name : l[0]; if (spoke[who]) return false; spoke[who] = true; return true; });
     return L.concat(barExtra);
   }
 
