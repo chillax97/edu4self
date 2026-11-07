@@ -32,7 +32,7 @@ WORDS = {
     "front": "The bar", "front_icon": "🍸", "back": "The back room", "back_icon": "🗝",
     "view": "Bar view", "place": "the bar", "counter": "the counter",
     "host": "The bartender", "music_box": "The jukebox",
-    "tonight": "Fuel · tonight", "week": "Streak · this week", "nights": "nights",
+    "tonight": "Fuel · tonight", "week": "Streak · this week", "nights": "nights", "streak_run": "running", "streak_best": "house record",
     "die_case": "The die case", "die": "die", "dies": "dies", "tile": "tile", "tiles": "tiles", "shipped": "shipped",
     "doors": "Doors that won't open yet", "job": "The job", "note": "Leave a note for the bartender.",
     "how": "How does this place work?", "back_q": "What's in the back room?",

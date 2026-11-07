@@ -1172,11 +1172,12 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 
 /* ---------- the streak chalk board: slate, wooden frame, chalk. A new day draws a stroke; every 5th day the slash;
    milestones get an underline and a head turn; a new best pops a brass star; a break gets one rag wipe. */
-.bx-chalk { position: absolute; left: 117px; top: 5px; width: 74px; height: 36px; box-sizing: border-box; z-index: 1; border: 2px solid #7a5230; border-radius: 2px; background: linear-gradient(145deg, #1b2a22, #0f1914); box-shadow: 0 2px 0 rgba(0,0,0,.45), inset 0 0 8px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,235,200,.08); overflow: hidden; }
+/* it hangs on the front of the counter, where no sign word or bottle can reach it */
+.bx-chalk { position: absolute; left: 10px; bottom: 7px; width: 160px; height: 40px; box-sizing: border-box; z-index: 1; border: 2px solid #7a5230; border-radius: 2px; background: linear-gradient(145deg, #1b2a22, #0f1914); box-shadow: 0 2px 0 rgba(0,0,0,.45), inset 0 0 8px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,235,200,.08); overflow: hidden; }
 .ch-in { position: absolute; inset: 0; color: #eef1e8; }
 .ch-fade, .ch-cur, .ch-prev { position: absolute; inset: 0; }
 .ch-cur, .ch-prev { pointer-events: none; }
-.ch-cur { left: 17px; top: 3px; right: auto; bottom: auto; width: 28px; height: 24px; }
+.ch-cur { left: 17px; top: 7px; right: auto; bottom: auto; width: 28px; height: 24px; }
 .ch-prev { left: 4px; top: 12px; right: auto; bottom: auto; width: 24px; height: 24px; transform: scale(.45); transform-origin: 0 0; opacity: .55; }
 .ch-s { position: absolute; top: 0; width: 2px; height: 20px; border-radius: 1px; background: #eef1e8; opacity: .93; box-shadow: 0 0 1px rgba(255,255,255,.5); transform: rotate(var(--r, 0deg)); transform-origin: 50% 0; }
 .ch-sl { position: absolute; left: -2px; top: 21px; width: 30px; height: 2px; border-radius: 1px; background: #eef1e8; opacity: .93; box-shadow: 0 0 1px rgba(255,255,255,.5); transform: rotate(-32deg); transform-origin: 0 50%; }
@@ -1184,14 +1185,14 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .ch-sl[data-new] { animation: ch-slash .4s ease-out both; }
 @keyframes ch-draw { from { transform: rotate(var(--r, 0deg)) scaleY(0); } to { transform: rotate(var(--r, 0deg)) scaleY(1); } }
 @keyframes ch-slash { from { transform: rotate(-32deg) scaleX(0); } to { transform: rotate(-32deg) scaleX(1); } }
-.ch-n { position: absolute; right: 5px; top: 3px; font: 700 14px/18px "Chalkduster", "Chalkboard SE", "Bradley Hand", cursive; letter-spacing: 0; color: #f4f6ee; text-shadow: 0 0 2px rgba(255,255,255,.35); }
+.ch-n { position: absolute; left: 50px; top: 3px; white-space: nowrap; font: 700 15px/18px "Chalkduster", "Chalkboard SE", "Bradley Hand", cursive; letter-spacing: 0; color: #f4f6ee; text-shadow: 0 0 2px rgba(255,255,255,.35); }
 .ch-n span { display: inline-block; }
 .ch-n span[data-new] { animation: ch-roll .32s cubic-bezier(.2,.8,.3,1) both; }
 @keyframes ch-roll { from { transform: translateY(-8px); opacity: 0; } }
-.big .ch-n { font-size: 11px; }
-.ch-ul { position: absolute; right: 5px; top: 20px; width: 20px; height: 2px; border-radius: 1px; background: #eef1e8; opacity: .9; transform-origin: 0 50%; animation: ch-under .4s ease-out 1s both; }
+.ch-lab { margin-left: 5px; font: 600 8px/18px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .02em; color: rgba(238,241,232,.75); vertical-align: top; }
+.ch-ul { position: absolute; left: 50px; top: 21px; width: 19px; height: 2px; border-radius: 1px; background: #eef1e8; opacity: .9; transform-origin: 0 50%; animation: ch-under .4s ease-out 1s both; }
 @keyframes ch-under { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.ch-best { position: absolute; right: 4px; bottom: 1px; font: 7.5px/9px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .04em; color: rgba(238,241,232,.62); }
+.ch-best { position: absolute; right: 6px; bottom: 2px; font: 7.5px/9px ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .04em; color: rgba(238,241,232,.62); }
 .ch-best b { display: inline-block; font-weight: 600; }
 .ch-best b[data-new] { animation: ch-roll .3s ease-out .6s both; }
 .ch-star { position: absolute; left: -9px; top: 0; width: 8px; height: 8px; background: #e2b04a; clip-path: polygon(50% 0, 61% 36%, 98% 38%, 68% 60%, 79% 96%, 50% 74%, 21% 96%, 32% 60%, 2% 38%, 39% 36%); opacity: 0; transform-origin: 50% 50%; }

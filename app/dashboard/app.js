@@ -2159,18 +2159,21 @@
       return h + "</span>";
     }
     var day = kind === "day", g = Math.floor((n - 1) / 5), m = n > 0 ? (n - 1) % 5 + 1 : 0, h = "";
-    h += '<span class="ch-in' + (n >= 100 ? " big" : "") + '"><span class="ch-fade">';
+    h += '<span class="ch-in"><span class="ch-fade">';
     if (n > 0) {
-      if (g >= 1 && n < 100) h += group("ch-prev", 5, false);
+      if (g >= 1) h += group("ch-prev", 5, false);
       h += group("ch-cur", m, day);
       if (day && m < 5) h += '<span class="ch-dust" style="left:' + (18 + X[m - 1]) + 'px"><i style="--j:0;--dx:-4px"></i><i style="--j:1;--dx:1px"></i><i style="--j:2;--dx:5px"></i></span>';
-      h += '<b class="ch-n"><span' + (day ? " data-new" : "") + ">" + n + "</span></b>";
+      h += '<b class="ch-n"><span' + (day ? " data-new" : "") + ">" + n + '</span><small class="ch-lab">' + esc(streakWords(n)) + "</small></b>";
       if (day && MILESTONES.indexOf(n) >= 0) h += '<u class="ch-ul"></u>';
     }
-    h += '</span><small class="ch-best"><i class="ch-star"' + (newBest ? " data-new" : "") + "></i>best <b" + (newBest ? " data-new" : "") + ">" + best + "</b></small>" +
+    h += '</span><small class="ch-best"><i class="ch-star"' + (newBest ? " data-new" : "") + "></i>" + esc(W("streak_best")) + " <b" + (newBest ? " data-new" : "") + ">" + best + "</b></small>" +
       '<i class="ch-rag"></i></span>';
-    return '<span class="bx-chalk"' + (kind === "wipe" ? " data-wipe" : "") + ' role="img" aria-label="' + n + (n === 1 ? " day" : " days") + " in a row with a block. Best: " + best + '.">' + h + "</span>";
+    return '<span class="bx-chalk"' + (kind === "wipe" ? " data-wipe" : "") + ' role="img" aria-label="' + esc(n + " " + streakWords(n) + ". " + W("streak_best") + ": " + best) + '.">' + h + "</span>";
   }
+
+  // "13 nights running", "1 night running": the room's own word for a day
+  function streakWords(n) { var w = W("nights"); return (n === 1 ? w.replace(/s$/, "") : w) + " " + W("streak_run"); }
 
   function streakFill() {
     var s = streakRuns(), was = stage.seen;
