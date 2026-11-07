@@ -354,7 +354,7 @@
       '<p class="hero-why">' + esc(t.why || "") + '</p>' +
       '<div class="hero-meta">' + (t.effort ? '<span>◷ ' + esc(t.effort) + '</span>' : "") +
         (t.kind === "probe" ? '<span>◎ Measures what you know. Nothing to study first.</span>' : "") +
-        (t.kind === "lesson" ? '<span>✦ Ends with exercises</span>' : "") + '</div>';
+        (t.kind === "lesson" ? '<span>✦ Ends with exercises</span>' : "") + calcChip(t) + '</div>';
     if (t.rules) html += '<div class="hero-rules"><span aria-hidden="true">⚑</span><span><strong>Rules:</strong> ' + esc(t.rules) + '</span></div>';
     if (pend) {
       html += '<div class="hero-submitted"><span class="chip chip-wait">Submitted</span>' +
@@ -404,13 +404,17 @@
     submitCtx = { kind: "recall", topic: "general", task: "recall", title: r.comeback ? "Welcome back: from memory" : "From memory", recall: r.questions.map(function (q) { return q.id; }) };
     renderSubmitForm({ chipClass: "chip-probe", chip: "From memory", title: submitCtx.title,
       intro: (r.comeback ? "An easy start: this is all work you passed. " : "") + "Answer without looking anything up. A few words each is plenty, and \"I don't remember\" is a real answer: it tells Claude what to bring back.",
-      fields: r.questions.map(function (q) { return q.q; }), honor: false, button: "Send to Claude", sure: false });
+      fields: r.questions.map(function (q) { return q.q; }), honor: false, button: "Send to Claude", sure: false,
+      calculator: r.questions.some(function (q) { return q.calculator === true; }) });
   }
   function recallLater() { store(RECALL_KEY, dayKey(new Date())); render(); }
 
   // a topic can name the block kind its tasks run under (state.json topics[].block); else the first kind
   function taskBlock(topic) { return topic.block && BLOCKS[topic.block] ? topic.block : Object.keys(BLOCKS)[0]; }
   function taskMinutes(topic) { return BLOCKS[taskBlock(topic)].minutes || 50; }
+
+  // tells the learner before starting that the answer form has a calculator (state.json task.calculator)
+  function calcChip(t) { return t.calculator === true ? '<span class="calc-chip">Calculator allowed</span>' : ""; }
 
   function resolveHref(href) {
     // markdown notes open straight in Obsidian; everything else is served by this dashboard
@@ -443,7 +447,7 @@
         (t.exercise ? " " + hintsButton(t, "btn btn-ghost btn-sm") : "");
       return '<div class="q-item' + (locked ? " is-locked" : "") + '" style="--c:var(--' + esc(KIND[t.kind] ? t.kind : "lesson") + ')">' +
         '<div class="q-num">' + n + '</div>' +
-        '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span><span class="card-sub">' + esc(t.label || "") + '</span></div>' +
+        '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span>' + (locked ? "" : calcChip(t)) + '<span class="card-sub">' + esc(t.label || "") + '</span></div>' +
         '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p>' + (locked ? "" : stuckNudge(t)) + '</div>' +
         '<div class="q-actions">' + right + '</div></div>';
     }
@@ -616,7 +620,8 @@
     renderSubmitForm({
       chipClass: "chip-" + t.kind, chip: meta.label, title: submitCtx.title,
       intro: sub.intro || (sub.type === "done" ? "Mark this as done. Add a note if there's anything Claude should know." : "Type your answers below."),
-      rules: t.rules, fields: sub.type === "done" ? [] : (sub.fields || ["Your answer"]), honor: submitCtx.probe, button: meta.submit, sure: true
+      rules: t.rules, fields: sub.type === "done" ? [] : (sub.fields || ["Your answer"]), honor: submitCtx.probe, button: meta.submit, sure: true,
+      calculator: t.calculator === true
     });
   }
 
@@ -644,6 +649,7 @@
     var noteLabel = form.querySelector('textarea[name="__note"]').previousElementSibling;
     noteLabel.innerHTML = o.noteLabel ? esc(o.noteLabel) : 'Anything else? <em>optional</em>';
     form.querySelector('textarea[name="__note"]').rows = o.noteRequired ? 6 : 2;
+    paintCalc(o.calculator);
     $("#sub-honor").hidden = !o.honor;
     $("#sub-sure").hidden = !o.sure;
     $("#sub-error").hidden = true;
@@ -651,6 +657,21 @@
     $("#sub-send").disabled = false;
     openOverlay("submit");
     setTimeout(function () { var f = form.querySelector("textarea"); if (f) f.focus(); }, 60);
+  }
+
+  // The calculator (calc.js), only on tasks whose state.json entry says calculator: true. Its history is
+  // kept per task until the answer is sent, and goes with the answer as calc: [{expr, result}].
+  var calcHistory = {};
+  function paintCalc(on) {
+    var box = $("#sub-calc");
+    box.hidden = !on;
+    box.innerHTML = "";
+    submitCtx.calc = on ? (calcHistory[submitCtx.task] = calcHistory[submitCtx.task] || []) : null;
+    if (on) window.EduCalc.mount(box, submitCtx.calc);
+  }
+  function calcSent() {
+    var h = submitCtx.calc;
+    return h && h.length ? h.slice(-window.EduCalc.MAX_HISTORY).map(function (x) { return { expr: x.expr, result: x.result }; }) : undefined;
   }
 
   function submitForm(ev) {
@@ -673,10 +694,11 @@
     btn.disabled = true; btn.textContent = "Saving…";
     fetch("/api/inbox", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall })
+      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall, calc: calcSent() })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
       .then(function (res) {
         if (!res.ok) throw new Error(res.body.error || "Could not save");
+        delete calcHistory[submitCtx.task];
         closeOverlay($("#submit"));
         toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade it now when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
         load();
@@ -1745,7 +1767,7 @@
       (t.why ? "<p>" + esc(t.why) + "</p>" : "") +
       '<div class="bx-meta">' + (t.effort ? "<span>◷ " + esc(t.effort) + "</span>" : "") +
         (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
-        (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + "</div>" +
+        (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + calcChip(t) + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
       (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? " " + gradeButton() : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + "</div>" : stuckNudge(t, true)) +
       "</div>";
