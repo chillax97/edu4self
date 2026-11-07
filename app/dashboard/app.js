@@ -656,7 +656,8 @@
     $("#sub-send").textContent = o.button || "Submit";
     $("#sub-send").disabled = false;
     openOverlay("submit");
-    setTimeout(function () { var f = form.querySelector("textarea"); if (f) f.focus(); }, 60);
+    // the first answer box gets the caret, unless you already clicked into the form (the calculator, say)
+    setTimeout(function () { var f = form.querySelector("textarea"); if (f && !form.contains(document.activeElement)) f.focus(); }, 60);
   }
 
   // The calculator (calc.js), only on tasks whose state.json entry says calculator: true. Its history is
