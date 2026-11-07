@@ -7,6 +7,21 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- The room is drawn once and patched after that: a poll rewrites only the slots that changed, so
+  nothing restarts every 15 seconds. In the bar, what changed moves: a fuel segment gulps in, a week
+  tile flips, a die stone is set with a spark, a new voice line leans in, a new job card clips on, an
+  opened door slides out. Bigger beats play once on `.room[data-event]`: the goal (the sign blinks, a
+  cap lands on the counter), a week won, a die shipped (a light sweeps the case, glints walk the
+  bottles), a grade (the counter bell rings), a block's end (the record winds down, the bartender
+  nods) and coming back after 3 or more days (the lights come up). The time of day tints the scene
+  (`data-phase`). During a block the room holds still; the record turns slowly. Reduced motion is honoured.
+- The streak on a chalk board behind the bar: days in a row with at least one finished block, in
+  tally marks, with the best run in the corner. A new day draws a stroke, every fifth the slash,
+  7, 14, 30, 60, 100, 200 and 365 get an underline and a tap from the bartender, a new best a brass
+  star; after a break the board is wiped once and the best stays. New optional theme slot `streak`;
+  rooms without it keep the streak as a Willpower line.
+- Room sounds (Settings, Room; `room_sounds`, off by default): small sounds made in the browser, no
+  files, each starting with its motion. During a block only its start and end make a sound.
 - "How sure are you?" on the submit form: guessed, shaky or solid, required for answers and done,
   stored on the inbox entry as `confidence`. The tutor compares it with the grade and the work record
   and names a mismatch in one line. Once three answers are graded, the progress page shows how often

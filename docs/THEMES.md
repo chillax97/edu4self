@@ -116,6 +116,7 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 | `water` | no | the water glass |
 | `keys` | no | the keyboard hint |
 | `shelf` | no | the learner's trophies; without it they are only in the back room |
+| `streak` | no | the streak: days in a row with at least one finished block, and the best run. The bar draws it as a chalk tally board. Without it, the streak is a Willpower line |
 
 The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sign, `.bx-replies`,
 `.bx-log`, `.bx-k` for small labels, `.bx-cab` for the die). Restyle them under `.room`.

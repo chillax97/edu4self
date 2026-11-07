@@ -16,6 +16,7 @@ Saving from Settings writes a fresh, valid file.
 | Default look | `view` | `"bar"` (your room) or `"classic"` | `"bar"` |
 | Room | `theme` | `bar`, `library`, `space`, `train`, `tea`, or a room in `<vault>/themes/` | `"bar"` |
 | Lessons wear the room's look | `theme_lessons` | `true` / `false` | `true` |
+| Room sounds (small sounds with the room's motion) | `room_sounds` | `true` / `false` | `false` |
 | Gifts from Claude for a week or a die (each is a run on your Claude plan) | `gifts` | `true` / `false` | not set: setup or the dashboard asks you once |
 | Mail me when I've been away | `reminders.mail` | `true` / `false` (needs `./edu4self mail setup`) | `true` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
