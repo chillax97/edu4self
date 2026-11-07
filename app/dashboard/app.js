@@ -2310,9 +2310,19 @@
       return;
     }
     var t = a.currentTime % dur, wait = null;
-    BLINKS.forEach(function (b) { if (wait === null && b * dur > t + 20) wait = b * dur - t; });
+    // a blink at least 600 ms off: the timer can fire a hair before the animation's own clock gets there,
+    // and the blink it just handled must not count twice
+    BLINKS.forEach(function (b) { if (wait === null && b * dur > t + 600) wait = b * dur - t; });
     if (wait === null) wait = dur - t + BLINKS[0] * dur;
-    blinkTimer = setTimeout(function () { swapSub(); armBlinks(); }, wait);
+    var at = (t + wait) % dur, tol = 0.006 * dur;   // the darkest moment, and how far either side still reads dim
+    function fire() {
+      var off = a.currentTime % dur - at;
+      if (off > dur / 2) off -= dur;
+      if (off < -tol) { blinkTimer = setTimeout(fire, -off); return; }   // early: wait the rest
+      if (off <= tol) swapSub();                                         // late past the dip (a busy page): skip this blink
+      armBlinks();
+    }
+    blinkTimer = setTimeout(fire, wait);
   }
 
   function barTick() {
