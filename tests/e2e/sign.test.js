@@ -22,13 +22,13 @@ after(async () => {
 });
 
 const sub = (page) => page.$eval(".bx-neon [data-sub]", (e) => e.textContent);
-// what the sign shows, and how bright the neon is, every 40 ms for a while
+// every change to the subtitle, with the neon's brightness at that very moment (read inside the change itself)
 const watch = (page, ms) => page.evaluate((ms) => new Promise((done) => {
-  const out = [], t0 = performance.now(), neon = document.querySelector(".bx-neon");
-  const id = setInterval(() => {
-    out.push([document.querySelector(".bx-neon [data-sub]").textContent, Number(getComputedStyle(neon).opacity)]);
-    if (performance.now() - t0 > ms) { clearInterval(id); done(out); }
-  }, 40);
+  const el = document.querySelector(".bx-neon [data-sub]"), neon = document.querySelector(".bx-neon");
+  const out = [[el.textContent, Number(getComputedStyle(neon).opacity)]];
+  const mo = new MutationObserver(() => out.push([el.textContent, Number(getComputedStyle(neon).opacity)]));
+  mo.observe(el, { childList: true, characterData: true, subtree: true });
+  setTimeout(() => { mo.disconnect(); done(out); }, ms);
 }), ms);
 
 test("the sign moves to the next line each time the neon blinks, while it's dim", async () => {
