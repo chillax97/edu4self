@@ -40,9 +40,9 @@ const poll = (page) => page.evaluate(() => document.dispatchEvent(new Event("vis
 test("the streak is on the chalk board, not in a Willpower line", async () => {
   const page = await open();
   try {
-    assert.equal(await page.$eval(".bx-chalk .ch-n", (e) => e.textContent), "13");
+    assert.equal(await page.$eval(".bx-chalk .ch-n > span", (e) => e.textContent), "13");
     assert.equal(await page.$eval(".bx-chalk .ch-best b", (e) => e.textContent), "13");
-    assert.match(await page.$eval(".bx-chalk", (e) => e.getAttribute("aria-label")), /^13 days in a row with a block\. Best: 13\.$/);
+    assert.match(await page.$eval(".bx-chalk", (e) => e.getAttribute("aria-label")), /^13 nights running\. house record: 13\.$/);
     const log = await page.$eval('.room [data-slot="voices"]', (e) => e.textContent);
     assert.doesNotMatch(log, /days in a row/);
     assert.match(await page.$eval(".room", (e) => e.dataset.phase), /^(morning|day|evening|late)$/);
@@ -71,7 +71,7 @@ test("a new block: fuel, week tile and stones are marked new, the board draws da
       body: JSON.stringify({ block: "lessons", minutes: 40, started: s }) }).then((x) => x.status), started);
     assert.ok(r === 200 || r === 201, "block saved: " + r);
     await poll(page);
-    await page.waitForFunction(() => document.querySelector(".bx-chalk .ch-n")?.textContent === "14", { timeout: 5000 });
+    await page.waitForFunction(() => document.querySelector(".bx-chalk .ch-n > span")?.textContent === "14", { timeout: 5000 });
     assert.equal(await page.$$eval('.room [data-slot="tonight"] .bx-pips i[data-new]', (l) => l.length), 2, "40 minutes is two new fuel segments");
     assert.equal(await page.$$eval('.room [data-slot="week"] .bx-pips i[data-new]', (l) => l.length), 1);
     assert.ok(await page.$$eval('.room [data-slot="die"] .die i[data-new]', (l) => l.length) >= 1);

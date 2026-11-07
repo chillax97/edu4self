@@ -15,8 +15,9 @@ versions follow [Semantic Versioning](https://semver.org).
   bottles), a grade (the counter bell rings), a block's end (the record winds down, the bartender
   nods) and coming back after 3 or more days (the lights come up). The time of day tints the scene
   (`data-phase`). During a block the room holds still; the record turns slowly. Reduced motion is honoured.
-- The streak on a chalk board behind the bar: days in a row with at least one finished block, in
-  tally marks, with the best run in the corner. A new day draws a stroke, every fifth the slash,
+- The streak on a chalk board on the front of the counter: days in a row with at least one finished
+  block, in tally marks, "13 nights running" and the house record in the corner (theme words
+  `streak_run`, `streak_best`). A new day draws a stroke, every fifth the slash,
   7, 14, 30, 60, 100, 200 and 365 get an underline and a tap from the bartender, a new best a brass
   star; after a break the board is wiped once and the best stays. New optional theme slot `streak`;
   rooms without it keep the streak as a Willpower line.
