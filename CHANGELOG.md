@@ -46,6 +46,12 @@ versions follow [Semantic Versioning](https://semver.org).
 - The mail app password can live in the macOS Keychain or a Linux desktop's password store instead of
   the config file. It's optional: `mail setup` lists where it can go and the risk of each, and the
   file stays the default.
+- The jukebox plays a list of your own songs (`music.files`, up to 100) in turn, back to the first after
+  the last, with prev / next buttons; it resumes the same song after a reload. Settings → Music → Your
+  songs adds one file or several at once, renames, reorders and takes songs off the list (the files
+  stay). Uploads take mp3, m4a/aac, ogg/oga, opus, wav, flac and webm, up to 1 GB each; a same-name file
+  gets a suffix instead of overwriting, and a file that isn't audio is refused. A config with only
+  `music.file` plays as before.
 
 ### Fixed
 

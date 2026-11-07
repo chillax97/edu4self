@@ -81,7 +81,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 - **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
   8 dies a node, 4 nodes a rack. A water reminder arrives every 15 minutes while a block runs, if you want one.
 - **A room, or plain.** In a room your skills talk to you about tonight's work, the music plays a
-  built-in soundscape, a radio station or your own track, and the host reminds you to drink water.
+  built-in soundscape, a radio station or your own songs, and the host reminds you to drink water.
   *Classic* is calm and plain.
 
 <details>
