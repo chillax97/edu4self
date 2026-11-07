@@ -72,7 +72,7 @@ const wav = wavFile(v.dir, 4);
 const up = await fetch(server.url + "api/music", { method: "POST", headers: { "Content-Type": "audio/wav", "X-Filename": "Night-Drive.wav" }, body: fs.readFileSync(wav) });
 if (!up.ok) throw new Error("music upload failed");
 const cfg = (await up.json()).config;
-cfg.music.title = "Night Drive"; cfg.music.subtitle = "your own track";
+cfg.music.files[0].title = "Night Drive"; cfg.music.subtitle = "your own track";
 await fetch(server.url + "api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ config: cfg }) });
 
 const browser = await launch();
