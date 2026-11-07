@@ -25,7 +25,7 @@ Saving from Settings writes a fresh, valid file.
 | Kinds of block | `blocks.kinds` | 1–8 kinds, see below | Lessons, Practice, Reading, Free, Play |
 | Water | `water.every` | 15, 30 or 0 (off) | 15 |
 | Music | `music` | see below | the Night shift soundscape, paused |
-| Names on the neon sign | `bar.names` | 1–20 `[name, tagline]` pairs; the bar only, other rooms bring their own | five names |
+| Names on the neon sign | `bar.names` | 1–20 `[name, subtitle]` pairs; the subtitle is a string, or a list of up to 20 strings (each at most 80 characters) that rotates, see below; the bar only, other rooms bring their own | five names |
 | Room jokes | `bar.gags` | `true` / `false` | `true` |
 | Your own lines | `bar.lines` | up to 100 `{voice, text}` | none |
 | Voices | `bar.voices` | per voice: `{name?, color?}` | see below |
@@ -33,6 +33,26 @@ Saving from Settings writes a fresh, valid file.
 
 The look (bar or classic) and the water setting are also remembered per browser once you switch them
 on the page itself. **Reset to defaults** in Settings clears both, and keeps your music file.
+
+### Rotating subtitles on the sign
+
+A name's subtitle may be a list. The sign shows one entry at a time and moves to the next every
+30 seconds (the entry is `floor(clock / 30 s)` modulo the list length, so it is the same on every
+open tab). It holds still while a focus block is running, and fades with a plain opacity change.
+
+```json
+"bar": { "names": [["Bad Tokens", ["line one", "line two", "line three"]], ["Cache Miss", "a plain string still works"]] }
+```
+
+In Settings, put one subtitle per line; extra lines for the same name start with `|`:
+
+```
+Bad Tokens | line one
+| line two
+| line three
+```
+
+One line is saved as a string, several as a list.
 
 ### Rooms
 
