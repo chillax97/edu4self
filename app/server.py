@@ -665,6 +665,22 @@ def api_state():
 
 # Longest question label a submission may carry. validate_state.py checks state.json against the same limit.
 FIELD_LABEL_MAX = 1000
+# The calculator's working sent with an answer: at most this many lines, each this long
+CALC_MAX, CALC_EXPR_MAX, CALC_RESULT_MAX = 50, 200, 100
+
+
+def clean_calc(calc):
+    """[{expr, result}] from the answer form's calculator, or ValueError."""
+    if not isinstance(calc, list) or len(calc) > CALC_MAX:
+        raise ValueError("bad calculator history")
+    out = []
+    for c in calc:
+        if not isinstance(c, dict) or set(c) != {"expr", "result"} or \
+                not isinstance(c["expr"], str) or not 0 < len(c["expr"]) <= CALC_EXPR_MAX or \
+                not isinstance(c["result"], str) or not 0 < len(c["result"]) <= CALC_RESULT_MAX:
+            raise ValueError("bad calculator history")
+        out.append({"expr": c["expr"], "result": c["result"]})
+    return out
 
 
 def clean_submission(body, state):
@@ -698,6 +714,8 @@ def clean_submission(body, state):
         "id": uuid.uuid4().hex[:10], "ts": now_iso(), "topic": topic, "task": task, "kind": kind,
         "title": title, "fields": clean_fields, "note": note, "honor": bool(body.get("honor")),
     }
+    if body.get("calc"):                      # an empty history sends nothing
+        entry["calc"] = clean_calc(body["calc"])
     if kind in ("answers", "done"):
         if body.get("confidence") not in CONFIDENCE:
             raise ValueError("say how sure you are: guessed, shaky or solid")
