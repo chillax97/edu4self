@@ -23,7 +23,7 @@ THEME_ID = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
 # The engine draws these. Required ones must appear exactly once; optional ones at most once.
 SLOTS_REQUIRED = ("name", "rooms", "voices", "job", "replies", "block", "music", "tonight", "week", "die")
-SLOTS_OPTIONAL = ("timer", "finish", "doors", "clock", "sign", "water", "keys", "shelf")
+SLOTS_OPTIONAL = ("timer", "finish", "doors", "clock", "sign", "water", "keys", "shelf", "streak")
 SLOTS = SLOTS_REQUIRED + SLOTS_OPTIONAL
 
 # Words a theme may rename. Core learning words (Lesson, Submit, Grade, minutes) are never renamed.

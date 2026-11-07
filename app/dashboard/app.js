@@ -21,11 +21,13 @@
   var DAY_GOAL_MIN = 120;    // focused minutes a day, any block type; Settings → Goals
   var WEEK_GOAL_DAYS = 4;    // days with at least one block, Monday to Sunday; Settings → Goals
   var HOURS_PER_STEP = 8;    // rough focused hours per milestone step, for the finish-line date
+  var BACK_KEY = "edu.back.v1";   // the day the room last played "back after days away"
   var IDLE_DAYS = 3;         // this long without a block and the greeting goes gentle
   var PROOF_KEY = "edu.proofs.seen.v1";
 
   // ---------------------------------------------------------------- helpers
   function $(sel, el) { return (el || document).querySelector(sel); }
+  function $$(sel, el) { return Array.prototype.slice.call((el || document).querySelectorAll(sel)); }
   function esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -148,8 +150,14 @@
 
     if (isBar()) {
       if (!THEME || THEME.meta.id !== wantTheme()) { ensureTheme(); if (!THEME) return; }
-      app.innerHTML = renderBar(hero, topics, live);
+      if (!stage.seen && !stage.asked) {   // back after days away: the lights come up once that day
+        stage.asked = true;
+        stage.back = away >= IDLE_DAYS && store(BACK_KEY) !== dayKey(new Date());
+        if (stage.back) store(BACK_KEY, dayKey(new Date()));
+      }
+      var patched = paintRoom(app, renderBar(hero, topics, live));
       markFolds();
+      roomBeats(patched);
       if (topics[0]) document.documentElement.style.setProperty("--topic", topics[0].color);
       mountBlockCard();
       if (away >= IDLE_DAYS && !pick.touched && !active && pick.minutes !== 25) { pick.minutes = 25; paintControls(); }
@@ -1073,6 +1081,7 @@
     presence(active.end);
     arm();
     paintControls();
+    roomSound("hum_up", 0); roomSound("buzz", 0);
     if (isBar()) barSay("you", "start " + m + " minutes of " + esc(blockLabel(active.block)) + "." +
       (active.water ? ' <span class="bx-chk">water every ' + active.water + " min</span>" : ""));
   }
@@ -1100,6 +1109,7 @@
     paintDie();
     paintToday();
     if (a.task || isBar()) render();   // the hero card drops its live clock; the bar redraws its room
+    if (isBar()) { roomEvent(["end"], 2600); roomSound("hum_down", 0); roomSound("blink", 100); roomSound("blink", 450); }
     saving = flushUnsent();
     chime();
     if (!document.hasFocus()) notify(a);
@@ -1628,7 +1638,8 @@
       var days = p ? Math.floor((Date.now() - new Date(p.ts).getTime()) / 864e5) : 0;
       if (days >= 1) add(75, "bartender", (e.task.label || e.task.title) + " has been on " + W("counter") + " for " + plural(days, "day") + (claudeOK() ? ". Grade it. I'm starting to take it personally." : '. Say "check my inbox". I\'m starting to take it personally.'), "pend-" + e.task.id);
     });
-    if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
+    if (THEME && /data-slot="streak"/.test(THEME.layout)) {}   // the room shows it on its own board
+    else if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
     else if (S.streak >= 2) add(70, "volition", S.streak + " days in a row with a block. Don't look down.", "streak");
     if (t.glasses >= 4) add(60, "physical", t.glasses + " " + W("glasses") + " tonight. You're better cooled than most GPUs in prod.", "glasses");
     if (S.todayMins >= 240) add(55, "physical", hm(S.todayMins) + " today. Stand up, roll your shoulders, look at something farther away than the screen.", "heavy");
@@ -1973,7 +1984,7 @@
         (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "",
       voices: barLines2HTML(hero), job: recallCard(true) + barJob(hero), replies: barReplies(hero),
       keys: "Press <kbd>1</kbd>–<kbd>9</kbd> to reply.",
-      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: shelfHTML()
+      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: shelfHTML(), streak: streakFill()
     };
     var tpl = document.createElement("template");
     tpl.innerHTML = THEME.layout;   // cleaned by the server: no scripts, handlers, links or ids
@@ -1990,10 +2001,260 @@
     Object.keys(parts).forEach(function (k) { var el = $('.room [data-slot="' + k + '"]'); if (el) el.innerHTML = parts[k](); });
   }
 
+  // ---------------------------------------------------------------- the room stage: patched, not redrawn
+  // The room is drawn once. After that each poll rewrites only the slots whose HTML changed, so nothing
+  // restarts every 15 seconds. What changed gets marked: data-new on the one child that is new (a fuel
+  // segment, a week tile, a die stone, a voice line, a trophy) and a one-shot data-event on .room for the
+  // bigger beats (goal, week, die, mile, grade, end, back). app.css plays them; the sound table follows.
+  var stage = { key: "", html: "", slots: {}, seen: null, timer: 0, back: false };
+  var MILESTONES = [7, 14, 30, 60, 100, 200, 365];
+
+  function paintRoom(app, html) {
+    var key = THEME.meta.id + "|" + barRoom(), tpl = document.createElement("template");
+    tpl.innerHTML = html;
+    var fresh = tpl.content.firstElementChild, live = app.firstElementChild, news = {};
+    fresh.querySelectorAll("[data-slot]").forEach(function (el) { news[el.dataset.slot] = el.innerHTML; });
+    var same = live && live.classList.contains("room") && stage.key === key &&
+      Object.keys(news).join() === Object.keys(stage.slots).join() && Object.keys(news).length;
+    if (!same) {
+      if (!(live && stage.key === key && html === stage.html)) { app.innerHTML = ""; app.appendChild(fresh); }
+      stage.key = key; stage.html = html; stage.slots = news;
+      return false;
+    }
+    live.querySelectorAll("[data-slot]").forEach(function (el) {
+      var k = el.dataset.slot;
+      if (news[k] === stage.slots[k]) return;
+      var old = el.cloneNode(true);
+      if (k === "doors") {   // a door that opens slides out first, then the list is rewritten
+        var now = {}, gone = [];
+        tpl.innerHTML = news[k];
+        tpl.content.querySelectorAll("li b").forEach(function (b) { now[b.textContent] = 1; });
+        el.querySelectorAll("li").forEach(function (li) { var b = li.querySelector("b"); if (b && !now[b.textContent]) gone.push(li); });
+        if (gone.length) {
+          gone.forEach(function (li) { li.setAttribute("data-gone", ""); });
+          roomSound("lock", 0);
+          var html2 = news[k];
+          return setTimeout(function () { el.innerHTML = html2; }, roomDelay(600));
+        }
+      }
+      el.innerHTML = news[k];
+      markNew(k, old, el);
+    });
+    stage.html = html; stage.slots = news;
+    return true;
+  }
+
+  // the children that are new in a rewritten slot, compared with what was there
+  function markNew(k, old, el) {
+    function lit(sel) {
+      var a = old.querySelectorAll(sel), out = [];
+      el.querySelectorAll(sel).forEach(function (n, i) { if (n.classList.contains("on") && !(a[i] && a[i].classList.contains("on"))) { n.setAttribute("data-new", ""); out.push(n); } });
+      return out;
+    }
+    if (k === "tonight" && lit(".bx-pips i").length) roomSound("fuel", 0);
+    if (k === "week" && lit(".bx-pips i").length) roomSound("week", 0);
+    if (k === "die" && lit(".die i").length) {
+      var nb = el.querySelector(".bx-num"), ob = old.querySelector(".bx-num");
+      if (nb && ob && nb.textContent !== ob.textContent) nb.setAttribute("data-new", "");
+      roomSound("stone", 0);
+    }
+    if (k === "voices") {
+      var had = {}, any = false;
+      old.querySelectorAll("[data-fold]").forEach(function (l) { had[l.textContent] = 1; });
+      el.querySelectorAll(".bx-line").forEach(function (l) { if (!had[l.textContent]) { l.setAttribute("data-new", ""); any = true; } });
+      if (any) roomSound("line", 0);
+    }
+    if (k === "job") {
+      var nj = el.querySelector(".bx-job h2"), oj = old.querySelector(".bx-job h2");
+      if (nj && (!oj || nj.textContent !== oj.textContent)) el.querySelector(".bx-job").setAttribute("data-new", "");
+    }
+    if (k === "shelf") {
+      var ids = {}, landed = false;
+      old.querySelectorAll("[data-ks]").forEach(function (b) { ids[b.dataset.ks] = 1; });
+      el.querySelectorAll("[data-ks]").forEach(function (b) { if (!ids[b.dataset.ks]) { b.setAttribute("data-new", ""); landed = true; } });
+      if (landed) roomSound("thud", 390);   // it lands 65% into its .6s drop
+    }
+  }
+
+  // one-shot beats on .room; several can play at once (data-event="goal die")
+  function roomEvent(names, ms) {
+    var r = $(".room");
+    if (!r || !names.length) return;
+    r.removeAttribute("data-event"); void r.offsetWidth;
+    r.setAttribute("data-event", names.join(" "));
+    clearTimeout(stage.timer);
+    stage.timer = setTimeout(function () { var x = $(".room"); if (x) x.removeAttribute("data-event"); }, ms || 3400);
+  }
+
+  function dayPhase() {
+    var h = new Date().getHours();
+    return h >= 5 && h < 11 ? "morning" : h >= 11 && h < 17 ? "day" : h >= 17 && h < 22 ? "evening" : "late";
+  }
+  function paintPhase() {
+    var r = $(".room"), p = dayPhase();
+    if (r && r.getAttribute("data-phase") !== p) r.setAttribute("data-phase", p);
+  }
+
+  // what the room counts, to tell what just changed between two draws
+  function roomCounts() {
+    var t = tonight(), d = dieNow(), s = streakRuns();
+    return { mins: t.mins, hit: t.hit, etched: d.etched, shipped: d.shipped, streak: s.now, best: s.best,
+             stamp: DATA && DATA.state ? DATA.state.updated : "" };
+  }
+
+  // after a draw: compare with the last one and play the beats
+  function roomBeats(patched) {
+    var now = roomCounts(), was = stage.seen, ev = [];
+    stage.seen = now;
+    paintPhase();
+    var r = $(".room");
+    if (!r) return;
+    $$(".room .bx-pips.h i, .room .bx-pips.m i, .room .bx-cab .die i, .room .bx-bottles i").forEach(function (e) {
+      e.style.setProperty("--k", Array.prototype.indexOf.call(e.parentNode.children, e));
+    });
+    if (!was) {
+      if (stage.back) { ev.push("back"); roomSound("swell", 0); if (r.querySelector(".bx-chalk[data-wipe]")) roomSound("swish", 1000); }
+      return roomEvent(ev, 3600);
+    }
+    if (!patched) return;
+    if (was.mins < DAY_GOAL_MIN && now.mins >= DAY_GOAL_MIN) { ev.push("goal"); roomSound("cap", 920); }   // lands 30% into the 1.4s drop that starts at .5s
+    if (was.hit < WEEK_GOAL_DAYS && now.hit >= WEEK_GOAL_DAYS) { ev.push("week"); $$(".room .bx-pips.m i.on").forEach(function (t, k) { roomSound("week", k * 70); }); }
+    if (now.shipped > was.shipped) { ev.push("die"); $$(".room .bx-bottles i").forEach(function (b, k) { roomSound("clink", 1500 + k * 80, k); }); }
+    if (now.streak > was.streak) {
+      roomSound(now.streak % 5 === 0 ? "slash" : "scratch", 0);
+      if (MILESTONES.indexOf(now.streak) >= 0) { ev.push("mile"); roomSound("tap", 500); roomSound("tap", 800); roomSound("underline", 1000); }
+      if (now.best > was.best) roomSound("star", 600);
+    }
+    if (now.stamp !== was.stamp && was.stamp) { ev.push("grade"); roomSound("bell", 0); }
+    roomEvent(ev);
+  }
+
+  // ------------------------------------------------ the streak: days in a row with at least one finished block
+  // Today counts once you study; until then it counts back from yesterday, so it never looks broken by day.
+  function streakRuns() {
+    var byDay = {}, today = dayKey(new Date());
+    allBlocks().forEach(function (b) { byDay[dayKey(new Date(b.ts || b.started))] = 1; });
+    var n = 0, d = new Date();
+    if (!byDay[today]) d.setDate(d.getDate() - 1);
+    while (byDay[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
+    var best = 0, last = 0, run = 0, prev = null;
+    Object.keys(byDay).sort().forEach(function (k) {
+      var day = new Date(k + "T12:00:00");
+      run = prev && Math.round((day - prev) / 864e5) === 1 ? run + 1 : 1;
+      best = Math.max(best, run); last = run; prev = day;
+    });
+    return { now: n, best: best, last: last };
+  }
+
+  // The chalk board: only the current group of five is drawn, plus one small finished group, so it reads
+  // the same at 13 days or 130; the number carries the count. kind: "" quiet, "day" a new mark, "wipe".
+  function boardHTML(n, best, kind, newBest) {
+    var X = [0, 6, 12, 18], R = [-2, 1, -1, 2];
+    function group(cls, m, newLast) {
+      var h = '<span class="' + cls + '">';
+      for (var i = 0; i < m; i++) {
+        var nw = newLast && i === m - 1 ? " data-new" : "";
+        h += i < 4 ? '<i class="ch-s"' + nw + ' style="left:' + X[i] + "px;--r:" + R[i] + 'deg"></i>' : '<i class="ch-sl"' + nw + "></i>";
+      }
+      return h + "</span>";
+    }
+    var day = kind === "day", g = Math.floor((n - 1) / 5), m = n > 0 ? (n - 1) % 5 + 1 : 0, h = "";
+    h += '<span class="ch-in' + (n >= 100 ? " big" : "") + '"><span class="ch-fade">';
+    if (n > 0) {
+      if (g >= 1 && n < 100) h += group("ch-prev", 5, false);
+      h += group("ch-cur", m, day);
+      if (day && m < 5) h += '<span class="ch-dust" style="left:' + (18 + X[m - 1]) + 'px"><i style="--j:0;--dx:-4px"></i><i style="--j:1;--dx:1px"></i><i style="--j:2;--dx:5px"></i></span>';
+      h += '<b class="ch-n"><span' + (day ? " data-new" : "") + ">" + n + "</span></b>";
+      if (day && MILESTONES.indexOf(n) >= 0) h += '<u class="ch-ul"></u>';
+    }
+    h += '</span><small class="ch-best"><i class="ch-star"' + (newBest ? " data-new" : "") + "></i>best <b" + (newBest ? " data-new" : "") + ">" + best + "</b></small>" +
+      '<i class="ch-rag"></i></span>';
+    return '<span class="bx-chalk"' + (kind === "wipe" ? " data-wipe" : "") + ' role="img" aria-label="' + n + (n === 1 ? " day" : " days") + " in a row with a block. Best: " + best + '.">' + h + "</span>";
+  }
+
+  function streakFill() {
+    var s = streakRuns(), was = stage.seen;
+    if (!was && stage.back) return boardHTML(s.last, s.best, "wipe", false);   // back after days: the old run gets wiped once
+    var day = !!(was && s.now > was.streak);
+    return boardHTML(s.now, s.best, day ? "day" : "", day && s.best > was.best);
+  }
+
+  // ------------------------------------------------ room sounds: synthesized with Web Audio, no files
+  // Off unless Settings → Room has "Room sounds" on. Each starts with its motion (the CSS delay), at
+  // once under reduced motion. While a block runs only its start and end sounds play.
+  var SOUND_GAIN = 0.15, roomBus = null, noiseBuf = null;
+  function bus() {
+    if (!audio) return null;
+    if (!roomBus) { roomBus = audio.createGain(); roomBus.gain.value = SOUND_GAIN; roomBus.connect(audio.destination); }
+    return roomBus;
+  }
+  function tone(t, f0, f1, dur, g, type, att) {
+    var o = audio.createOscillator(), e = audio.createGain(); o.type = type || "sine";
+    o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(g, t + (att || 0.005)); e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(e); e.connect(bus()); o.start(t); o.stop(t + dur + 0.03);
+  }
+  function hiss(t, dur, f0, f1, q, g, type, peak) {
+    if (!noiseBuf) { noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate); var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    var s = audio.createBufferSource(), f = audio.createBiquadFilter(), e = audio.createGain(); s.buffer = noiseBuf; s.loop = true;
+    f.type = type || "bandpass"; f.Q.value = q; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(g, t + dur * (peak || 0.15)); e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(e); e.connect(bus()); s.start(t); s.stop(t + dur + 0.03);
+  }
+  // each entry: function (t, i), t = start on the audio clock, i = an optional index (the bottle)
+  var SOUNDS = {
+    fuel:      function (t) { tone(t, 230, 100, 0.2, 0.55, "sine", 0.02); tone(t + 0.1, 180, 85, 0.16, 0.35, "sine", 0.02); },      // a soft low gulp
+    cap:       function (t) { tone(t, 2600, 2500, 0.16, 0.35, "triangle"); tone(t, 3900, 3800, 0.1, 0.18, "triangle"); tone(t + 0.07, 2100, 2000, 0.12, 0.2, "triangle"); },
+    week:      function (t) { hiss(t, 0.04, 3500, 2500, 1.2, 0.5, "highpass", 0.1); tone(t, 900, 500, 0.04, 0.15, "square"); },     // a card click
+    stone:     function (t) { tone(t, 1900, 1700, 0.03, 0.3, "square"); [2700, 3400, 4300].forEach(function (f, k) { tone(t + 0.2 + k * 0.03, f, f, 0.28, 0.07, "sine", 0.03); }); },
+    clink:     function (t, i) { var f = 1500 + (i || 0) * 85; tone(t, f, f * 0.99, 0.28, 0.3, "triangle"); tone(t, f * 1.5, f * 1.5, 0.16, 0.12, "sine"); },
+    hum_up:    function (t) { tone(t, 55, 120, 1.4, 0.45, "sine", 0.25); tone(t, 110, 240, 1.4, 0.12, "triangle", 0.4); },             // the record spins up
+    buzz:      function (t) { var o = audio.createOscillator(), f = audio.createBiquadFilter(), e = audio.createGain(); o.type = "sawtooth"; o.frequency.value = 100; f.type = "lowpass"; f.frequency.value = 700; e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.22, t + 0.02); e.gain.exponentialRampToValueAtTime(0.0001, t + 0.32); o.connect(f); f.connect(e); e.connect(bus()); o.start(t); o.stop(t + 0.35); },
+    hum_down:  function (t) { tone(t, 120, 50, 1.5, 0.4, "sine", 0.05); tone(t, 240, 100, 1.2, 0.1, "triangle", 0.05); },
+    blink:     function (t) { tone(t, 100, 100, 0.12, 0.2, "sawtooth", 0.01); hiss(t, 0.03, 2500, 2000, 1, 0.2, "bandpass", 0.1); },
+    bell:      function (t) { [[1320, 0.5, 0.55], [2640, 0.22, 0.38], [3960, 0.12, 0.25], [1870, 0.12, 0.3]].forEach(function (p) { tone(t, p[0], p[0], p[2], p[1], "sine", 0.003); }); },
+    line:      function (t) { tone(t, 1500, 1100, 0.05, 0.3, "sine", 0.004); },
+    lock:      function (t) { hiss(t, 0.025, 3200, 2800, 2, 0.5, "bandpass", 0.1); tone(t, 1100, 900, 0.03, 0.18, "square"); hiss(t + 0.08, 0.03, 1800, 1500, 2, 0.4, "bandpass", 0.1); },
+    thud:      function (t) { tone(t, 120, 45, 0.24, 0.8, "sine", 0.004); hiss(t, 0.08, 400, 150, 0.7, 0.3, "lowpass", 0.05); },
+    scratch:   function (t) { hiss(t, 0.3, 2200, 3600, 0.9, 0.35, "bandpass", 0.25); },                                             // a chalk stroke
+    slash:     function (t) { hiss(t, 0.42, 1800, 4000, 0.8, 0.4, "bandpass", 0.3); },
+    underline: function (t) { hiss(t, 0.35, 2400, 3400, 0.9, 0.3, "bandpass", 0.3); },
+    tap:       function (t) { tone(t, 190, 110, 0.09, 0.5, "sine", 0.003); hiss(t, 0.03, 1200, 800, 1, 0.2, "bandpass", 0.1); },   // a knuckle on the board
+    star:      function (t) { tone(t, 1760, 1760, 0.4, 0.18, "sine", 0.01); tone(t + 0.07, 2349, 2349, 0.4, 0.14, "sine", 0.01); },
+    swish:     function (t) { hiss(t, 0.55, 500, 1900, 0.6, 0.3, "bandpass", 0.5); },                                              // the rag wipe
+    swell:     function (t) { [220, 277, 330].forEach(function (f) { tone(t, f, f, 1.5, 0.22, "triangle", 0.7); }); }                // back after days
+  };
+  var HUSH_OK = { hum_up: 1, buzz: 1, hum_down: 1, blink: 1 };
+  function reducedMotion() { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function roomDelay(ms) { return reducedMotion() ? 0 : ms; }
+  function soundsOn() { return cfg().room_sounds === true && isBar(); }
+  function roomSound(name, ms, i) {
+    function fire() {
+      if (active && !HUSH_OK[name]) return;
+      (window.__roomSounds = window.__roomSounds || []).push({ name: name, t: Date.now() });   // what played and when, for the tests
+      if (!soundsOn() || !SOUNDS[name]) return;
+      unlockAudio();
+      if (audio && audio.state === "running") try { SOUNDS[name](audio.currentTime + 0.005, i); } catch (e) {}
+    }
+    ms = roomDelay(ms || 0);
+    if (ms <= 0) fire(); else setTimeout(fire, ms);
+  }
+  // browsers only allow sound after a click on the page
+  document.addEventListener("pointerdown", function () { if (soundsOn()) unlockAudio(); });
+
   function barTick() {
     if (!isBar()) return;
     var wc = $('.room [data-slot="clock"]');
-    if (!active) { if (wc) wc.textContent = hhmm(Date.now()); return; }
+    paintPhase();
+    if (!active) {
+      var hm = hhmm(Date.now());
+      if (wc && wc.textContent !== hm) {   // the minute rolls over instead of jumping
+        var first = wc.textContent;
+        wc.textContent = hm;
+        if (first) { wc.removeAttribute("data-new"); void wc.offsetWidth; wc.setAttribute("data-new", ""); }
+      }
+      return;
+    }
     var t = clock(active.end - Date.now());
     if (wc) wc.textContent = t;
     var bt = $("[data-bx-time]"); if (bt) bt.textContent = t;
@@ -2618,6 +2879,7 @@
         'To make your own, ask Claude for one (it follows <code>docs/THEMES.md</code>).</p>' +
       '<div class="set-rooms" role="radiogroup" aria-label="Room">' + roomPicks(c) + "</div>" +
       '<label class="set-check"><input type="checkbox" id="set-theme-lessons"' + (c.theme_lessons !== false ? " checked" : "") + "> Lessons wear the room's look (off: the plain default lesson pages)</label>" +
+      '<label class="set-check"><input type="checkbox" id="set-room-sounds"' + (c.room_sounds === true ? " checked" : "") + "> Room sounds: small, quiet sounds with what moves in the room (a bell for a grade, chalk for a new streak day). During a block, only its start and end</label>" +
 
       '<h3 id="set-goals">Goals</h3>' +
       '<div class="set-two">' +
@@ -2712,6 +2974,7 @@
     var view = document.querySelector('input[name="set-view"]:checked'); if (view) c.view = view.value;
     var room = document.querySelector('input[name="set-theme"]:checked'); if (room) c.theme = room.value;
     c.theme_lessons = $("#set-theme-lessons").checked;
+    c.room_sounds = $("#set-room-sounds").checked;
     c.gifts = $("#set-gifts").checked;
     c.reminders = { mail: $("#set-rem-mail").checked };
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
