@@ -82,9 +82,9 @@ or a moved mission. Material merely covered is not a record; neither is a sessio
 
 ## Terms
 
-**KV cache**:
-The stored keys and values of earlier tokens, reused so each new token skips recomputing them.
-_Avoid_: attention cache, memory
+**Preterite**:
+The past tense for a finished action with a clear end: "ayer comí paella".
+_Avoid_: simple past, perfect
 ```
 
 A term goes in only once the learner has used it correctly without notes. Pick one word per idea and
