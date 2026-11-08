@@ -611,7 +611,7 @@ def local_topic(topic):
 
 
 def linked_topic(link):
-    """Read-only facts about a topic that lives outside this vault (e.g. the old teach hub)."""
+    """Read-only facts about a topic that lives outside this vault (e.g. an older course folder)."""
     root = link["root"]
     mission = read_text(os.path.join(root, "MISSION.md"))
     title = link.get("title")
