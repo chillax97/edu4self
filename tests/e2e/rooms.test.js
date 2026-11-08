@@ -298,3 +298,43 @@ test("a broken room of your own shows its problem in Settings and can't be picke
   await closePage(page);
   fs.rmSync(d, { recursive: true, force: true });
 });
+
+test("a bar of your own replaces the built-in: its words name the back room, its voice names show in Settings", async () => {
+  const back = async (page) => {
+    await page.click('[data-room="back"]');
+    await page.waitForSelector(".bx-back .cluster");
+    return page.$eval(".bx-back .cluster", (e) => e.innerText.replace(/\s+/g, " "));
+  };
+  setConfig({ theme: "bar" });
+  // the built-in bar: plain words a stranger reads at a glance
+  let page = await openPage(browser, server.url, { view: "bar" });
+  await page.waitForSelector(".room.t-bar", { timeout: 5000 });
+  let text = await back(page);
+  assert.match(text, /^The die case Tray #1 row 1 /i);
+  assert.match(text, /8 dies = a row · 4 rows = a tray/);
+  assert.equal(await page.$eval('#help [data-w="row"]', (e) => e.textContent), "row");
+  await closePage(page);
+  // a copy in the vault with the same id, carrying its own words and a voice name
+  const d = path.join(v.vault, "themes", "bar"), src = path.join(ENGINE, "app", "dashboard", "themes", "bar");
+  fs.cpSync(src, d, { recursive: true });
+  const meta = readJSON(path.join(src, "theme.json"));
+  meta.words = { collection: "Your cluster", row: "node", rows: "nodes", tray: "rack", trays: "racks" };
+  meta.voices = { gpu: { name: "GPU whisperer" } };
+  fs.writeFileSync(path.join(d, "theme.json"), JSON.stringify(meta));
+  try {
+    page = await openPage(browser, server.url, { view: "bar" });
+    await page.waitForSelector(".room.t-bar", { timeout: 5000 });
+    text = await back(page);
+    assert.match(text, /^Your cluster Rack #1 node 1 /i);
+    assert.match(text, /8 dies = a node · 4 nodes = a rack/);
+    assert.equal(await page.$eval('#help [data-w="row"]', (e) => e.textContent), "node");
+    assert.equal(await page.$eval('#help [data-w="collection"]', (e) => e.textContent), "your cluster");
+    await page.click("#btn-settings");
+    await page.waitForSelector('[data-voice="gpu"]');
+    assert.equal(await page.$eval('[data-voice="gpu"]', (e) => e.placeholder), "GPU whisperer");
+    assert.deepEqual(page.errors, []);
+    await closePage(page);
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true });
+  }
+});

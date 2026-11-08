@@ -2,6 +2,7 @@
 import http.client
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,6 +41,25 @@ class BuiltinTest(unittest.TestCase):
             t = themes.load(os.path.join(BUILTIN, tid), tid)
             self.assertEqual(t["errors"], [], tid)
             self.assertTrue(t["lesson_css"], tid + " dresses lessons too")
+
+    def test_the_defaults_carry_no_one_s_field(self):
+        # the built-in rooms, the page and the server defaults are for strangers: studying and light
+        # coding humour, not one person's machine-learning jokes (those go in a vault room)
+        # (a "-" before a word is code: linear-gradient, bx-cluster; lowercase "gpu" is the voice's id and a class)
+        ml = re.compile(r"(?<![-\w])(GPUs?|(?i:h100|kv cache|softmax|gradients?|attention is all|residual connection|mlp|"
+                        r"leetcode|neural|whisperer|last token|cache miss|dead neurons|cluster|rack|in prod))\b")
+        for tid in sorted(os.listdir(BUILTIN)):
+            meta = themes.load(os.path.join(BUILTIN, tid), tid)["meta"]
+            text = json.dumps([meta[k] for k in ("names", "gags", "lines", "words", "about")] +
+                              [v.get("name", "") for v in meta["voices"].values()])   # names, not ids: the id "gpu" stays
+            self.assertEqual(ml.findall(text), [], tid)
+        self.assertEqual(ml.findall(json.dumps(server.DEFAULT_CONFIG["bar"])), [])
+        self.assertEqual(ml.findall(json.dumps(themes.WORDS)), [])
+        with open(os.path.join(APP, "dashboard", "app.js"), encoding="utf-8") as fh:
+            strings = re.findall(r'"(?:[^"\\\n]|\\.)*"', fh.read())   # what the page can say; ids and classes like "gpu" aren't words
+        said = [x for x in strings if " " in x and ml.search(x)]
+        self.assertEqual(said, [])
+        self.assertEqual(server.DEFAULT_CONFIG["goals"], {"day_minutes": 60, "week_days": 4})
 
 
 class LayoutTest(unittest.TestCase):
@@ -101,6 +121,16 @@ class MetaTest(unittest.TestCase):
                      ("palette", {"nope": "#000"}), ("words", {"lesson": "Chapter"}), ("fonts", {"head": "Comic Sans"}),
                      ("voices", {"stranger": {"name": "x"}}), ("lines", {"nope": "x"}), ("scape", "techno")):
             self.assertTrue(themes.clean_meta(dict(good, **{k: v}), "train")[1], (k, v))
+
+    def test_a_room_can_name_the_back_room_and_say_its_own_lines(self):
+        meta, errors = themes.clean_meta({"name": "Mine", "words": {"collection": "Your shelf", "row": "stack", "rows": "stacks",
+                                                                    "tray": "crate", "trays": "crates"},
+                                          "voices": {"gpu": {"name": "The printer"}},
+                                          "lines": {k: "said {n}" for k in ("water", "hydrated", "row_full", "row_full_body", "die_full_body")}}, "mine")
+        self.assertEqual(errors, [])
+        self.assertEqual(meta["words"]["row"], "stack")
+        self.assertEqual(meta["voices"]["gpu"]["name"], "The printer")
+        self.assertEqual(meta["lines"]["row_full"], "said {n}")
 
     def test_core_learning_words_cannot_be_renamed(self):
         for word in ("lesson", "submit", "grade", "minutes"):
