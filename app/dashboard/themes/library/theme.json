@@ -14,9 +14,10 @@
     "tonight": "Ink tonight", "week": "Evenings this week", "nights": "evenings", "die_case": "The bindery", "die": "volume", "dies": "volumes",
     "tile": "page", "tiles": "pages", "shipped": "bound", "doors": "Shelved for later", "job": "On the desk",
     "note": "Leave a note for the librarian.", "how": "How does this library work?", "back_q": "What's in the archive?",
-    "sign_open": "QUIET", "sign_busy": "READING", "glass": "cup", "glasses": "cups"
+    "sign_open": "QUIET", "sign_busy": "READING", "glass": "cup", "glasses": "cups",
+    "collection": "The bindery", "row": "shelf", "rows": "shelves", "tray": "bookcase", "trays": "bookcases"
   },
-  "voices": { "bartender": { "name": "The librarian", "color": "#f3e6c4" }, "regular": { "name": "The night owl", "color": "#c8b6ff" },
+  "voices": { "bartender": { "name": "The librarian", "color": "#f3e6c4" }, "gpu": { "name": "The bookbinder" }, "regular": { "name": "The night owl", "color": "#c8b6ff" },
               "jukebox": { "name": "The gramophone", "color": "#d8b26a" }, "encyclopedia": { "name": "The catalogue", "color": "#f5d06f" } },
   "names": [["The Reading Room", "silence is a study method"], ["The Late Stacks", "open until you close the book"],
             ["The Quiet Wing", "whispers only, thoughts loud"]],
