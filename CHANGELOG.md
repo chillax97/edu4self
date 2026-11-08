@@ -70,6 +70,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Changed
 
+- The bar's default sign names no longer include "Bad Tokens"; "Off by One" takes its place. A name
+  list you saved keeps working as it is.
 - The job comes first in every room. The room's own lines no longer repeat what's already on screen
   (tonight's minutes, the week's nights, Up next, the die's count, the finish line), which also
   drops the stray "seen?." full stop. Every line folds to one line with its name; the host's note

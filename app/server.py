@@ -114,7 +114,7 @@ DEFAULT_CONFIG = {
         "names": [
             ["Cache Miss", "nobody remembers your name"],
             ["The Last Token", "last call, every step"],
-            ["Bad Tokens", "loud, wrong, and proud of it"],
+            ["Off by One", "close, every single night"],
             ["Exploding Gradients", "no ceiling, no mercy"],
             ["Dead Neurons", "switched off since forever"],
         ],
