@@ -55,7 +55,7 @@ class SkillFilesTest(unittest.TestCase):
             for file in os.listdir(os.path.join(SKILLS, name)):
                 if file.endswith(".md") and file != "PROTOCOL.md":   # PROTOCOL.md is a copy of docs/
                     with self.subTest(skill=name, file=file):
-                        self.assertNotIn("—", self.read(name, file))
+                        self.assertNotIn("\u2014", self.read(name, file))
 
 
 if __name__ == "__main__":
