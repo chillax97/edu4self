@@ -101,12 +101,15 @@ test("New topic: say what and why, Claude starts with the teach skill", async ()
   await page.type("#nt-more", "20 minutes a day");
   await page.click('#nt-form button[type="submit"]');
   await page.waitForSelector("#newtopic", { hidden: true });
-  await page.waitForFunction(() => /You said: Start a new topic/.test(document.querySelector("#cl-log").innerText));
+  // the stand-in echoes only the prompt's last 200 characters; the full prompt is checked from its run log below
+  await page.waitForFunction(() => /You said:/.test(document.querySelector("#cl-log").innerText));
   await waitIdle(page);
   const p = runs().at(-1).args;
   const prompt = p[p.indexOf("-p") + 1];
   assert.match(prompt, /teach skill/);
   assert.match(prompt, /Spanish, for a move to Madrid\nMore about me: 20 minutes a day/);
+  assert.match(prompt, /^Start a new topic with the teach skill/);
+  assert.match(prompt, /stays in that room's theme/);
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
