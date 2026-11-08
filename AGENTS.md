@@ -1,5 +1,7 @@
 # edu4self, for agents
 
+> **One rule for every room:** everything made for a room (characters, dialogue, jokes, names, labels, trophies, sounds, lessons, words on screen) stays in that room's theme, with plain core learning words. Read [docs/THEMES.md#the-one-rule-stay-in-the-room](docs/THEMES.md#the-one-rule-stay-in-the-room) first.
+
 edu4self is a local learning dashboard where a coding agent is the tutor. It's built to be handed to
 you: a person clones this repo, opens you in it, and says what they want. Your job is one of two
 branches. Pick it from the request:

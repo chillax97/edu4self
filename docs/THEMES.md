@@ -8,16 +8,25 @@ Pick one in **⚙ Settings → Room**.
 This guide is for anyone making a room, and it is written so an agent can follow it. Ask Claude
 "make me a room that feels like a lighthouse" and it should be able to finish with nothing but this file.
 
-## The one rule: themed, but recognizable
+## The one rule: stay in the room
 
-Every object the learner sees should belong to the room, and still be understood at a glance.
+**Everything made for a room stays in that room's theme.** That covers the room itself, lessons and
+lectures dressed for it, its characters (voices and personas), their dialogue and jokes, object names,
+labels, trophies, sounds and any words on screen. Nothing should feel borrowed from another room or
+generic. But the core learning words stay plain, and a themed object must still be recognizable for
+what it does, never so far off it feels weird.
 
+- A bar character says "last call", not a library line like "please keep your voice down". A tea
+  master pours; the conductor announces the next stop.
+- The streak board is "the punch card" on the train and "the shelf of tea bowls" in the tea house. Both still
+  read as a streak. "The ledger of continuous diurnal fidelity" does not.
 - In the library, finished dies are bound **volumes** in **the bindery**. On the train they are **ticket
-  books** you punch. Both read instantly. A "codex of accumulated attentional resonance" does not.
+  books** you punch. Both read instantly.
 - Rename a thing only when the new word is obvious in its place. If the learner would need a legend to
   decode it, keep the plain word.
 - **Core learning words never change:** Lesson 01, Submit answers, Grade, 25 min, dates, numbers and
-  every button that does something. The engine enforces this: those words can't be renamed.
+  every button that does something. Lesson 01 is Lesson 01 in every room. The engine enforces this:
+  those words can't be renamed.
 - Give each room its own fitting object for every visible thing, including new ones (the shelf for
   keepsakes, reminders, cards). A room that leaves the bar's jukebox standing in a library feels broken.
 - Keep it light. The jokes are background: one short line, about studying, kind to the learner.

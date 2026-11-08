@@ -56,6 +56,8 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    - write the `coach` note: `date`, a `headline` and a `body` addressed to the learner. The
      `headline` is the verdict in one sentence of at most 15 words. The `body` is at most 40 words in
      2 sentences: the one thing to do differently, then what's next. It never repeats a voice;
+   - dress it for the room: voices, jokes and any lesson styling stay in the learner's room theme (see
+     [THEMES.md](THEMES.md#the-one-rule-stay-in-the-room)); core words like "Lesson 01" stay plain;
    - optionally `coach.voices`: lines `{voice, text}` that the room's characters say about this
      grading. `voice` ∈ `logic | volition | gpu | encyclopedia | physical | nostalgia | critic
      | regular | jukebox`. Write 2 to 3 per grade (4 at most on a milestone), only for characters

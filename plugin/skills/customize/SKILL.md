@@ -16,7 +16,7 @@ there. Then, if they want you to do it:
    - `name` (≤ 60 chars), `view`: `"bar"` (their room) or `"classic"`
    - `theme`: `bar`, `library`, `space`, `train`, `tea`, or a room in `themes/`; `theme_lessons`:
      true/false (lessons take the room's look). A new room ("make it a lighthouse") is files, not a
-     setting: follow `docs/THEMES.md` in the edu4self engine to its last step.
+     setting: follow `docs/THEMES.md` in the edu4self engine to its last step. Its first rule applies to everything you write: stay in the room (characters, jokes, names, labels, sounds), with core learning words left plain.
    - `goals`: `day_minutes` 10–960, `week_days` 1–7
    - `blocks.presets`: 1–4 durations, 1–240 min. `blocks.kinds`: 1–8 of `{id, label, color, minutes?}`;
      `id` is lowercase `[a-z][a-z0-9_-]{0,23}` and must stay the same for existing kinds (old blocks
