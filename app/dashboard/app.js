@@ -2841,7 +2841,7 @@
         '<p class="form-error" id="nt-error" hidden></p>' +
         '<div class="sub-buttons"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-primary" type="submit">Start with Claude</button></div>'
       : '<p class="nt-intro">Starting a topic needs Claude Code on this computer. Install it from <a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a> and sign in once; then this button does it all here. Until then, in a terminal:</p>' +
-        "<pre><code>cd " + esc((DATA && DATA.server && DATA.server.vault) || "your-vault") + " && claude\n&gt; /teach what you want to learn</code></pre>" +
+        "<pre><code>cd " + esc((DATA && DATA.server && DATA.server.vault) || "your-vault") + " && claude\n&gt; I want to learn (what you want to learn)</code></pre>" +
         '<div class="sub-buttons"><button class="btn btn-primary" type="button" data-close>OK</button></div>';
     openOverlay("newtopic");
     var w = $("#nt-what"); if (w) w.focus();

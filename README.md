@@ -112,7 +112,7 @@ the dashboard at login and opens <http://127.0.0.1:4747>. After that, give Claud
 
 ```sh
 claude plugin marketplace add chillax97/edu4self
-claude plugin install edu4self@edu4self     # also installs Matt Pocock's teach skill
+claude plugin install edu4self@edu4self
 ```
 
 Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
@@ -121,7 +121,7 @@ your tutor. The page runs Claude Code on your computer, with your own login. A t
 
 ```sh
 cd ~/learn && claude
-> /teach Spanish for a move to Madrid     # start a topic
+> I want to learn Spanish for a move to Madrid   # start a topic (or /edu4self:new-topic)
 > check my inbox                          # after you submit something on the dashboard
 ```
 
@@ -198,7 +198,7 @@ the vault, in `~/.config/edu4self/` or, if you choose, the macOS Keychain or you
 
 ## Credits
 
-edu4self stands on other people's work: Matt Pocock's `teach` skill, Claude Code, four open-source
+edu4self stands on other people's work: Claude Code, Matt Pocock's `teach` skill (an inspiration for the lesson formats), four open-source
 typefaces, and decades of learning research. The bar view's dialogue is inspired by *Disco Elysium*.
 Full list with licenses: [CREDITS.md](CREDITS.md).
 

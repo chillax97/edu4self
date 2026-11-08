@@ -69,7 +69,7 @@ Use neutral stand-ins (Kim, Sam, Spanish, Rust, `~/learn`).
    you; and the next move, which happens in the vault, where the tutor instructions live:
 
        cd <vault> && claude
-       > /teach <what they want to learn>
+       > I want to learn <what they want to learn>      (or /edu4self:new-topic)
 
    If they want to remove the example topic, that's a vault change too (its `AGENTS.md` says how).
 

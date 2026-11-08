@@ -14,7 +14,7 @@ tags: [home, index]
 
 ## Topics
 Each topic is a folder here with a `MISSION.md`, `lessons/`, `probes/`, `reference/`,
-`learning-records/` and a `Dashboard.md` log. Start a new one with `/teach <what you want to learn>`.
+`learning-records/` and a `Dashboard.md` log. Start a new one with **+ New topic** on the dashboard, or tell Claude "I want to learn X".
 
 ## Your data
 Everything in `_system/` is yours and stays on this computer: `state.json` (written by Claude),
