@@ -31,7 +31,7 @@ def blk(when, minutes=30):
 
 def state_with(status="todo"):
     q = {"id": "t-recall", "kind": "probe", "status": status, "label": "Recall check", "title": "How big is the cache?", "href": "/x"}
-    return {"topics": [{"id": "t", "title": "Inference", "queue": [q], "history": [
+    return {"topics": [{"id": "t", "title": "Rust", "queue": [q], "history": [
         {"date": "2026-11-03", "title": "Lesson 06: cache size", "evidence": True},
         {"date": "2026-10-20", "title": "older", "evidence": True}]}]}
 
@@ -75,14 +75,14 @@ class AwayTest(unittest.TestCase):
         title, body = reminders.away(st, blocks, items, cfg, 7, reminders.last_activity(blocks, []), set(), 4747)
         self.assertIn("A week away", title)
         self.assertIn("30 minutes of Lessons", body, "the last session, in the learner's own words for it")
-        self.assertIn("The last thing you proved: Lesson 06: cache size (Inference)", body)
-        self.assertIn("Inference: Fundamentals, 1 of 2 steps done", body)
+        self.assertIn("The last thing you proved: Lesson 06: cache size (Rust)", body)
+        self.assertIn("Rust: Fundamentals, 1 of 2 steps done", body)
         self.assertIn("2 hours of focused study over 2 days", body)
         self.assertIn("2 bottle caps, one for each day you reached your daily goal of 60 minutes", body, "a trophy says what it means")
         self.assertIn("1 neon sign, the week you studied on 4 days", body)
         self.assertIn("1 die, for your first 10 focused hours", body)
         self.assertIn("8 hours more and your next die is done", body)
-        self.assertIn("Recall check: How big is the cache?, in Inference", body)
+        self.assertIn("Recall check: How big is the cache?, in Rust", body)
         self.assertIn("Why it matters: It's how a server streams", body)
         self.assertIn("One 25-minute block", body, "the smallest block on offer")
         self.assertIn("http://127.0.0.1:4747/#submit=t-recall", body)

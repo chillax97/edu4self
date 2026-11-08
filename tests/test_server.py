@@ -214,9 +214,9 @@ class ServerTest(unittest.TestCase):
 
     def test_a_sign_subtitle_is_a_string_or_a_short_list_of_strings(self):
         def names(sub):
-            return server.clean_config({"bar": {"names": [["Bad Tokens", sub]]}})["bar"]["names"]
-        self.assertEqual(names("line one"), [["Bad Tokens", "line one"]], "a string stays a string")
-        self.assertEqual(names(["line one", "line two"]), [["Bad Tokens", ["line one", "line two"]]])
+            return server.clean_config({"bar": {"names": [["The Night Shift", sub]]}})["bar"]["names"]
+        self.assertEqual(names("line one"), [["The Night Shift", "line one"]], "a string stays a string")
+        self.assertEqual(names(["line one", "line two"]), [["The Night Shift", ["line one", "line two"]]])
         self.assertEqual(len(names(["x"] * 20)[0][1]), 20)
         for bad, msg in ((["x"] * 21, "1 to 20"), ([], "1 to 20"), (["x" * 81], "at most 80"),
                          (["fine", 7], "at most 80"), ("x" * 81, "at most 80")):
@@ -234,7 +234,7 @@ class ServerTest(unittest.TestCase):
                  "reminders": {"notify": True, "mail": False}, "goals": {"day_minutes": 45, "week_days": 6},
                  "blocks": {"presets": [15, 40], "kinds": [{"id": "maths", "label": "Maths", "color": "amber", "minutes": 30}]},
                  "water": {"every": 30}, "obsidian": {"enabled": True, "vault": "notes"},
-                 "bar": {"names": [["Ada's", "open late"], ["Bad Tokens", ["line one", "line two"]]], "voices": {}, "gags": False, "lines": []},
+                 "bar": {"names": [["Ada's", "open late"], ["The Night Shift", ["line one", "line two"]]], "voices": {}, "gags": False, "lines": []},
                  "music": {"source": "scape", "scape": "rain", "stream": {"url": "", "name": ""}, "file": "",
                            "title": "", "subtitle": "", "autoplay": True}}
         now = server.clean_config(json.loads(json.dumps(saved)))

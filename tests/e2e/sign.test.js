@@ -11,7 +11,7 @@ const LINES = ["line one", "line two", "line three"];
 before(async () => {
   v = makeVault("Tester");
   cfgPath = path.join(v.vault, "_system", "config.json");
-  fs.writeFileSync(cfgPath, JSON.stringify({ theme: "bar", bar: { names: [["Bad Tokens", LINES], ["Plain Name", "just one"]] } }));
+  fs.writeFileSync(cfgPath, JSON.stringify({ theme: "bar", bar: { names: [["The Night Shift", LINES], ["Plain Name", "just one"]] } }));
   server = await startServer(v, await freePort());
   browser = await launch();
 });
@@ -61,10 +61,10 @@ test("Settings shows both shapes and saves them back the same way", async () => 
   try {
     await page.click("#btn-settings");
     await page.waitForSelector("#settings:not([hidden]) #set-names");
-    assert.equal(await page.$eval("#set-names", (e) => e.value), "Bad Tokens | line one\n| line two\n| line three\nPlain Name | just one");
+    assert.equal(await page.$eval("#set-names", (e) => e.value), "The Night Shift | line one\n| line two\n| line three\nPlain Name | just one");
     await page.click("#set-save");
     await page.waitForSelector("#settings", { hidden: true });
-    assert.deepEqual(readJSON(cfgPath).bar.names, [["Bad Tokens", LINES], ["Plain Name", "just one"]]);
+    assert.deepEqual(readJSON(cfgPath).bar.names, [["The Night Shift", LINES], ["Plain Name", "just one"]]);
 
     // typing: one line stays a string, two become a list
     await page.click("#btn-settings");
