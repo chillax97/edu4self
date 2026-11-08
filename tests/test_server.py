@@ -613,14 +613,15 @@ class ClaudeTest(unittest.TestCase):
         self.wait_idle()
         self.assertNotIn("--resume", self.calls()[-1]["args"])
 
-    def test_a_new_topic_starts_a_fresh_conversation_with_the_teach_skill(self):
+    def test_a_new_topic_starts_a_fresh_conversation_with_the_new_topic_skill(self):
         self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "warm up"})[0], 202)
         self.wait_idle()
         self.assertEqual(self.req("POST", "/api/claude", {"kind": "topic", "text": "Spanish for a move to Madrid"})[0], 202)
         self.wait_idle()
         call = self.calls()[-1]
         prompt = call["args"][call["args"].index("-p") + 1]
-        self.assertIn("teach", prompt)
+        self.assertIn("new-topic skill", prompt)   # edu4self's own skill, which Claude can start by itself
+        self.assertIn("teach skill", prompt)       # the fallback when the plugin isn't installed
         self.assertIn("Spanish for a move to Madrid", prompt)
         self.assertNotIn("--resume", call["args"])
 

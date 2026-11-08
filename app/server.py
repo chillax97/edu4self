@@ -1007,7 +1007,8 @@ def claude_start(body):
             prompt, resume = "check my inbox", None
             claude_event("you", "Grade my inbox")
         elif kind == "topic":
-            prompt = ("Start a new topic with the teach skill. What I want to learn, in my words: %s\n"
+            prompt = ("Start a new topic with the edu4self new-topic skill (if it isn't installed, the teach skill). "
+                      "What I want to learn, in my words: %s\n"
                       "Ask me what you need to know first, one question at a time. "
                       "Anything you make for my room (voices, jokes, names, lesson dressing) stays in that room's theme, "
                       "and core words like Lesson 01 stay plain." % text)
