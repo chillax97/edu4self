@@ -18,8 +18,7 @@ The learner wants a new topic: $ARGUMENTS
 3. Write the first unit: usually a calibration probe with the `write-probe` skill, because what they
    say they know is a guess until a probe shows it. When the probe has nothing to measure (a subject
    new to them), start with Lesson 01 using the `write-lesson` skill. Write the unit after it too, so
-   two are ready. (Without this plugin's skills, the `teach` skill writes lessons; the dashboard rules
-   in PROTOCOL.md still apply.)
+   two are ready.
 4. Register the topic in `_system/state.json` as described in section 2 of
    [PROTOCOL.md](../check-inbox/PROTOCOL.md): id, title, tagline, path, colour, milestones with steps,
    the queue from step 3, regions at level 0, and a history entry with `evidence: false`. Add a `gate`

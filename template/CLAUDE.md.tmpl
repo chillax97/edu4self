@@ -1,7 +1,7 @@
 # Learning vault (edu4self)
 
 This folder is {{NAME}}'s learning vault. One folder per topic, each taught with the edu4self
-plugin's skills (`new-topic`, `write-lesson`, `write-probe`), or Matt Pocock's `teach` skill without it. A local dashboard at http://127.0.0.1:{{PORT}} is the learner's front end.
+plugin's skills (`new-topic`, `write-lesson`, `write-probe`). A local dashboard at http://127.0.0.1:{{PORT}} is the learner's front end.
 
 - **The dashboard reads `_system/state.json`, and you are its only writer.** Whenever teaching progress
   changes (grading, a new lesson or probe, unlocking, a milestone change), update `state.json` in the
@@ -16,8 +16,8 @@ plugin's skills (`new-topic`, `write-lesson`, `write-probe`), or Matt Pocock's `
   every grading and every request, in the same turn as `state.json`. Keep two units fully written
   ahead: the one the learner is on and the next. The rules are in
   `{{ENGINE}}/docs/PROTOCOL.md`, section 5.
-- **A new topic**: use the `new-topic` skill. Without the plugin, run the `teach` skill in a new folder
-  here, then register the topic in `state.json` (PROTOCOL.md, section 2) so it appears on the dashboard.
+- **A new topic**: use the `new-topic` skill. It sets up the folder and registers the topic in
+  `state.json` (PROTOCOL.md, section 2) so it appears on the dashboard.
 - **A lesson or a probe**: use the `write-lesson` or `write-probe` skill. Every lesson ends in exercises
   answered from memory on the dashboard, with one `submit` field per exercise.
 - **Settings** (name, goals, block kinds, music, bar names and voices) live in `_system/config.json`.

@@ -1,8 +1,8 @@
 # Topic files
 
 The files every topic folder keeps, besides lessons and probes (those have their own skills,
-`write-lesson` and `write-probe`). Adapted from Matt
-Pocock's `teach` skill (MIT, notice at the end), so a topic started with `/teach` reads the same.
+`write-lesson` and `write-probe`). Adapted from the `teach`
+skill by Matt Pocock (MIT, notice at the end).
 
 | file | what it holds | written when |
 |---|---|---|

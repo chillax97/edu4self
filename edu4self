@@ -107,7 +107,7 @@ def cmd_init(args):
     if args.no_example:
         state["topics"] = []
         state["coach"].update(headline="Welcome. Start your first topic.",
-                              body="Open Claude Code in this folder and say /teach followed by what you want to learn.")
+                              body="Open Claude Code in this folder and say what you want to learn.")
         state["coach"]["voices"] = [{"voice": "regular", "text": "Empty bar. Best seat in the house. What are we learning?"}]
     for t in state["topics"]:
         for h in t["history"]:
@@ -122,7 +122,7 @@ def cmd_init(args):
             text = fh.read().replace("{{DATE}}", today.date().isoformat())
         if args.no_example:   # no topics yet: an order with nothing in it, not the example's units
             head, _, _ = text.partition("| 1 |")
-            text = head + "| 1 | your first topic | Lesson 01, once `/teach` sets it up | next |\n\n## Changes\n\n" + \
+            text = head + "| 1 | your first topic | Lesson 01, once your first topic is set up | next |\n\n## Changes\n\n" + \
                 "- %s: an empty vault; the plan fills in with the first topic.\n" % today.date().isoformat()
         with open(plan, "w", encoding="utf-8") as fh:
             fh.write(text)
@@ -433,17 +433,15 @@ def cmd_open(args):
 # ---------------------------------------------------------------- doctor
 
 def lesson_skill_found():
-    """Which skill writes lessons here: edu4self's own write-lesson (in the plugin), else teach, else None."""
+    """True when the plugin's own write-lesson and check-inbox skills are installed for Claude Code."""
     home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
     found = set()
-    if os.path.isfile(os.path.join(home, "skills", "teach", "SKILL.md")):
-        found.add("teach")
     for root, dirs, files in os.walk(os.path.join(home, "plugins")):
-        if os.path.basename(root) in ("write-lesson", "teach") and "SKILL.md" in files:
+        if os.path.basename(root) in ("write-lesson", "check-inbox") and "SKILL.md" in files:
             found.add(os.path.basename(root))
         if root.count(os.sep) - home.count(os.sep) > 8:
             dirs[:] = []
-    return "write-lesson" if "write-lesson" in found else ("teach" if found else None)
+    return found == {"write-lesson", "check-inbox"}
 
 
 def cmd_doctor(args):
@@ -479,9 +477,8 @@ def cmd_doctor(args):
     else:
         bad += 1
         say("✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)")
-    skill = lesson_skill_found()
-    if skill:
-        say("✓", "lesson skills installed (%s)" % ("edu4self plugin" if skill == "write-lesson" else "teach skill"))
+    if lesson_skill_found():
+        say("✓", "tutor skills installed (edu4self plugin)")
     else:
         bad += 1
         say("✗", "tutor skills not found: claude plugin marketplace add chillax97/edu4self && claude plugin install edu4self@edu4self")
@@ -591,7 +588,7 @@ def cmd_setup(args):
     if not args.no_service:
         rc = cmd_install(argparse.Namespace(vault=vault, port=port))
     print("\nNext:")
-    print("  1. Give Claude the tutor skills (once; also installs Matt Pocock's teach skill):")
+    print("  1. Give Claude the tutor skills (once):")
     print("       claude plugin marketplace add chillax97/edu4self")
     print("       claude plugin install edu4self@edu4self")
     print("  2. Open the dashboard:   http://127.0.0.1:%d/" % port)

@@ -892,7 +892,7 @@ def append_inbox(entry):
 # The dashboard can run Claude Code in the vault, so nobody needs a terminal day to day:
 #   grade: "check my inbox", a fresh session each time
 #   chat:  one ongoing conversation (resumed until the learner starts a new one)
-#   topic: start a topic with the teach skill, as a new conversation the learner then answers in chat
+#   topic: start a topic with the new-topic skill, as a new conversation the learner then answers in chat
 # One run at a time. The agent works with edits auto-accepted inside the vault only (Claude Code asks
 # before touching anything outside the working folder, and a run from here can't answer, so it's
 # refused), plus read-only web research and the edu4self check. After every run the server runs the
@@ -1023,7 +1023,7 @@ def claude_start(body):
             prompt, resume = "check my inbox", None
             claude_event("you", "Grade my inbox")
         elif kind == "topic":
-            prompt = ("Start a new topic with the edu4self new-topic skill (if it isn't installed, the teach skill). "
+            prompt = ("Start a new topic with the edu4self new-topic skill. "
                       "What I want to learn, in my words: %s\n"
                       "Ask me what you need to know first, one question at a time. "
                       "Anything you make for my room (voices, jokes, names, lesson dressing) stays in that room's theme, "
