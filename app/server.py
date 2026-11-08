@@ -112,11 +112,11 @@ DEFAULT_CONFIG = {
     "obsidian": {"enabled": False, "vault": ""},
     "bar": {
         "names": [
-            ["Cache Miss", "nobody remembers your name"],
-            ["The Last Token", "last call, every step"],
+            ["The Rubber Duck", "tell it everything"],
+            ["Cram & Tonic", "served until the exam"],
             ["Off by One", "close, every single night"],
-            ["Exploding Gradients", "no ceiling, no mercy"],
-            ["Dead Neurons", "switched off since forever"],
+            ["The Open Tab", "nobody closes it either"],
+            ["Last Call", "one more block, then home"],
         ],
         "voices": {},               # per-voice overrides: {"logic": {"name": "Spock", "color": "#85b8ff"}}
         "gags": True,               # the rotating bar jokes

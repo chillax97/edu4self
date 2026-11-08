@@ -38,7 +38,7 @@ WORDS = {
     "how": "How does this place work?", "back_q": "What's in the back room?",
     "glass": "glass", "glasses": "glasses", "sign_open": "OPEN", "sign_busy": "ON AIR",
     # the back room: finished dies fill a row, rows fill a tray, all of it kept in the collection
-    "collection": "Your cluster", "row": "node", "rows": "nodes", "tray": "rack", "trays": "racks",
+    "collection": "The die case", "row": "row", "rows": "rows", "tray": "tray", "trays": "trays",
 }
 # Lines a room may say its own way (the defaults are the bar's, in app.js occasionLines)
 LINES = ("play", "evening", "friday", "silent", "newyear", "nye", "halloween", "valentine", "music_quiet", "music_none",

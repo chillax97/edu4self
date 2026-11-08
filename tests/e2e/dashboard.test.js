@@ -38,7 +38,7 @@ test("first visit: onboarding, then the bar with the example topic", async () =>
   await page.click("#ob-next"); await page.click("#ob-next"); await page.click("#ob-next");
   assert.equal(await page.$eval("#onboarding", (e) => e.hidden), true);
   assert.ok(await page.$("body.v-bar"), "bar is the default view");
-  assert.match(await page.$eval(".bx-neon", (e) => e.textContent), /Cache Miss/);
+  assert.match(await page.$eval(".bx-neon", (e) => e.textContent), /The Rubber Duck/);
   assert.match(await page.$eval(".bx-job h2", (e) => e.textContent), /Retrieval beats rereading/);
   // the jukebox has a built-in soundscape, paused: never empty, never online by default
   assert.match(await page.$eval(".bx-music", (e) => e.textContent), /Night shift.*paused/s);
@@ -262,7 +262,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   assert.equal(after.blocks.kinds.length, 5);
   assert.equal(after.music.file, "Test-Tone.wav", "reset keeps the uploaded track");
   // the default look is the bar again, with the default names
-  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /Cache Miss/.test(document.querySelector(".bx-neon").textContent));
+  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /The Rubber Duck/.test(document.querySelector(".bx-neon").textContent));
   assert.deepEqual(p2.errors, []);
   await closePage(p2);
 });

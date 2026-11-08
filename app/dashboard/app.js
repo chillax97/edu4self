@@ -771,8 +771,8 @@
   var PRESETS = [25, 50, 90];
   var DIE_TILES = 24;
   var TILE_MIN = 25;   // one tile = 25 focused minutes, so a die = 10 hours
-  var NODE_GPUS = 8;   // 8 shipped dies fill one row (80 hours, the bar calls it a node); the room names it, W("row")
-  var RACK_NODES = 4;  // 4 rows fill one tray (320 hours, a rack), W("tray")
+  var NODE_GPUS = 8;   // 8 shipped dies fill one row (80 hours); the room names it, W("row")
+  var RACK_NODES = 4;  // 4 rows fill one tray (320 hours), W("tray")
   var pickedDie = null;
   var BASE_TITLE = document.title;
   var pick = { block: "lessons", minutes: 50 };
@@ -1246,11 +1246,11 @@
       var dieNo = Math.floor(after / DIE_TILES), gpu = (dieNo - 1) % NODE_GPUS + 1, node = Math.floor((dieNo - 1) / NODE_GPUS) % RACK_NODES + 1;
       var nodeDone = shippedNow && gpu === NODE_GPUS;
       var say = { n: node, Row: cap(W("row")), row: W("row"), die: W("die"), dies: W("dies"), count: NODE_GPUS, pos: gpu, tiles: DIE_TILES, hours: DIE_TILES * TILE_MIN / 60 };
-      $("#blk-done-title").textContent = nodeDone ? fill(LINE("row_full", "{Row} {n} online."), say) : shippedNow ? "Die #" + dieNo + " shipped."
+      $("#blk-done-title").textContent = nodeDone ? fill(LINE("row_full", "{Row} {n} is full."), say) : shippedNow ? "Die #" + dieNo + " shipped."
         : etched > 1 ? etched + " tiles etched." : etched === 1 ? "Tile etched." : "Progress etched.";
       $("#blk-done-body").textContent = (shippedNow
-        ? (nodeDone ? fill(LINE("row_full_body", "{count} GPUs, {hours} hours of real work. A whole server, built one block at a time."), Object.assign({}, say, { hours: NODE_GPUS * DIE_TILES * TILE_MIN / 60 }))
-                    : fill(LINE("die_full_body", "{tiles} tiles, {hours} hours of real work, burned into silicon. It's GPU {pos} of {count} in {row} {n}."), say))
+        ? (nodeDone ? fill(LINE("row_full_body", "{count} {dies}, {hours} hours of real work. A full {row}, built one block at a time."), Object.assign({}, say, { hours: NODE_GPUS * DIE_TILES * TILE_MIN / 60 }))
+                    : fill(LINE("die_full_body", "{tiles} tiles, {hours} hours of real work, etched for good. It's {die} {pos} of {count} in {row} {n}."), say))
         : "That's " + (after % DIE_TILES) + " of " + DIE_TILES + " on this die.") +
         (carry ? " The next tile is " + carry + " of " + TILE_MIN + " minutes in." : "");
       $("#blk-done-die").innerHTML = dieHTML(list, key);
@@ -1368,7 +1368,7 @@
   var WATER_KEY = "edu.water.v1";
   var WATER_LINES = [   // the second one a room can say its own way (lines.water)
     "Drink it. Your neurons are mostly water. Probably.",
-    "Even an H100 needs coolant. So do you.",
+    "A sip now saves a headache later.",
     "One sip. Then straight back to it.",
     "Thirsty brains guess more and remember less. Water is cheaper than a retry."
   ];
@@ -1518,18 +1518,18 @@
   // A second way to draw the same data: a room where your skills talk. Classic stays as it was.
   var VIEW_KEY = "edu.view.v1", ROOM_KEY = "edu.bar.room.v1", NAME_KEY = "edu.bar.name.v1";
   var BAR_NAMES = [   // Settings → The bar → Names
-    ["Cache Miss", "nobody remembers your name"],
-    ["The Last Token", "last call, every step"],
+    ["The Rubber Duck", "tell it everything"],
+    ["Cram & Tonic", "served until the exam"],
     ["Off by One", "close, every single night"],
-    ["Exploding Gradients", "no ceiling, no mercy"],
-    ["Dead Neurons", "switched off since forever"]
+    ["The Open Tab", "nobody closes it either"],
+    ["Last Call", "one more block, then home"]
   ];
   // The ids are part of the state.json contract (coach.voices); names and colours can be changed in Settings.
   var VOICE_DEFAULTS = {
     bartender:    { name: "The bartender", c: "#ffe9cf" },
     logic:        { name: "Logic",         c: "#85b8ff" },
     volition:     { name: "Willpower",     c: "#cfa6ff" },
-    gpu:          { name: "GPU whisperer", c: "#ff9090" },
+    gpu:          { name: "The die-maker", c: "#ff9090" },
     encyclopedia: { name: "The archivist", c: "#f5d06f" },
     physical:     { name: "The body",      c: "#ffa36b" },
     nostalgia:    { name: "Nostalgia",     c: "#8fe0cf" },
@@ -1671,10 +1671,10 @@
     }
     if (S.best && S.todayMins > S.best) add(85, "volition", "New record: " + hm(S.todayMins) + " in one day. The old best was " + hm(S.best) + ".", "record");
     var dates = {
-      "10-31": ["regular", LINE("halloween", "Halloween. Someone came dressed as a KV cache. Twice the size anyone expected.")],
+      "10-31": ["regular", LINE("halloween", "Halloween. Someone came dressed as a deadline. Everyone recognised him at once.")],
       "12-31": ["bartender", LINE("nye", "Last night of the year. Close the die, not just the year.")],
       "01-01": ["bartender", LINE("newyear", "New year. Same bar. The die doesn't reset.")],
-      "02-14": ["regular", LINE("valentine", "Valentine's Day. The regular says attention is all you need. He's been single since 2017.")]
+      "02-14": ["regular", LINE("valentine", "Valentine's Day. The regular says his one true love is spaced repetition. It keeps coming back to him.")]
     };
     if (dates[md]) add(80, dates[md][0], dates[md][1], "date");
     else if (now.getDate() === 1) add(60, "encyclopedia", "First of the month. Whatever last month was, this one has a blank page.", "month");
@@ -1686,7 +1686,7 @@
     if (THEME && /data-slot="streak"/.test(THEME.layout)) {}   // the room shows it on its own board
     else if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
     else if (S.streak >= 2) add(70, "volition", S.streak + " days in a row with a block. Don't look down.", "streak");
-    if (t.glasses >= 4) add(60, "physical", fill(LINE("hydrated", "{n} {glasses} tonight. You're better cooled than most GPUs in prod."), { n: t.glasses, glasses: W("glasses") }), "glasses");
+    if (t.glasses >= 4) add(60, "physical", fill(LINE("hydrated", "{n} {glasses} tonight. Better hydrated than most people at their desks."), { n: t.glasses, glasses: W("glasses") }), "glasses");
     if (S.todayMins >= 240) add(55, "physical", hm(S.todayMins) + " today. Stand up, roll your shoulders, look at something farther away than the screen.", "heavy");
     if (hr >= 20 && S.todayMins && Object.keys(S.types).every(function (k) { return FUN_BLOCKS[k]; }))
       add(52, "critic", "Today was all " + Object.keys(S.types).map(blockLabel).join(" and ") + ". Fair. One lesson block would make the die a little prouder.", "only-fun");

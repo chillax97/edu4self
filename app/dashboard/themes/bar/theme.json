@@ -13,30 +13,30 @@
   "voices": {},
   "names": [
     [
-      "Cache Miss",
-      "nobody remembers your name"
+      "The Rubber Duck",
+      "tell it everything"
     ],
     [
-      "The Last Token",
-      "last call, every step"
+      "Cram & Tonic",
+      "served until the exam"
     ],
     [
       "Off by One",
       "close, every single night"
     ],
     [
-      "Exploding Gradients",
-      "no ceiling, no mercy"
+      "The Open Tab",
+      "nobody closes it either"
     ],
     [
-      "Dead Neurons",
-      "switched off since forever"
+      "Last Call",
+      "one more block, then home"
     ]
   ],
   "gags": [
     [
       "regular",
-      "A regular at the end of the bar insists attention is all you need. Nobody has the heart to tell him about the MLP."
+      "A regular at the end of the bar has highlighted his whole textbook yellow. He says it's all important."
     ],
     [
       "regular",
@@ -48,7 +48,7 @@
     ],
     [
       "regular",
-      "A coaster reads: SOFTMAX RESPONSIBLY."
+      "A coaster reads: SLEEP IS PART OF THE SYLLABUS."
     ],
     [
       "jukebox",
@@ -56,23 +56,23 @@
     ],
     [
       "regular",
-      "A man in the corner has been on the same LeetCode problem since 2019. He says he's close."
+      "A man in the corner has been on chapter one since spring. He says this time he's really starting."
     ],
     [
       "bartender",
-      "Behind the bar hangs a framed receipt: one H100, rented by the hour, never returned."
+      "Behind the bar hangs a framed library fine, paid in full, eleven years late."
     ],
     [
       "regular",
-      "Someone left a napkin with 2 × L × n × h × d × b on it. The 2 is circled three times."
+      "Someone left a napkin covered in flashcards. The hard one is circled three times."
     ],
     [
       "regular",
-      "House rule by the door: no gradients after midnight. Ignored nightly."
+      "House rule by the door: no new topics after midnight. Ignored nightly."
     ],
     [
       "bartender",
-      "says the secret ingredient is the residual connection. He says that about everything."
+      "says the secret ingredient is a good night's sleep. He says that about everything."
     ],
     [
       "jukebox",
