@@ -41,8 +41,8 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught.
    A missed one is knowledge that has faded: pull the next recall check on that material forward in
    `PLAN.md` (the next slot of its track) and say so. Keep feedback on a comeback short and warm.
-3. Do the topic bookkeeping (formats in the plugin's `new-topic/FORMATS.md`, adapted from the
-   `teach` skill): a learning record in `<topic>/learning-records/` when the result is non-obvious,
+3. Do the topic bookkeeping (formats in the plugin's `new-topic/FORMATS.md`, adapted from
+   Matt Pocock's `teach` skill, credited there): a learning record in `<topic>/learning-records/` when the result is non-obvious,
    glossary entries only for terms proven without notes, and a line in `<topic>/Dashboard.md`.
 4. Update `state.json`:
    - append the processed entry ids to `processed_inbox`;
@@ -80,7 +80,7 @@ The dashboard polls every 15 seconds and shows "Claude updated your dashboard" w
 
 ## 2. A new topic
 
-After the plugin's `new-topic` skill (or `/teach <topic>`) sets up a topic folder (`MISSION.md`,
+After the plugin's `new-topic` skill (started from the dashboard's **+ New topic**, or with `/edu4self:new-topic <topic>`) sets up a topic folder (`MISSION.md`,
 `lessons/`, `probes/`, `reference/`, `learning-records/`, `Dashboard.md`, `GLOSSARY.md`, `NOTES.md`),
 register it in `state.json → topics` so it appears on the dashboard:
 

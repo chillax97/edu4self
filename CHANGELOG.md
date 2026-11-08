@@ -10,8 +10,13 @@ versions follow [Semantic Versioning](https://semver.org).
 - Two plugin skills that write edu4self's own units: `write-lesson` (the lesson page, its closed-book
   exercises, an exercise with a checker, a redo with a refresher) and `write-probe` (probes,
   checkpoints and spaced recall checks). The topic file formats live in the plugin too, adapted from
-  Matt Pocock's `teach` skill with its MIT notice. `new-topic` and `check-inbox` use them; `teach`
-  stays the fallback.
+  Matt Pocock's `teach` skill with its MIT notice. `new-topic` and `check-inbox` use them.
+
+### Removed
+
+- The dependency on Matt Pocock's `teach` skill (`mattpocock-skills`): the plugin installs on its own,
+  and nothing falls back to `teach` any more. Starting a topic is **+ New topic**, "I want to learn X",
+  or `/edu4self:new-topic`. `edu4self doctor` checks the plugin's own skills. Credit stays in `CREDITS.md`.
 - A name on the bar's neon sign can have several subtitle lines (`bar.names`: `[name, [line, ...]]`, up to 20,
   80 characters each). The next one shows each time the neon blinks, and they hold still during a block. A single line is still a plain string.
 - The room is drawn once and patched after that: a poll rewrites only the slots that changed, so

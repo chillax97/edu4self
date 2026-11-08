@@ -88,7 +88,7 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-11 | Jukebox plays a built-in soundscape (default, offline), a radio stream, or one learner-supplied track on loop; a track resumes where it stopped and supports seek, ±1 min, random spot; volume; one tab plays at a time | e2e soundscape (measured signal, no offsite requests), radio, jukebox |
 | FR-12 | Settings panel edits name, default view, goals, block presets and kinds, water, music (upload/replace/remove), bar names, gags, custom lines, voice names and colours, Obsidian; validated server-side; reset keeps music | e2e Settings, unit config tests |
 | FR-13 | A broken `config.json` never breaks the page; defaults are used and the problem is shown in Settings | unit `test_broken_config_file_falls_back_to_defaults` |
-| FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `write-lesson`, `write-probe`, `customize` skills; the lesson format, probes and topic files are its own, so it works without any other skill. Installing it also installs the `teach` skill, for now, as the fallback | `claude plugin validate`; sandboxed install; unit `test_plugin.py` |
+| FR-14 | Claude Code plugin with `check-inbox`, `new-topic`, `write-lesson`, `write-probe`, `customize` skills; the lesson format, probes and topic files are its own, so it needs no other skill or plugin | `claude plugin validate`; sandboxed install; unit `test_plugin.py` |
 | FR-16 | The page runs Claude Code: Grade (inbox), a chat panel, and New topic; one run at a time, live progress, check after every run; without Claude Code the page shows terminal steps instead. Runs are fenced to the vault (no shell, instruction files locked, no web while grading) | unit `ClaudeTest`, e2e `claude.test.js` (stand-in), real probes |
 | FR-17 | Rooms: five built-in rooms (bar, library, space station, night train, tea house) and the learner's own in `<vault>/themes/`, picked in Settings. A room sets layout, palette, fonts, words, voices, jokes, sound, and optionally the lessons' look (on by default, can be turned off). Themed but recognizable: core learning words are never renamed. A room can't run code or load anything; a broken one is listed with its errors, never applied, and `edu4self check` reports it | unit `test_themes.py`, e2e `rooms.test.js` (every room at desktop and phone width, contrast, Settings) |
 | FR-21 | (Removed 2026-11-06.) No room sharing: rooms aren't exported or imported from Settings, the API or the CLI. A room gets into a vault only by being written into `themes/<id>/`, and it's checked when loaded | unit `NoRoomSharingTest`, e2e `rooms.test.js` |
@@ -101,7 +101,7 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-25 | Your attempts: for a task with an `exercise`, the Hints window lists every run (passed or not, time since the run before) and every hint opened, in order. After 3 failing runs in a row with no pass since, the task shows a nudge offering the next unopened hint. Reading only; nothing is written | unit `test_learning.py` StuckTest; e2e `hints.test.js` |
 | FR-26 | The job comes first. The room's own lines never restate what the room already shows (tonight's minutes, the week's nights, the next task, the die's count, the finish line). Each line folds to one line with its badge and name, the host's note to its headline and two lines with "more"; a click, a tap or Enter opens it in place, and the classic coach card folds the same way. With a 210-word note and six voices the job starts at most 700px down at 1440x1000 and 1266px at 390x844 in every room. The tutor keeps the note short (PROTOCOL section 1) and the checker warns past 60 words or 4 voices. |
 | FR-27 | The room is alive and calm. After the first draw, a poll rewrites only the slots whose HTML changed, so a poll with nothing new rewrites nothing. A changed child gets `data-new` and a bigger beat a one-shot `data-event` on `.room`; the bar animates them with transform and opacity only, holds still during a block, and honours reduced motion. The streak (days in a row with a finished block; today counts once you study) shows in the `streak` slot with the best run. Room sounds are synthesized, off by default (`room_sounds`), start with their motion, and only a block's start and end sound during a block. |
-| FR-15 | `edu4self doctor` reports Python, vault, server, service, Claude Code and the lesson skills (the plugin's, or teach), each with a fix | manual; unit `test_doctor_finds_the_plugins_lesson_skill_before_teach` |
+| FR-15 | `edu4self doctor` reports Python, vault, server, service, Claude Code and the plugin's lesson skills, each with a fix | manual; unit `test_doctor_finds_the_plugins_own_skills` |
 
 ## 6. Non-functional requirements
 
@@ -155,12 +155,12 @@ lesson within 20 minutes of cloning; `doctor` explains every failed setup step i
 - **Original voice names.** The bar view is inspired by *Disco Elysium*'s skill-voice dialogue, but uses
   its own characters and names (Logic, Willpower, The archivist, The body, …). Players of that game
   will recognise the idea; no names, text or assets are taken from it.
-- **Own the lesson format; teach is the fallback.** The lesson page, probes and closed-book exercises
+- **Own the lesson format; no outside skill.** The lesson page, probes and closed-book exercises
   are edu4self's contract with the dashboard, so the plugin writes them with its own skills
   (`write-lesson`, `write-probe`). The topic file formats are adapted from Matt Pocock's `teach` skill
-  (MIT, credited in `plugin/skills/new-topic/FORMATS.md`). `teach` is user-invoked only, so Claude
-  can't start it from another skill or the dashboard. The plugin still declares it as a dependency
-  while that dependency is reviewed; a missing dependency stops the whole plugin loading.
+  (MIT, credited in `plugin/skills/new-topic/FORMATS.md` and `CREDITS.md`). The plugin declares no
+  dependency on it: `teach` is user-invoked only, so Claude couldn't start it from another skill or the
+  dashboard, and a missing dependency stops the whole plugin loading.
 
 ## 11. Roadmap (not committed)
 

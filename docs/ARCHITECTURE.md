@@ -81,7 +81,7 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 
 **Claude from the page.** `/api/claude` starts `claude -p` in the vault, one run at a time, and turns its
 `stream-json` into short events (your message, "Reading …", Claude's text, done, check). `grade` sends
-"check my inbox" in a fresh session; `topic` starts a new conversation with the teach skill; `chat`
+"check my inbox" in a fresh session; `topic` starts a new conversation with the plugin's new-topic skill; `chat`
 resumes the last one. After every run the server runs `edu4self check` itself and adds the result.
 The page polls while a run is busy and reloads the state when it ends.
 
