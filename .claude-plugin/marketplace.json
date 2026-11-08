@@ -12,7 +12,7 @@
     {
       "name": "edu4self",
       "source": "./plugin",
-      "description": "Grade dashboard submissions (\"check my inbox\"), register new topics, change dashboard settings."
+      "description": "Write lessons and probes, grade dashboard submissions (\"check my inbox\"), start new topics, change dashboard settings."
     }
   ]
 }
