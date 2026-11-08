@@ -687,6 +687,24 @@ class CliTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    def test_doctor_finds_the_plugins_lesson_skill_before_teach(self):
+        cli, home = load_cli(), os.path.join(self.tmp, "claude")
+        old = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = home
+        try:
+            self.assertIsNone(cli.lesson_skill_found())
+            for skill in ("skills/teach", "plugins/cache/edu4self/edu4self/1.3.0/skills/write-lesson"):
+                os.makedirs(os.path.join(home, skill))
+                open(os.path.join(home, skill, "SKILL.md"), "w").close()
+                if skill == "skills/teach":
+                    self.assertEqual(cli.lesson_skill_found(), "teach")
+            self.assertEqual(cli.lesson_skill_found(), "write-lesson")
+        finally:
+            if old is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = old
+
     def test_init_writes_a_working_vault_and_remembers_it(self):
         vault, env = make_vault(self.tmp)
         self.assertEqual(read_json(os.path.join(self.tmp, "cfg", "settings.json"))["vault"], vault)

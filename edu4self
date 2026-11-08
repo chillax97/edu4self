@@ -432,16 +432,18 @@ def cmd_open(args):
 
 # ---------------------------------------------------------------- doctor
 
-def teach_skill_found():
+def lesson_skill_found():
+    """Which skill writes lessons here: edu4self's own write-lesson (in the plugin), else teach, else None."""
     home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    found = set()
     if os.path.isfile(os.path.join(home, "skills", "teach", "SKILL.md")):
-        return True
+        found.add("teach")
     for root, dirs, files in os.walk(os.path.join(home, "plugins")):
-        if os.path.basename(root) == "teach" and "SKILL.md" in files:
-            return True
+        if os.path.basename(root) in ("write-lesson", "teach") and "SKILL.md" in files:
+            found.add(os.path.basename(root))
         if root.count(os.sep) - home.count(os.sep) > 8:
             dirs[:] = []
-    return False
+    return "write-lesson" if "write-lesson" in found else ("teach" if found else None)
 
 
 def cmd_doctor(args):
@@ -477,11 +479,12 @@ def cmd_doctor(args):
     else:
         bad += 1
         say("✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)")
-    if teach_skill_found():
-        say("✓", "teach skill installed")
+    skill = lesson_skill_found()
+    if skill:
+        say("✓", "lesson skills installed (%s)" % ("edu4self plugin" if skill == "write-lesson" else "teach skill"))
     else:
         bad += 1
-        say("✗", "teach skill not found: claude plugin marketplace add chillax97/edu4self && claude plugin install edu4self@edu4self")
+        say("✗", "tutor skills not found: claude plugin marketplace add chillax97/edu4self && claude plugin install edu4self@edu4self")
     print("All good." if not bad else "%d thing%s to fix." % (bad, "" if bad == 1 else "s"))
     return 1 if bad else 0
 
