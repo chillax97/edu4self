@@ -7,6 +7,11 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- Two plugin skills that write edu4self's own units: `write-lesson` (the lesson page, its closed-book
+  exercises, an exercise with a checker, a redo with a refresher) and `write-probe` (probes,
+  checkpoints and spaced recall checks). The topic file formats live in the plugin too, adapted from
+  Matt Pocock's `teach` skill with its MIT notice. `new-topic` and `check-inbox` use them; `teach`
+  stays the fallback.
 - A name on the bar's neon sign can have several subtitle lines (`bar.names`: `[name, [line, ...]]`, up to 20,
   80 characters each). The next one shows each time the neon blinks, and they hold still during a block. A single line is still a plain string.
 - The room is drawn once and patched after that: a poll rewrites only the slots that changed, so
@@ -61,6 +66,10 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Fixed
 
+- The dashboard's New topic asked Claude to start the `teach` skill, which only a person can start
+  (`disable-model-invocation`). It now starts the plugin's `new-topic` skill.
+- Lesson quizzes shuffle their answer options when the page opens, so the right answer isn't always
+  second. `data-fixed` on a quiz keeps its order.
 - The Rules line on a task was nearly invisible in the library, tea and train rooms; each room now
   gives it a dark ink.
 - The train ticket, the tea scroll and the library's drawers no longer stretch to the height of the

@@ -24,7 +24,7 @@ edu4self is three small programs around one folder of plain files.
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |
 | CLI | `edu4self` | setup, init, serve, login service, check, doctor |
 | template | `template/` | what a new vault starts as, including the example topic |
-| plugin | `plugin/`, `.claude-plugin/marketplace.json` | Claude Code skills: check-inbox, new-topic, customize |
+| plugin | `plugin/`, `.claude-plugin/marketplace.json` | Claude Code skills: check-inbox, new-topic, write-lesson, write-probe, customize |
 
 All Python is standard library (3.9+). The page is vanilla JavaScript in one IIFE: no framework, no
 bundler, no network requests beyond its own server (except a radio stream, if the learner picks one).

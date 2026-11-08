@@ -6,7 +6,7 @@ edu4self is small because it stands on other people's work. Thank you.
 
 | what | by | used for | license |
 |---|---|---|---|
-| [`teach` skill](https://github.com/mattpocock/skills) (in `mattpocock-skills`) | Matt Pocock | how Claude runs a topic: mission, lessons, probes, learning records, glossary. Installed as a dependency of the edu4self plugin, not copied here | MIT |
+| [`teach` skill](https://github.com/mattpocock/skills) (in `mattpocock-skills`) | Matt Pocock | how Claude runs a topic: mission, lessons, probes, learning records, glossary. The topic file formats in `plugin/skills/new-topic/FORMATS.md` are adapted from it, with its MIT notice; the skill itself is still installed as a dependency of the edu4self plugin | MIT |
 | [Claude Code](https://claude.com/claude-code) and its [plugin system](https://code.claude.com/docs/en/plugin-marketplaces) | Anthropic | the tutor, and how the skills are distributed | Anthropic's terms |
 | [Puppeteer](https://pptr.dev) | Google and contributors | the browser tests (development only) | Apache-2.0 |
 
