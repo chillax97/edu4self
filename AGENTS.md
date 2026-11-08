@@ -15,6 +15,20 @@ Two folders, never mixed: this repo is the **engine** (code, shared by everyone,
 `git pull`); the **vault** is the person's own data (default `~/learn`). Personal changes live in the
 vault, so updates never overwrite them.
 
+## Product first
+
+This repo is a product for strangers. Its builder also uses it every day, so a request can be for him
+or for everyone. Before you build, decide which:
+
+- **For the person asking** (their names, music, jokes, topics, schedule, goals): it goes in their
+  vault, `<vault>/_system/config.json` or `<vault>/themes/<id>/`, or stays a local, uncommitted change.
+- **For the product** (a bug, a feature anyone would want): it goes in the engine, with a default
+  that suits someone who has never met the builder.
+- **Not sure?** Ask. A one-line question costs less than a personal joke shipped to everyone.
+
+Engine defaults, docs, tests and examples hold no one's real name, paths, topics, timezone or taste.
+Use neutral stand-ins (Kim, Sam, Spanish, Rust, `~/learn`).
+
 ## Setting up for a person
 
 1. **Gather their wishes.** Ask, in one short round, only what they haven't said: what to call them;

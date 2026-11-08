@@ -14,6 +14,9 @@ Thanks for wanting to help. edu4self is deliberately small. Good contributions k
   meaning after `git pull`: a new key gets its default only where nothing was saved, and a setting
   for a removed feature is dropped, never reinterpreted. `test_an_update_keeps_every_setting_the_learner_saved`
   guards this; extend it when you add a setting.
+- **Product first.** A change to the engine is for everyone who uses edu4self, not for one person's
+  setup. Personal taste (names, jokes, topics, goals) belongs in that person's vault config; engine
+  defaults suit a stranger. See [AGENTS.md](AGENTS.md#product-first).
 - **Keep both views.** A feature that shows data should work in classic and in the bar.
 
 ## Setup
