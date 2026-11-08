@@ -5,9 +5,6 @@
     "name": "chillax97",
     "url": "https://github.com/chillax97"
   },
-  "allowCrossMarketplaceDependenciesOn": [
-    "claude-plugins-official"
-  ],
   "plugins": [
     {
       "name": "edu4self",

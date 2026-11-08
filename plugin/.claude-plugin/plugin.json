@@ -7,6 +7,5 @@
   "homepage": "https://github.com/chillax97/edu4self",
   "repository": "https://github.com/chillax97/edu4self",
   "license": "MIT",
-  "keywords": ["learning", "teaching", "tutor", "dashboard", "spaced-repetition"],
-  "dependencies": ["mattpocock-skills@claude-plugins-official"]
+  "keywords": ["learning", "teaching", "tutor", "dashboard", "spaced-repetition"]
 }
