@@ -18,8 +18,8 @@ what it does, never so far off it feels weird.
 
 - A bar character says "last call", not a library line like "please keep your voice down". A tea
   master pours; the conductor announces the next stop.
-- The streak board is "the punch card" on the train and "the shelf of tea bowls" in the tea house. Both still
-  read as a streak. "The ledger of continuous diurnal fidelity" does not.
+- A day you hit your goal leaves a bottle cap in the bar, a ticket stub on the train and a tea bowl in the tea
+  house. All three read as "one good day" at a glance. "A token of diurnal fidelity" does not.
 - In the library, finished dies are bound **volumes** in **the bindery**. On the train they are **ticket
   books** you punch. Both read instantly.
 - Rename a thing only when the new word is obvious in its place. If the learner would need a legend to
