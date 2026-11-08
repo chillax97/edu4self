@@ -81,7 +81,7 @@ Each principle comes from evidence or from a failure observed while building the
 | FR-4 | The tutor processes the inbox per [PROTOCOL.md](PROTOCOL.md) and edits only `state.json` | live run with Claude Code (CHANGELOG 1.0.0) |
 | FR-5 | `edu4self check` validates `state.json` and every internal link; exit 0 = valid | unit ValidatorTest |
 | FR-6 | Focus blocks: kind, duration (presets or 1–240 min), start/stop, survive reloads, saved on completion, idempotent across tabs | unit `test_blocks`, e2e focus block |
-| FR-7 | Die / node / rack visualisation from all blocks; per-die details on click | existing behaviour, e2e smoke |
+| FR-7 | Die / row / tray visualisation from all blocks; per-die details on click | existing behaviour, e2e smoke |
 | FR-8 | Water rounds every 15 or 30 min (or off) during a block; counts saved with the block | unit `test_blocks` (validation) |
 | FR-9 | Two views (bar, classic) with the same data; each browser remembers its choice; Settings sets the default | e2e first visit, classic |
 | FR-10 | Bar view: voices comment on real data (time, streak, die, inbox, proof age, music) plus tutor-written lines (`coach.voices`) | e2e voices check |
@@ -130,7 +130,7 @@ Each principle comes from evidence or from a failure observed while building the
 ## 8. Success measures
 
 For a learner (visible on the dashboard itself): days a week with a block (goal 4), focused minutes a
-day (goal 120), and evidence entries per week. For the project: a newcomer reaches a graded first
+day (goal 60), and evidence entries per week. For the project: a newcomer reaches a graded first
 lesson within 20 minutes of cloning; `doctor` explains every failed setup step it can detect.
 
 ## 9. Risks

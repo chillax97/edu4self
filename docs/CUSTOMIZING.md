@@ -19,7 +19,7 @@ Saving from Settings writes a fresh, valid file.
 | Room sounds (small sounds with the room's motion) | `room_sounds` | `true` / `false` | `false` |
 | Gifts from Claude for a week or a die (each is a run on your Claude plan) | `gifts` | `true` / `false` | not set: setup or the dashboard asks you once |
 | Mail me when I've been away | `reminders.mail` | `true` / `false` (needs `./edu4self mail setup`) | `true` |
-| Focused minutes a day | `goals.day_minutes` | 10–960 | 120 |
+| Focused minutes a day | `goals.day_minutes` | 10–960 | 60 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
 | Kinds of block | `blocks.kinds` | 1–8 kinds, see below | Lessons, Practice, Reading, Free, Play |
@@ -41,7 +41,7 @@ the neon blinks (twice every 7 seconds), swapping while the sign is dim. It hold
 block is running. With reduced motion the neon doesn't flicker, so the entry moves every 30 seconds.
 
 ```json
-"bar": { "names": [["The Night Shift", ["line one", "line two", "line three"]], ["Cache Miss", "a plain string still works"]] }
+"bar": { "names": [["The Night Shift", ["line one", "line two", "line three"]], ["Off by One", "a plain string still works"]] }
 ```
 
 In Settings, put one subtitle per line; extra lines for the same name start with `|`:
@@ -135,7 +135,7 @@ The bar's characters, with their ids (used by Claude in `coach.voices` and by yo
 | `bartender` | The bartender | Claude's latest note, water, the inbox |
 | `logic` | Logic | what's next, the plan |
 | `volition` | Willpower | tonight's minutes, streaks, records |
-| `gpu` | GPU whisperer | your die and cluster |
+| `gpu` | The die-maker | your die and the die case |
 | `encyclopedia` | The archivist | the finish line, dates, totals |
 | `physical` | The body | water, breaks, sleep |
 | `nostalgia` | Nostalgia | a past win |

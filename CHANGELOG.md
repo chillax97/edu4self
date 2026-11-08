@@ -7,6 +7,10 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- Rooms name the back room and say more lines their own way: `words.collection`, `row`, `rows`,
+  `tray`, `trays`, and `lines.water`, `hydrated`, `row_full`, `row_full_body`, `die_full_body` with
+  `{placeholders}` (see docs/THEMES.md). The help panel and Settings' voice names follow the room,
+  and each built-in room has its own words (the library's shelves and bookcases, for one).
 - Two plugin skills that write edu4self's own units: `write-lesson` (the lesson page, its closed-book
   exercises, an exercise with a checker, a redo with a refresher) and `write-probe` (probes,
   checkpoints and spaced recall checks). The topic file formats live in the plugin too, adapted from
@@ -84,6 +88,14 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Changed
 
+- The built-in bar is general now: study life and light coding humour, with no machine-learning
+  in-jokes. New sign names (The Rubber Duck, Cram & Tonic, Off by One, The Open Tab, Last Call), new
+  gags, Halloween, Valentine and water lines, the `gpu` voice shown as "The die-maker", and the back
+  room counts finished dies in rows of 8 and trays of 4 rows in "The die case" (it said GPUs, nodes,
+  racks and "Your cluster"). Voice ids are unchanged, so saved state still works. To keep the old
+  bar, copy it into `<vault>/themes/bar/` and set the words and lines below.
+- New vaults start with a daily goal of 60 focused minutes (it was 120), still 4 days a week.
+  Existing `goals` in `config.json` are kept.
 - The bar's default sign names no longer include "Bad Tokens"; "Off by One" takes its place. A name
   list you saved keeps working as it is.
 - The job comes first in every room. The room's own lines no longer repeat what's already on screen

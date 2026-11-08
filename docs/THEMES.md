@@ -39,6 +39,7 @@ How the five built-ins map the same things:
 | music | the jukebox | the gramophone | comms | the radio car | the kettle |
 | a die / a tile | die / tile | volume / page | core / cell | ticket book / punch | tin / leaf |
 | where dies live | the die case | the bindery | reactor core | punches | the tea tin |
+| 8 dies / 4 of those | row / tray | shelf / bookcase | bank / module | bundle / satchel | shelf / cupboard |
 | sound | night | rain | noise | rain | rain |
 | day trophy (stacks) | bottle cap | book | mission patch | ticket stub | tea bowl |
 | week trophy | neon sign | brass bookend | medal | postcard | teapot |
@@ -157,14 +158,21 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 - **words** a room may rename, with the bar's defaults: `front` "The bar", `front_icon`, `back` "The
   back room", `back_icon`, `view` "Bar view", `place`, `counter`, `host`, `music_box`, `tonight`, `week`,
   `nights`, `die_case`, `die`, `dies`, `tile`, `tiles`, `shipped`, `doors`, `job`, `note`, `how`,
-  `back_q`, `glass`, `glasses`, `sign_open`, `sign_busy`. Anything else is refused.
+  `back_q`, `glass`, `glasses`, `sign_open`, `sign_busy`, and for the back room, where finished dies are
+  counted, `collection` "The die case", `row`/`rows` (8 dies) and `tray`/`trays` (4 rows). Anything
+  else is refused.
 - **voices**: rename or recolour a character by id: `bartender` (the host), `logic`, `volition`, `gpu`,
   `encyclopedia`, `physical`, `nostalgia`, `critic`, `regular`, `jukebox` (the music box), `you`. The
   learner's own voice settings still win.
 - **names**: `[name, tagline]` pairs for the sign.
 - **gags**: `[voice, text]` jokes, one every 40 minutes when jokes are on.
 - **lines**: the room's own words for `play`, `evening`, `friday`, `silent` (`{days}` is replaced with
-  the number), `newyear`, `nye`, `halloween`, `valentine`, `music_quiet`, `music_none`.
+  the number), `newyear`, `nye`, `halloween`, `valentine`, `music_quiet`, `music_none`, `water` (one of
+  the lines when a glass arrives), `hydrated` (four or more glasses: `{n}`, `{glasses}`), and the card
+  when a block finishes a die or a row: `row_full` (the title, `{n}` the row's number, `{Row}` the word
+  capitalised), `row_full_body` (`{count}` dies, `{dies}`, `{hours}`, `{row}`) and `die_full_body`
+  (`{tiles}`, `{hours}`, `{die}`, `{pos}` of `{count}`, `{row}` `{n}`). A `{name}` it doesn't know
+  stays as written.
 
 ### keepsakes (trophies)
 

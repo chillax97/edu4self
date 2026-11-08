@@ -106,7 +106,7 @@ ends it (background tabs throttle intervals, not that). The finished block is qu
 the server de-duplicates by start time, so two tabs or a retry can't double count.
 
 **The die.** All blocks are laid end to end and cut into 25-minute tiles; 24 tiles are a die, 8 dies a
-node, 4 nodes a rack. A tile can hold minutes from two blocks, coloured by kind.
+row, 4 rows a tray (each room names these itself: `words.row`, `words.tray`). A tile can hold minutes from two blocks, coloured by kind.
 
 **The bar.** `barLines()` builds the dialogue from real data: Claude's note and `coach.voices`, tonight's
 minutes, Up next, the die, then the three highest-priority `occasionLines()` (time of day, weekday,

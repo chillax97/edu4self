@@ -79,7 +79,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
   from memory or a solved problem. Reading doesn't count. This follows the research on retrieval
   practice ([why](docs/SPEC.md#principles)).
 - **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
-  8 dies a node, 4 nodes a rack. A water reminder arrives every 15 minutes while a block runs, if you want one.
+  8 dies a row, 4 rows a tray. A water reminder arrives every 15 minutes while a block runs, if you want one.
 - **A room, or plain.** In a room your skills talk to you about tonight's work, the music plays a
   built-in soundscape, a radio station or your own songs, and the host reminds you to drink water.
   *Classic* is calm and plain.
@@ -91,7 +91,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 
 | classic | the back room |
 |---|---|
-| ![Classic view](docs/images/classic.png) | ![The back room: cluster, milestones, evidence, skills](docs/images/backroom.png) |
+| ![Classic view](docs/images/classic.png) | ![The back room: the die case, milestones, evidence, skills](docs/images/backroom.png) |
 | **Settings** | **phone** |
 | ![Settings panel](docs/images/settings.png) | ![The bar on a phone](docs/images/phone.png) |
 
