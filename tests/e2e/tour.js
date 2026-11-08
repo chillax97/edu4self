@@ -170,7 +170,7 @@ await page.evaluate(() => window.__tour.term("Terminal", [
   ["ok", "The dashboard is running at http://127.0.0.1:4747/ and starts at login.", 500],
   ["cmd", "claude plugin marketplace add chillax97/edu4self"],
   ["cmd", "claude plugin install edu4self@edu4self"],
-  ["ok", "✔ Installed edu4self (and its dependency: teach)", 1400],
+  ["ok", "✔ Installed edu4self", 1400],
 ]));
 await hush();
 await page.goto(server.url, { waitUntil: "networkidle0" });

@@ -621,7 +621,7 @@ class ClaudeTest(unittest.TestCase):
         call = self.calls()[-1]
         prompt = call["args"][call["args"].index("-p") + 1]
         self.assertIn("new-topic skill", prompt)   # edu4self's own skill, which Claude can start by itself
-        self.assertIn("teach skill", prompt)       # the fallback when the plugin isn't installed
+        self.assertNotIn("teach", prompt)          # no outside skill to fall back on
         self.assertIn("Spanish for a move to Madrid", prompt)
         self.assertNotIn("--resume", call["args"])
 
@@ -687,18 +687,16 @@ class CliTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_doctor_finds_the_plugins_lesson_skill_before_teach(self):
+    def test_doctor_finds_the_plugins_own_skills(self):
         cli, home = load_cli(), os.path.join(self.tmp, "claude")
         old = os.environ.get("CLAUDE_CONFIG_DIR")
         os.environ["CLAUDE_CONFIG_DIR"] = home
         try:
-            self.assertIsNone(cli.lesson_skill_found())
-            for skill in ("skills/teach", "plugins/cache/edu4self/edu4self/1.3.0/skills/write-lesson"):
-                os.makedirs(os.path.join(home, skill))
-                open(os.path.join(home, skill, "SKILL.md"), "w").close()
-                if skill == "skills/teach":
-                    self.assertEqual(cli.lesson_skill_found(), "teach")
-            self.assertEqual(cli.lesson_skill_found(), "write-lesson")
+            self.assertFalse(cli.lesson_skill_found())
+            for skill in ("skills/write-lesson", "skills/check-inbox"):   # a lone skill is not the plugin
+                os.makedirs(os.path.join(home, "plugins/cache/edu4self/edu4self/1.3.0", skill))
+                open(os.path.join(home, "plugins/cache/edu4self/edu4self/1.3.0", skill, "SKILL.md"), "w").close()
+                self.assertEqual(cli.lesson_skill_found(), skill.endswith("check-inbox"))
         finally:
             if old is None:
                 os.environ.pop("CLAUDE_CONFIG_DIR", None)

@@ -91,7 +91,7 @@ test("chat: Enter sends, the next message resumes the same conversation, New con
   await closePage(page);
 });
 
-test("New topic: say what and why, Claude starts with the new-topic skill, teach as the fallback", async () => {
+test("New topic: say what and why, Claude starts with the new-topic skill", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.click("#btn-topic");
   await page.waitForSelector("#newtopic:not([hidden])");
@@ -106,9 +106,9 @@ test("New topic: say what and why, Claude starts with the new-topic skill, teach
   await waitIdle(page);
   const p = runs().at(-1).args;
   const prompt = p[p.indexOf("-p") + 1];
-  assert.match(prompt, /teach skill/);
+  assert.doesNotMatch(prompt, /teach/);
   assert.match(prompt, /Spanish, for a move to Madrid\nMore about me: 20 minutes a day/);
-  assert.match(prompt, /^Start a new topic with the edu4self new-topic skill \(if it isn't installed, the teach skill\)/);
+  assert.match(prompt, /^Start a new topic with the edu4self new-topic skill/);
   assert.match(prompt, /stays in that room's theme/);
   assert.deepEqual(page.errors, []);
   await closePage(page);
