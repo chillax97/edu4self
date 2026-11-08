@@ -97,7 +97,7 @@ DEFAULT_CONFIG = {
     "gifts": None,                  # a week or a die won starts one Claude run that makes a gift (uses your account);
                                     # None = not asked yet: the page asks, and gifts wait until you answer
     "reminders": {"mail": True},    # mail after 3, 7, 15, 30 days away (needs `edu4self mail setup`; see reminders.py)
-    "goals": {"day_minutes": 120, "week_days": 4},
+    "goals": {"day_minutes": 60, "week_days": 4},
     "blocks": {
         "presets": [25, 50, 90],
         "kinds": [

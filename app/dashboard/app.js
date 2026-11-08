@@ -18,7 +18,7 @@
     mock:       { label: "Mock interview", open: "Start mock",  submit: "Submit notes" }
   };
   var LADDER = ["Not yet", "Heard of it", "Understand it", "Use it on my own", "Public proof"];
-  var DAY_GOAL_MIN = 120;    // focused minutes a day, any block type; Settings → Goals
+  var DAY_GOAL_MIN = 60;     // focused minutes a day, any block type; Settings → Goals
   var WEEK_GOAL_DAYS = 4;    // days with at least one block, Monday to Sunday; Settings → Goals
   var HOURS_PER_STEP = 8;    // rough focused hours per milestone step, for the finish-line date
   var BACK_KEY = "edu.back.v1";   // the day the room last played "back after days away"
@@ -73,7 +73,7 @@
   // Apply settings that the rest of the code reads as plain variables
   function applyConfig() {
     var c = cfg(), g = c.goals || {}, b = c.blocks || {};
-    DAY_GOAL_MIN = g.day_minutes || 120;
+    DAY_GOAL_MIN = g.day_minutes || 60;
     WEEK_GOAL_DAYS = g.week_days || 4;
     if (b.presets && b.presets.length) PRESETS = b.presets.slice();
     if (b.kinds && b.kinds.length) {

@@ -374,7 +374,7 @@ class ServerTest(unittest.TestCase):
         try:
             code, d, _ = self.req("GET", "/api/state")
             self.assertEqual(code, 200)
-            self.assertEqual(d["config"]["goals"]["day_minutes"], 120)
+            self.assertEqual(d["config"]["goals"]["day_minutes"], 60)
             self.assertIn("config.json ignored", d["server"]["config_error"])
         finally:
             self.req("POST", "/api/config", {"reset": True})
