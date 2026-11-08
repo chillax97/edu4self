@@ -130,6 +130,20 @@ test("a sandboxed lesson can load its own fonts (the maths in lessons uses them)
   await closePage(page);
 });
 
+test("a lesson's answer options are shuffled, so the right one isn't always in the same place", async () => {
+  const page = await browser.newPage();
+  page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(String(e)));
+  await page.evaluateOnNewDocument(() => { Math.random = () => 0; });   // a known shuffle: [a, b, c] becomes [b, c, a]
+  await page.goto(server.url + "vault/how-learning-works/lessons/0001-retrieval-beats-rereading.html", { waitUntil: "networkidle0" });
+  const firsts = await page.$$eval(".quiz", (qs) => qs.filter((q) => q.querySelector("button.opt")).map((q) => q.querySelector("button.opt").hasAttribute("data-correct")));
+  assert.deepEqual(firsts, [true, true], "the right answer (second in the file) moved to the front");
+  await page.click('.quiz button.opt[data-correct="1"]');
+  assert.match(await page.$eval(".quiz .verdict", (e) => e.textContent), /correct/);
+  assert.deepEqual(page.errors, []);
+  await closePage(page);
+});
+
 test("lessons run sandboxed: the quiz still works, but the page can't call the dashboard", async () => {
   const page = await browser.newPage();   // a plain tab: openPage seeds localStorage, which a sandboxed page can't touch
   page.errors = [];

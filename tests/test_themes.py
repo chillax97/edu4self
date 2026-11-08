@@ -184,6 +184,16 @@ class RouteTest(unittest.TestCase):
         self.set_config(theme="broken", theme_lessons=True)   # a broken room never dresses a lesson
         self.assertNotIn(b"/theme/lesson.css", self.get(lesson)[2])
 
+    def test_every_lesson_shuffles_its_answer_options_in_any_room(self):
+        # lessons written by hand put the right answer second most of the time; the page shuffles it away
+        lesson = "/vault/how-learning-works/lessons/0001-retrieval-beats-rereading.html"
+        for theme_lessons in (True, False):
+            self.set_config(theme="bar", theme_lessons=theme_lessons)
+            page = self.get(lesson)[2]
+            self.assertEqual(page.count(b"data-edu-shuffle"), 1)
+            self.assertLess(page.index(b"data-edu-shuffle"), page.lower().index(b"</head>"))
+        self.assertNotIn(b"data-edu-shuffle", self.get("/vault/how-learning-works/MISSION.md?raw=1")[2])
+
     def test_config_keeps_a_bad_theme_id_out(self):
         self.assertEqual(server.clean_config({"theme": "../x"})["theme"], "bar")
         self.assertEqual(server.clean_config({"theme": "night-train"})["theme"], "night-train")

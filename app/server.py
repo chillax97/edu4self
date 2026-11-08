@@ -924,6 +924,22 @@ def with_lesson_theme(page):
     return page[:i] + link + page[i:] if i >= 0 else link + page
 
 
+# Hand-written quizzes put the right answer in the same place most of the time (second, in one real vault:
+# 19 of 27), and a learner learns the place instead of the answer. So every lesson page shuffles each
+# quiz's options when it opens. A quiz with data-fixed keeps its order ("all of the above" and the like).
+QUIZ_SHUFFLE = (b'<script data-edu-shuffle>document.addEventListener("DOMContentLoaded",function(){'
+                b'[].forEach.call(document.querySelectorAll(".quiz:not([data-fixed])"),function(q){'
+                b'var o=[].slice.call(q.querySelectorAll("button.opt"));if(o.length<2)return;'
+                b'var s=o.map(function(b){var m=document.createComment("");b.parentNode.insertBefore(m,b);return m});'
+                b'for(var i=o.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=o[i];o[i]=o[j];o[j]=t}'
+                b's.forEach(function(m,k){m.parentNode.replaceChild(o[k],m)})})})</script>')
+
+
+def with_quiz_shuffle(page):
+    i = page.lower().find(b"</head>")
+    return page[:i] + QUIZ_SHUFFLE + page[i:] if i >= 0 else QUIZ_SHUFFLE + page
+
+
 def claude_bin():
     exe = os.environ.get("EDU4SELF_CLAUDE") or shutil.which("claude")
     return exe if exe and os.path.isfile(exe) and os.access(exe, os.X_OK) else None
@@ -1508,7 +1524,7 @@ class Handler(BaseHTTPRequestHandler):
         # origin, so they can't read the API, change settings or start Claude. Their scripts still run.
         if target.endswith((".html", ".htm")):
             with open(target, "rb") as fh:
-                page = fh.read()
+                page = with_quiz_shuffle(fh.read())
             if load_config()[0]["theme_lessons"] and active_lesson_css():
                 page = with_lesson_theme(page)
             return self.send_text("text/html; charset=utf-8", page, {"Content-Security-Policy": VAULT_CSP})
