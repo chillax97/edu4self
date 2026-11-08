@@ -41,12 +41,13 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught.
    A missed one is knowledge that has faded: pull the next recall check on that material forward in
    `PLAN.md` (the next slot of its track) and say so. Keep feedback on a comeback short and warm.
-3. Do the topic bookkeeping (the `teach` skill's formats): a learning record in
-   `<topic>/learning-records/` when the result is non-obvious, glossary entries only for terms proven
-   without notes, and a line in `<topic>/Dashboard.md`.
+3. Do the topic bookkeeping (formats in the plugin's `new-topic/FORMATS.md`, adapted from the
+   `teach` skill): a learning record in `<topic>/learning-records/` when the result is non-obvious,
+   glossary entries only for terms proven without notes, and a line in `<topic>/Dashboard.md`.
 4. Update `state.json`:
    - append the processed entry ids to `processed_inbox`;
-   - move finished tasks to `status: "done"`, unlock or add the next ones;
+   - move finished tasks to `status: "done"`, unlock or add the next ones (the plugin's
+     `write-lesson` and `write-probe` skills write new ones);
    - update `milestones` (step `done`, the `current` step), `regions` (levels move only on evidence),
      the optional `gate`, and `history` (`evidence: true` only for demonstrated learning, never for
      reading or effort; `inbox`: the id of the entry it grades, so the progress page can show how
@@ -79,9 +80,9 @@ The dashboard polls every 15 seconds and shows "Claude updated your dashboard" w
 
 ## 2. A new topic
 
-After `/teach <topic>` sets up a topic folder (`MISSION.md`, `lessons/`, `probes/`, `reference/`,
-`learning-records/`, `Dashboard.md`, `GLOSSARY.md`, `NOTES.md`), register it in `state.json → topics`
-so it appears on the dashboard:
+After the plugin's `new-topic` skill (or `/teach <topic>`) sets up a topic folder (`MISSION.md`,
+`lessons/`, `probes/`, `reference/`, `learning-records/`, `Dashboard.md`, `GLOSSARY.md`, `NOTES.md`),
+register it in `state.json → topics` so it appears on the dashboard:
 
 ```json
 {
