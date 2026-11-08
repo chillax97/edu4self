@@ -41,13 +41,13 @@ the neon blinks (twice every 7 seconds), swapping while the sign is dim. It hold
 block is running. With reduced motion the neon doesn't flicker, so the entry moves every 30 seconds.
 
 ```json
-"bar": { "names": [["Bad Tokens", ["line one", "line two", "line three"]], ["Cache Miss", "a plain string still works"]] }
+"bar": { "names": [["The Night Shift", ["line one", "line two", "line three"]], ["Cache Miss", "a plain string still works"]] }
 ```
 
 In Settings, put one subtitle per line; extra lines for the same name start with `|`:
 
 ```
-Bad Tokens | line one
+The Night Shift | line one
 | line two
 | line three
 ```

@@ -3,7 +3,7 @@
 An exercise's checker calls start() once, at its top. When the checker finishes (passing, failing or
 crashing), one file is written next to it, in trace/, named by the time of the run:
 
-    inference-engineering/exercises/p03b/trace/2026-11-06T14-02-11.204-run.json
+    python/exercises/p03b/trace/2026-11-06T14-02-11.204-run.json
 
 Sorted by name, the folder is the learner's attempt in order. Hints opened in the dashboard land in
 the same folder (...-hint-2.json), so the order shows when a hint came. When the learner hands the
