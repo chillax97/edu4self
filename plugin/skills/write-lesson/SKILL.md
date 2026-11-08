@@ -28,7 +28,8 @@ answers from the dashboard. Reading it is not proof; the graded answers are. Wri
    - **Section 0, before you read:** one closed-book question on what's coming. A wrong guess here is
      part of the method.
    - Short numbered sections, each with an in-page `.quiz` for instant feedback. Options are the same
-     length, and the right one moves position between questions.
+     length, and the right one moves position between questions. (The dashboard also shuffles
+     them; mark a quiz `data-fixed` when its order matters, as with "all of the above".)
    - Facts come from `RESOURCES.md`; cite them inline and list them under Sources. Point at one
      primary source worth reading next.
    - **Last section, "Exercises (submit these from the dashboard)":** "Close this page first," then
