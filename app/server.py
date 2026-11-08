@@ -1008,7 +1008,9 @@ def claude_start(body):
             claude_event("you", "Grade my inbox")
         elif kind == "topic":
             prompt = ("Start a new topic with the teach skill. What I want to learn, in my words: %s\n"
-                      "Ask me what you need to know first, one question at a time." % text)
+                      "Ask me what you need to know first, one question at a time. "
+                      "Anything you make for my room (voices, jokes, names, lesson dressing) stays in that room's theme, "
+                      "and core words like Lesson 01 stay plain." % text)
             resume = None
             RUN["session"] = None
             claude_event("you", "New topic: " + text)
