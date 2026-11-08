@@ -1209,6 +1209,8 @@ one-page map of what they now know, a puzzle or quiz built from it, a poem, a pr
 or something better. Make it personal and specific, not generic praise.
 Write exactly one file: gifts/{id}.html (a self-contained page: inline CSS, no scripts, no links to
 other sites, no images from the web) or gifts/{id}.md. Keep it to about one screen. Change no other file.
+Anything themed stays in {room}'s own world (its objects, its characters, its kind of joke), and core
+words like Lesson 01 stay plain.
 Finish with one short sentence saying what you made."""
 
 
