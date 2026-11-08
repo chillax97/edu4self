@@ -771,8 +771,8 @@
   var PRESETS = [25, 50, 90];
   var DIE_TILES = 24;
   var TILE_MIN = 25;   // one tile = 25 focused minutes, so a die = 10 hours
-  var NODE_GPUS = 8;   // 8 shipped dies = one node (an 8-GPU server, 80 hours)
-  var RACK_NODES = 4;  // 4 nodes = one rack (320 hours)
+  var NODE_GPUS = 8;   // 8 shipped dies fill one row (80 hours, the bar calls it a node); the room names it, W("row")
+  var RACK_NODES = 4;  // 4 rows fill one tray (320 hours, a rack), W("tray")
   var pickedDie = null;
   var BASE_TITLE = document.title;
   var pick = { block: "lessons", minutes: 50 };
@@ -982,7 +982,7 @@
     var dies = dieSummaries(list);
     var shipped = dies.filter(function (d) { return d.full; }).length;
     var perRack = NODE_GPUS * RACK_NODES;
-    var rack = Math.floor(Math.max(0, dies.length - 1) / perRack);   // the rack the newest die sits in
+    var rack = Math.floor(Math.max(0, dies.length - 1) / perRack);   // the tray the newest die sits in
     var nodes = "";
     for (var n = 0; n < RACK_NODES; n++) {
       var slots = "", filled = 0;
@@ -995,13 +995,13 @@
           '" data-gpu="' + die.n + '" style="background-image:' + mixFill(die.parts, pct) + '" aria-label="Die ' + die.n +
           (die.full ? ", shipped" : ", " + pct + "% done") + '"></button>';
       }
-      nodes += '<div class="node' + (filled === NODE_GPUS ? " is-online" : "") + '"><span>node ' + (n + 1) + '</span><div class="gpus">' + slots + '</div><span>' + filled + "/" + NODE_GPUS + "</span></div>";
+      nodes += '<div class="node' + (filled === NODE_GPUS ? " is-online" : "") + '"><span>' + esc(W("row")) + " " + (n + 1) + '</span><div class="gpus">' + slots + '</div><span>' + filled + "/" + NODE_GPUS + "</span></div>";
     }
     var picked = dies[(pickedDie || dies.length) - 1];
-    return '<div class="cluster"><div class="cluster-head"><span class="card-title">Your cluster</span>' +
-      '<span class="card-sub">Rack #' + (rack + 1) + (rack ? " · " + rack + " full rack" + (rack > 1 ? "s" : "") + " before it" : "") + '</span></div>' +
+    return '<div class="cluster"><div class="cluster-head"><span class="card-title">' + esc(W("collection")) + '</span>' +
+      '<span class="card-sub">' + esc(cap(W("tray"))) + " #" + (rack + 1) + (rack ? " · " + rack + " full " + esc(W(rack > 1 ? "trays" : "tray")) + " before it" : "") + '</span></div>' +
       '<div class="rack">' + nodes + '</div>' +
-      '<p class="cluster-key">1 tile = ' + TILE_MIN + ' min · 1 die = ' + (DIE_TILES * TILE_MIN / 60) + ' h · ' + NODE_GPUS + ' dies = a node · ' + RACK_NODES + ' nodes = a rack · ' + shipped + ' shipped</p>' +
+      '<p class="cluster-key">1 tile = ' + TILE_MIN + ' min · 1 die = ' + (DIE_TILES * TILE_MIN / 60) + ' h · ' + NODE_GPUS + " dies = a " + esc(W("row")) + " · " + RACK_NODES + " " + esc(W("rows")) + " = a " + esc(W("tray")) + " · " + shipped + ' shipped</p>' +
       (picked ? '<p class="cluster-detail" aria-live="polite">' + dieDetail(picked) + '</p>' : "") + '</div>';
   }
 
@@ -1245,11 +1245,12 @@
       $("#blk-done-chip").textContent = label + " · " + a.minutes + " min";
       var dieNo = Math.floor(after / DIE_TILES), gpu = (dieNo - 1) % NODE_GPUS + 1, node = Math.floor((dieNo - 1) / NODE_GPUS) % RACK_NODES + 1;
       var nodeDone = shippedNow && gpu === NODE_GPUS;
-      $("#blk-done-title").textContent = nodeDone ? "Node " + node + " online." : shippedNow ? "Die #" + dieNo + " shipped."
+      var say = { n: node, Row: cap(W("row")), row: W("row"), die: W("die"), dies: W("dies"), count: NODE_GPUS, pos: gpu, tiles: DIE_TILES, hours: DIE_TILES * TILE_MIN / 60 };
+      $("#blk-done-title").textContent = nodeDone ? fill(LINE("row_full", "{Row} {n} online."), say) : shippedNow ? "Die #" + dieNo + " shipped."
         : etched > 1 ? etched + " tiles etched." : etched === 1 ? "Tile etched." : "Progress etched.";
       $("#blk-done-body").textContent = (shippedNow
-        ? (nodeDone ? NODE_GPUS + " GPUs, " + (NODE_GPUS * DIE_TILES * TILE_MIN / 60) + " hours of real work. A whole server, built one block at a time."
-                    : DIE_TILES + " tiles, " + (DIE_TILES * TILE_MIN / 60) + " hours of real work, burned into silicon. It's GPU " + gpu + " of " + NODE_GPUS + " in node " + node + ".")
+        ? (nodeDone ? fill(LINE("row_full_body", "{count} GPUs, {hours} hours of real work. A whole server, built one block at a time."), Object.assign({}, say, { hours: NODE_GPUS * DIE_TILES * TILE_MIN / 60 }))
+                    : fill(LINE("die_full_body", "{tiles} tiles, {hours} hours of real work, burned into silicon. It's GPU {pos} of {count} in {row} {n}."), say))
         : "That's " + (after % DIE_TILES) + " of " + DIE_TILES + " on this die.") +
         (carry ? " The next tile is " + carry + " of " + TILE_MIN + " minutes in." : "");
       $("#blk-done-die").innerHTML = dieHTML(list, key);
@@ -1365,12 +1366,13 @@
   // While a block runs, a glass arrives every N minutes (15, 30 or off, picked before the start).
   // The count lives on the running block, so it survives reloads and is saved with the block.
   var WATER_KEY = "edu.water.v1";
-  var WATER_LINES = [
+  var WATER_LINES = [   // the second one a room can say its own way (lines.water)
     "Drink it. Your neurons are mostly water. Probably.",
     "Even an H100 needs coolant. So do you.",
     "One sip. Then straight back to it.",
     "Thirsty brains guess more and remember less. Water is cheaper than a retry."
   ];
+  function waterLine(i) { i = i % WATER_LINES.length; return i === 1 ? LINE("water", WATER_LINES[1]) : WATER_LINES[i]; }
   // this browser's last pick, else the default from Settings
   function waterEvery() {
     var v = store(WATER_KEY);
@@ -1417,7 +1419,7 @@
     paintWater();
     if (isBar()) {
       barSay("bartender", "slides a glass of water down the bar. <span class=\"bx-chk\">" + mins + " min in · click the glass once you've drunk it</span>", true);
-      setTimeout(function () { barSay("physical", esc(WATER_LINES[((active && active.served) || 1) % WATER_LINES.length])); }, 900);
+      setTimeout(function () { barSay("physical", esc(waterLine((active && active.served) || 1))); }, 900);
     } else {
       toast('<span>💧</span><span><b>Water.</b> ' + mins + ' minutes in. Take a sip, then back to it. <button class="btn btn-soft btn-sm" type="button" data-drink>Drank it</button></span>', 12000);
     }
@@ -1466,6 +1468,8 @@
   function wantTheme() { return THEME_WANT || cfg().theme || "bar"; }
   function W(k) { return (THEME && THEME.meta.words[k]) || k; }
   function LINE(k, text) { return (THEME && THEME.meta.lines && THEME.meta.lines[k]) || text; }
+  // "{n} {glasses} tonight." with {n} and {glasses} filled in; an unknown {name} is left as it is
+  function fill(text, vars) { return text.replace(/\{(\w+)\}/g, function (m, k) { return vars[k] != null ? String(vars[k]) : m; }); }
   var themeLoading = null;
   function fetchTheme(id) {
     return fetch("/api/theme?id=" + encodeURIComponent(id), { cache: "no-store" }).then(function (r) {
@@ -1505,6 +1509,8 @@
     if (m.backdrop) decl.push("background:" + m.backdrop);
     vars.textContent = "body.v-bar{" + decl.join(";") + "}";
     document.body.dataset.theme = m.id;
+    // the help panel names the room's things: <span data-w="row">, lowercased with data-w-lc
+    document.querySelectorAll("[data-w]").forEach(function (el) { var w = W(el.dataset.w); el.textContent = el.hasAttribute("data-w-lc") ? w.toLowerCase() : w; });
     applyConfig();
   }
 
@@ -1680,7 +1686,7 @@
     if (THEME && /data-slot="streak"/.test(THEME.layout)) {}   // the room shows it on its own board
     else if (S.streak >= 7) add(72, "volition", S.streak + " days in a row. A full week without missing. That's not motivation anymore, that's a habit.", "streak");
     else if (S.streak >= 2) add(70, "volition", S.streak + " days in a row with a block. Don't look down.", "streak");
-    if (t.glasses >= 4) add(60, "physical", t.glasses + " " + W("glasses") + " tonight. You're better cooled than most GPUs in prod.", "glasses");
+    if (t.glasses >= 4) add(60, "physical", fill(LINE("hydrated", "{n} {glasses} tonight. You're better cooled than most GPUs in prod."), { n: t.glasses, glasses: W("glasses") }), "glasses");
     if (S.todayMins >= 240) add(55, "physical", hm(S.todayMins) + " today. Stand up, roll your shoulders, look at something farther away than the screen.", "heavy");
     if (hr >= 20 && S.todayMins && Object.keys(S.types).every(function (k) { return FUN_BLOCKS[k]; }))
       add(52, "critic", "Today was all " + Object.keys(S.types).map(blockLabel).join(" and ") + ". Fair. One lesson block would make the die a little prouder.", "only-fun");
@@ -1803,7 +1809,7 @@
     if (claudeOK()) act('<button class="bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
     else act('<button class="bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
     act('<button class="bx-r" type="button" data-help="all">"' + esc(W("how")) + '"</button>');
-    act('<button class="bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, your cluster") + "</button>");
+    act('<button class="bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, " + W("collection").toLowerCase()) + "</button>");
     return R.join("");
   }
 
@@ -2977,10 +2983,11 @@
       return '<input type="number" min="1" max="240" data-preset="' + i + '" value="' + (c.blocks.presets[i] || "") + '" aria-label="Duration ' + (i + 1) + '" placeholder="–">';
     }).join("");
     var voiceRows = voices.map(function (v) {
-      var o = c.bar.voices[v] || {};
+      // a blank name falls back to the room's name for the voice, so that's what the placeholder shows
+      var o = c.bar.voices[v] || {}, tv = (THEME && THEME.meta.voices && THEME.meta.voices[v]) || {}, dn = tv.name || VOICE_DEFAULTS[v].name;
       return '<div class="set-voice"><span class="set-sw" style="--c:' + esc(o.color || VOICE_DEFAULTS[v].c) + '"></span>' +
-        '<input type="text" maxlength="30" data-voice="' + v + '" value="' + esc(o.name || "") + '" placeholder="' + esc(VOICE_DEFAULTS[v].name) + '" aria-label="Name for ' + esc(VOICE_DEFAULTS[v].name) + '">' +
-        '<input type="color" data-voice-color="' + v + '" value="' + esc(o.color || VOICE_DEFAULTS[v].c) + '" aria-label="Colour for ' + esc(VOICE_DEFAULTS[v].name) + '"><code>' + v + "</code></div>";
+        '<input type="text" maxlength="30" data-voice="' + v + '" value="' + esc(o.name || "") + '" placeholder="' + esc(dn) + '" aria-label="Name for ' + esc(dn) + '">' +
+        '<input type="color" data-voice-color="' + v + '" value="' + esc(o.color || VOICE_DEFAULTS[v].c) + '" aria-label="Colour for ' + esc(dn) + '"><code>' + v + "</code></div>";
     }).join("");
     var m = c.music, src = m.source || (m.file ? "file" : "scape"), scape = SCAPES[m.scape] ? m.scape : "night";
     m.stream = m.stream || { url: "", name: "" };

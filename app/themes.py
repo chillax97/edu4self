@@ -37,9 +37,12 @@ WORDS = {
     "doors": "Doors that won't open yet", "job": "The job", "note": "Leave a note for the bartender.",
     "how": "How does this place work?", "back_q": "What's in the back room?",
     "glass": "glass", "glasses": "glasses", "sign_open": "OPEN", "sign_busy": "ON AIR",
+    # the back room: finished dies fill a row, rows fill a tray, all of it kept in the collection
+    "collection": "Your cluster", "row": "node", "rows": "nodes", "tray": "rack", "trays": "racks",
 }
 # Lines a room may say its own way (the defaults are the bar's, in app.js occasionLines)
-LINES = ("play", "evening", "friday", "silent", "newyear", "nye", "halloween", "valentine", "music_quiet", "music_none")
+LINES = ("play", "evening", "friday", "silent", "newyear", "nye", "halloween", "valentine", "music_quiet", "music_none",
+         "water", "hydrated", "row_full", "row_full_body", "die_full_body")
 VOICES = ("bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia", "critic", "regular", "jukebox", "you")
 FONTS = {"sans", "serif", "mono", "head", "neon"}   # bundled families, see app.css
 SCAPES = ("night", "rain", "noise")
