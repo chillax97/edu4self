@@ -12,7 +12,7 @@ edu4self is small because it stands on other people's work. Thank you.
 
 ## Fonts (bundled in `app/dashboard/fonts/`, from [Google Fonts](https://fonts.google.com))
 
-All four are under the [SIL Open Font License 1.1](https://openfontlicense.org); each license text ships
+They are not covered by the MIT license in `LICENSE`. All four are under the [SIL Open Font License 1.1](https://openfontlicense.org); each license text ships
 next to the font files. The files are unmodified; the CSS gives them local family names only.
 
 | typeface | by | used for |
