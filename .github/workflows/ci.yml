@@ -3,7 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,10 +19,36 @@ jobs:
       matrix:
         # 3.9 is the floor because it is macOS's system Python; GitHub's Ubuntu images no longer carry it
         include:
-          - { os: macos-latest, python: "3.9" }
-          - { os: macos-latest, python: "3.13" }
           - { os: ubuntu-latest, python: "3.10" }
           - { os: ubuntu-latest, python: "3.13" }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests (standard library only)
+        run: python -m unittest discover -s tests -v
+      - name: A fresh vault passes its own check
+        env:
+          EDU4SELF_CONFIG_HOME: ${{ runner.temp }}/cfg
+        run: |
+          python edu4self init "$RUNNER_TEMP/vault" --name CI
+          python edu4self check
+          python edu4self init "$RUNNER_TEMP/empty" --no-example
+          python edu4self check --vault "$RUNNER_TEMP/empty"
+
+  unit-macos:
+    name: unit (mac) · ${{ matrix.os }} · Python ${{ matrix.python }}
+    # macOS runners are slow: release tags and manual runs only (day to day, the Mac check is a local run)
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 is the floor because it is macOS's system Python; GitHub's Ubuntu images no longer carry it
+        include:
+          - { os: macos-latest, python: "3.9" }
+          - { os: macos-latest, python: "3.13" }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
