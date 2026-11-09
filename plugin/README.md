@@ -26,4 +26,10 @@ claude plugin marketplace add chillax97/edu4self
 claude plugin install edu4self@edu4self
 ```
 
+## Privacy
+
+The skills read and write files only in your own edu4self folder, and talk only to the dashboard on your
+computer (`127.0.0.1`). Nothing is sent to an outside service, and there is no edu4self server.
+Full details: [Privacy](https://github.com/chillax97/edu4self#privacy).
+
 MIT licensed. See [CREDITS](https://github.com/chillax97/edu4self/blob/main/CREDITS.md) for the work it builds on.
