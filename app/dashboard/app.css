@@ -930,7 +930,7 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .set-track .icon-btn:disabled { opacity: .3; cursor: default; background: transparent; }
 /* music: pick a source, then the pane for it */
 .set-src { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-.set-src-opt { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.set-src-opt { position: relative; display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
 .set-src-opt:has(input:checked) { border-color: var(--ink); background: var(--surface); }
 .set-src-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .set-src-opt:focus-within { box-shadow: 0 0 0 4px color-mix(in srgb, var(--topic) 22%, transparent); }
