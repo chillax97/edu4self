@@ -60,3 +60,20 @@ class SkillFilesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RepoSizeTest(unittest.TestCase):
+    """Adding the marketplace downloads the whole repo; Claude Code warns about any file over 5 MB."""
+
+    def test_no_tracked_file_over_5mb(self):
+        import subprocess
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, text=True)
+        if out.returncode != 0:
+            self.skipTest("not a git checkout")
+        big = []
+        for name in filter(None, out.stdout.split("\0")):
+            p = os.path.join(root, name)
+            if os.path.isfile(p) and not os.path.islink(p) and os.path.getsize(p) > 5 * 1024 * 1024:
+                big.append("%s (%.1f MB)" % (name, os.path.getsize(p) / 1048576))
+        self.assertEqual(big, [], "files over 5 MB: " + ", ".join(big))
