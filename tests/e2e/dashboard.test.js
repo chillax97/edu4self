@@ -274,7 +274,14 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   assert.equal(after.blocks.kinds.length, 5);
   assert.equal(after.music.file, "Test-Tone.wav", "reset keeps the uploaded track");
   // the default look is the bar again, with the default names
-  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /The Rubber Duck/.test(document.querySelector(".bx-neon").textContent));
+  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /The Rubber Duck/.test(document.querySelector(".bx-neon").textContent))
+    .catch(async (err) => {
+      // say what the page showed instead, so a failure on a machine we can't see is readable
+      const seen = await p2.evaluate(() => ({ body: document.body.className, neon: document.querySelector(".bx-neon")?.textContent ?? null,
+        view: localStorage.getItem("edu.view.v1"), error: document.querySelector("#error, .error")?.textContent ?? null }));
+      err.message += " | " + JSON.stringify(seen) + " | page errors: " + JSON.stringify(p2.errors);
+      throw err;
+    });
   assert.deepEqual(p2.errors, []);
   await closePage(p2);
 });
