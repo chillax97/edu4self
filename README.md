@@ -95,8 +95,6 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 <details>
 <summary>More screenshots: classic view, the back room, Settings, phone</summary>
 
-![The bar view: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
-
 | classic | the back room |
 |---|---|
 | ![Classic view](docs/images/classic.png) | ![The back room: the die case, milestones, evidence, skills](docs/images/backroom.png) |
