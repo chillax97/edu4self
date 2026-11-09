@@ -14,7 +14,13 @@ const CLI = path.join(ENGINE, "edu4self");
 // same port trips an undici bug ("assert(!this.paused)"). One connection per request avoids reusing a dead one.
 if (process.platform === "win32") {
   const realFetch = globalThis.fetch;
-  globalThis.fetch = (url, opts = {}) => realFetch(url, { ...opts, headers: { ...(opts.headers || {}), connection: "close" } });
+  // and read every body to the end before the test sees it: a closed connection with an unread body is the other
+  // way to trip the same undici bug (a test that only checks a status never reads the body)
+  globalThis.fetch = async (url, opts = {}) => {
+    const r = await realFetch(url, { ...opts, headers: { ...(opts.headers || {}), connection: "close" } });
+    const body = [101, 204, 205, 304].includes(r.status) ? null : await r.arrayBuffer();
+    return new Response(body, { status: r.status, statusText: r.statusText, headers: r.headers });
+  };
 }
 export const PYTHON = process.platform === "win32" ? "python" : "python3";
 
@@ -75,6 +81,14 @@ export async function stopServer(s) {
   await done;
 }
 
+// browser.close() can wait forever on Windows CI; give it 15 s, then end the process
+export async function closeBrowser(b) {
+  if (!b) return;
+  const proc = b.process();
+  await Promise.race([b.close(), new Promise((r) => setTimeout(r, 15000))]);
+  if (proc && proc.exitCode === null && proc.signalCode === null) proc.kill();
+}
+
 export async function launch() {
   return puppeteer.launch({
     executablePath: chromePath(),
@@ -106,6 +120,9 @@ export async function openPage(browser, url, { width = 1440, height = 1000, view
   page.on("console", (m) => { if (m.type() === "error") page.errors.push(m.text()); });
   page.on("dialog", (d) => d.accept());
   await page.setViewport({ width, height });
+  // the machine's own motion setting must not decide what a test sees (Windows CI runners ask for reduced
+  // motion, which stops every animation, the neon blink included); E2E_MOTION=reduce runs a file the other way
+  await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: process.env.E2E_MOTION || "no-preference" }]);
   if (hour !== undefined) await pinClock(page, hour);
   await page.evaluateOnNewDocument((v, blk) => {
     localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1");

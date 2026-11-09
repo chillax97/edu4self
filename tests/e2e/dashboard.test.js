@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { makeVault, freePort, startServer, stopServer, launch, openPage, pinClock, closePage, wavFile, readJSON, readLines, sleep } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, pinClock, closePage, wavFile, readJSON, readLines, sleep } from "./harness.js";
 
 let PORT;
 
@@ -33,7 +33,7 @@ before(async () => {
   browser = await launch();
 });
 after(async () => {
-  await browser?.close();
+  await closeBrowser(browser);
   await stopServer(server);
   fs.rmSync(v.dir, { recursive: true, force: true });
 });
