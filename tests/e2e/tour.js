@@ -331,7 +331,7 @@ await stopServer(server);
 const list = path.join(v.dir, "frames.txt");
 fs.writeFileSync(list, frames.map((f, i) => `file '${f.file}'\nduration ${(((frames[i + 1]?.ts) ?? endTs) - f.ts).toFixed(4)}`).join("\n") + `\nfile '${frames.at(-1).file}'\n`);
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-vf", `fps=30,scale=${W}:${H}:flags=lanczos,format=yuv420p`,
-  "-c:v", "libx264", "-preset", "slow", "-crf", "24", "-movflags", "+faststart", MP4]);
+  "-c:v", "libx264", "-preset", "slow", "-crf", "30", "-movflags", "+faststart", MP4]);
 // README cut: the first visit through grading, smaller and slower frame rate
 const pal = path.join(v.dir, "pal.png");
 const gifCut = ["-ss", "12", "-t", "46"];
