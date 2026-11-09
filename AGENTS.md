@@ -86,5 +86,8 @@ real one. Done when both suites pass:
     python3 -m unittest discover -s tests
     cd tests/e2e && npm ci && npm test
 
+While working, run only the changed test file (`node --test dashboard.test.js` in `tests/e2e`); run the full suite
+before a push. A test that depends on the time of day pins the page clock with `pinClock` in `tests/e2e/harness.js`.
+
 Commit each self-contained step on its own, subject tagged `[ADD]`, `[IMP]`, `[FIX]`, `[DOC]` or
 `[TEST]`.

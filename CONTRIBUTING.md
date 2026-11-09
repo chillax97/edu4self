@@ -39,7 +39,8 @@ cd tests/e2e && npm ci && npm test               # a real Chrome; set CHROME_PAT
 ```
 
 New behaviour needs a test that would fail without it. Bug fixes start with a test that reproduces the
-bug. CI runs the unit tests on Python 3.9 and 3.13 on macOS, 3.10 and 3.13 on Linux, and the browser tests on Linux.
+bug. CI runs the unit tests on Python 3.10 and 3.13 on Linux and the browser tests on Linux for every push and pull request; the macOS unit tests (Python 3.9 and 3.13) run only for `v*` tags and manual runs.
+While working, run only the changed test file; run the full suite before a push.
 
 If you change `docs/PROTOCOL.md`, copy it to `plugin/skills/check-inbox/PROTOCOL.md` (a test checks they
 match). If you bump the version, change it in `app/server.py`, `plugin/.claude-plugin/plugin.json` and
