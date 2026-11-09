@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-node_modules/
+node_modules
 .DS_Store
 *.tmp
 # a vault made inside the repo by accident
