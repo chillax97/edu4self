@@ -33,7 +33,8 @@ after(async () => {
 });
 
 test("a hint opens only when asked for, and lands in the record right after the run it followed", async () => {
-  const out = execFileSync(PYTHON, [path.join(ex, "check.py")], { encoding: "utf8" });
+  // Windows ends printed lines with \r\n; compare the words, not the platform's line ending
+  const out = execFileSync(PYTHON, [path.join(ex, "check.py")], { encoding: "utf8" }).replace(/\r\n/g, "\n");
   assert.match(out, /1 of 2 checks pass\n\n\(run saved for your tutor: trace\/.+-run\.json\)/);
   const page = await openPage(browser, server.url, { view: "classic" });
   await page.click('[data-hints="hlw-lesson-01"]');
