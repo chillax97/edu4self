@@ -7,6 +7,14 @@ You pick what to learn. Claude writes short lessons, tests what you know, and gr
 The dashboard always shows one next step, keeps a record of what you've actually proven, and turns
 your focused time into something you can see grow. Nothing leaves your machine.
 
+![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
+
+## What you need
+
+- **Claude Code**, signed in with a Claude plan that includes it. Claude is the tutor, so nothing works without it.
+- **macOS or Linux.** Both start the dashboard for you at login. On Windows you can run it by hand ([details](#set-it-up-yourself)).
+- **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python.
+
 [![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
 
 <sub>The first minute of the tour. [Watch all of it (2 min)](docs/video/tour.mp4).</sub>
@@ -99,7 +107,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 
 ## Set it up yourself
 
-You need **Python 3.9+** (macOS and most Linux have it), **[Claude Code](https://claude.com/claude-code)**, and git.
+You need [Claude Code](https://claude.com/claude-code), Python 3.9+ and git (see [What you need](#what-you-need)).
 
 ```sh
 git clone https://github.com/chillax97/edu4self.git
