@@ -10,10 +10,12 @@ import puppeteer from "puppeteer-core";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const ENGINE = path.resolve(here, "..", "..");
 const CLI = path.join(ENGINE, "edu4self");
+export const PYTHON = process.platform === "win32" ? "python" : "python3";
 
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH,
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser",
 ];
 
@@ -29,7 +31,7 @@ export function makeVault(name = "Tester", extra = []) {
   // Claude Code is off unless a test brings its own stand-in, so a real install on this machine changes nothing
   const env = { ...process.env, EDU4SELF_CONFIG_HOME: path.join(dir, "cfg"), EDU4SELF_CLAUDE: path.join(dir, "no-claude"), EDU4SELF_REMINDERS: "0" };   // no real reminder mail from test servers
   const vault = path.join(dir, "vault");
-  execFileSync("python3", [CLI, "init", vault, "--name", name, ...extra], { env, stdio: "pipe" });
+  execFileSync(PYTHON, [CLI, "init", vault, "--name", name, ...extra], { env, stdio: "pipe" });
   return { dir, vault, env };
 }
 
@@ -43,7 +45,7 @@ export function freePort() {
 }
 
 export async function startServer(v, port) {
-  const proc = spawn("python3", [CLI, "serve", "--vault", v.vault, "--port", String(port)], { env: v.env, stdio: "pipe" });
+  const proc = spawn(PYTHON, [CLI, "serve", "--vault", v.vault, "--port", String(port)], { env: v.env, stdio: "pipe" });
   let log = "";
   proc.stderr.on("data", (d) => (log += d));
   proc.stdout.on("data", (d) => (log += d));

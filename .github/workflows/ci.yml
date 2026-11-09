@@ -108,6 +108,25 @@ jobs:
         working-directory: tests/e2e
         run: CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable)" npm test
 
+  browser-windows:
+    name: browser tests (Chrome, Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/e2e/package-lock.json
+      - run: npm ci
+        working-directory: tests/e2e
+      - name: Run against a throwaway vault
+        working-directory: tests/e2e
+        run: npm test
+
   plugin:
     name: Claude Code plugin manifests
     runs-on: ubuntu-latest

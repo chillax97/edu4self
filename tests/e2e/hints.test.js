@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, sleep } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, sleep, PYTHON } from "./harness.js";
 
 let v, server, browser, ex;
 const traceFiles = () => (fs.existsSync(path.join(ex, "trace")) ? fs.readdirSync(path.join(ex, "trace")).sort() : []);
@@ -33,7 +33,7 @@ after(async () => {
 });
 
 test("a hint opens only when asked for, and lands in the record right after the run it followed", async () => {
-  const out = execFileSync("python3", [path.join(ex, "check.py")], { encoding: "utf8" });
+  const out = execFileSync(PYTHON, [path.join(ex, "check.py")], { encoding: "utf8" });
   assert.match(out, /1 of 2 checks pass\n\n\(run saved for your tutor: trace\/.+-run\.json\)/);
   const page = await openPage(browser, server.url, { view: "classic" });
   await page.click('[data-hints="hlw-lesson-01"]');
@@ -87,7 +87,7 @@ test("your attempts: every run and hint in order, and a gentle nudge after three
   const proto = fs.readFileSync(new URL("../../docs/PROTOCOL.md", import.meta.url), "utf8");
   const lines = proto.split("```python\n")[1].split("```")[0].replace('["solution.py"]', '["sol.py"]');
   const checker = (pass) => fs.writeFileSync(path.join(ex, "check.py"), lines + (pass ? "\nprint('2 of 2 pass')\n" : "\nimport sys\nprint('1 of 2 pass')\nsys.exit(1)\n"));
-  const run = () => { try { execFileSync("python3", [path.join(ex, "check.py")], { stdio: "pipe" }); } catch {} };
+  const run = () => { try { execFileSync(PYTHON, [path.join(ex, "check.py")], { stdio: "pipe" }); } catch {} };
   fs.rmSync(path.join(ex, "trace"), { recursive: true, force: true });
   checker(false);
   run(); run();
