@@ -58,7 +58,7 @@ export async function startServer(v, port) {
   for (let i = 0; i < 60; i++) {
     try {
       if (proc.exitCode !== null) break;   // ours died (port taken?); don't trust whoever answers
-      const r = await fetch(`http://127.0.0.1:${port}/api/health`);
+      const r = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(2000) });   // a stuck request can't stall the loop
       if (r.ok && (await r.json()).version) return { proc, url: `http://127.0.0.1:${port}/`, log: () => log };
     } catch {}
     await new Promise((r) => setTimeout(r, 100));
@@ -68,7 +68,8 @@ export async function startServer(v, port) {
 }
 
 export async function stopServer(s) {
-  if (!s || s.proc.exitCode !== null) return;
+  // a killed process has no exitCode, only a signalCode: check both, or we'd wait for an exit that already happened
+  if (!s || s.proc.exitCode !== null || s.proc.signalCode !== null) return;
   const done = new Promise((r) => s.proc.once("exit", r));
   s.proc.kill("SIGINT");
   await done;

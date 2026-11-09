@@ -252,6 +252,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   const mu = await fetch(server.url + "music");
   assert.equal(mu.status, 200);
   assert.match(mu.headers.get("content-type"), /^audio\//);
+  await mu.body?.cancel();   // don't leave the audio body unread on an open connection
 
   // reset: back to defaults, music kept
   await p2.click("#btn-settings");
