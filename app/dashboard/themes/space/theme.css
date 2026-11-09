@@ -12,7 +12,7 @@
 .room .bx-k { font-family: var(--bx-mono); letter-spacing: .14em; color: #7fd8ff; }
 .room .bx-pips i { transform: none; border-radius: 2px; }
 .room .bx-pips.h i.on { background: var(--sp-cyan); border-color: #9fe0ff; box-shadow: 0 0 6px var(--sp-cyan); }
-.room .bx-pips.h i.half { background: linear-gradient(to top, var(--sp-cyan) 50%, rgba(255,255,255,.08) 50%); }
+.room .bx-pips.h i.half { background: linear-gradient(to top, var(--sp-cyan) 50%, rgba(255,255,255,.08) 50%) border-box; }
 .room .bx-pips.m i.on { background: var(--sp-orange); border-color: #ffc890; color: #1a0e02; }
 .room .bx-num { color: #e4f6ff; }
 .room .bx-cab .die i.on { box-shadow: 0 0 8px var(--c); }

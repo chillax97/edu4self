@@ -713,7 +713,7 @@ body.v-bar code { background: var(--surface-2); }
 .bx-pips { display: flex; gap: 3px; margin-top: 6px; }
 .bx-pips i { width: 14px; height: 22px; transform: skewX(-12deg); background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); font: 600 10px/20px var(--bx-mono); text-align: center; font-style: normal; color: transparent; }
 .bx-pips.h i.on { background: #d64545; border-color: #ff8a8a; }
-.bx-pips.h i.half { background: linear-gradient(to top, #d64545 50%, rgba(255,255,255,.1) 50%); }
+.bx-pips.h i.half { background: linear-gradient(to top, #d64545 50%, rgba(255,255,255,.1) 50%) border-box; }
 .bx-pips.h i.on:last-child { animation: bx-beat 1.6s ease-in-out infinite; }
 .bx-pips.m i { width: 15px; color: var(--bx-dim); }
 .bx-pips.m i.on { background: #4f8fd6; border-color: #9cc4f5; color: #fff; }

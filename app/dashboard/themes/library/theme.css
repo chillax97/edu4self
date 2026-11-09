@@ -60,7 +60,7 @@
 .room .lb-lamp { border: 1px solid var(--bx-line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 12px;
   background: radial-gradient(ellipse 70% 80% at 50% 0, rgba(255,214,140,.16), transparent 70%), rgba(0,0,0,.15); }
 .room .bx-pips.h i.on, .room .bx-pips.m i.on { background: var(--lb-brass); border-color: #f0d79c; color: #1a140a; }
-.room .bx-pips.h i.half { background: linear-gradient(to top, var(--lb-brass) 50%, rgba(255,255,255,.1) 50%); }
+.room .bx-pips.h i.half { background: linear-gradient(to top, var(--lb-brass) 50%, rgba(255,255,255,.1) 50%) border-box; }
 .room .lb-side .bx-juke { border-radius: 12px; background: linear-gradient(#1d2a20, #121a14); border: 1px solid #8a6d36; padding: 14px; }
 .room .lb-side .bx-juke::before, .room .lb-side .bx-juke::after { display: none; }
 .room .lb-k { margin: 0 0 10px; font: italic 15px var(--serif); color: var(--lb-brass); }

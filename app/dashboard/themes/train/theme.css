@@ -29,7 +29,7 @@
 .room .tr-win .bx-mono { color: #f6e4c2; }
 .room .tr-win .bx-cab { border: 0; background: none; padding: 16px 18px; }
 .room .bx-pips.h i.on { background: #ffcf6b; border-color: #ffe7a8; }
-.room .bx-pips.h i.half { background: linear-gradient(to top, #ffcf6b 50%, rgba(255,255,255,.1) 50%); }
+.room .bx-pips.h i.half { background: linear-gradient(to top, #ffcf6b 50%, rgba(255,255,255,.1) 50%) border-box; }
 .room .bx-pips.m i.on { background: #ffcf6b; border-color: #ffe7a8; color: #2a1a10; }
 .room .bx-num { color: #fff1cf; }
 

@@ -21,7 +21,7 @@
 .room .te-cup.bx-cab { background: var(--te-paper); border-color: #d9ccb4; }
 .room .bx-pips i { background: #efe6d4; border-color: #c9b998; color: #6e6250; }
 .room .bx-pips.h i.on { background: var(--te-green); border-color: #4a6424; }
-.room .bx-pips.h i.half { background: linear-gradient(to top, var(--te-green) 50%, #efe6d4 50%); }
+.room .bx-pips.h i.half { background: linear-gradient(to top, var(--te-green) 50%, #efe6d4 50%) border-box; }
 .room .bx-pips.m i.on { background: var(--te-green); border-color: #4a6424; color: #fff; }
 .room .bx-pips.m i.is-today { outline-color: #2d261d; }
 .room .bx-num, .room .bx-num small { color: #2d261d; }
