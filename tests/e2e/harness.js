@@ -119,6 +119,8 @@ export async function openPage(browser, url, { width = 1440, height = 1000, view
   page.on("pageerror", (e) => page.errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") page.errors.push(m.text()); });
   page.on("dialog", (d) => d.accept());
+  // on CI, print every request the browser couldn't make: the console error alone doesn't name the URL
+  if (process.env.CI) page.on("requestfailed", (r) => console.log("request failed:", r.url(), r.failure()?.errorText));
   await page.setViewport({ width, height });
   // the machine's own motion setting must not decide what a test sees (Windows CI runners ask for reduced
   // motion, which stops every animation, the neon blink included); E2E_MOTION=reduce runs a file the other way
