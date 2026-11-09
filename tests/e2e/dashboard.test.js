@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, wavFile, readJSON, readLines, sleep } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, openPage, pinClock, closePage, wavFile, readJSON, readLines, sleep } from "./harness.js";
 
 let PORT;
 
@@ -32,6 +32,7 @@ test("first visit: onboarding, then the bar with the example topic", async () =>
   const page = await browser.newPage();
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(String(e)));
+  await pinClock(page, 7);   // the Willpower voice speaks only 5-9 and after 21
   await page.goto(server.url, { waitUntil: "networkidle0" });
   await page.waitForSelector("#onboarding:not([hidden])");
   assert.match(await page.$eval("#ob-title", (e) => e.textContent), /Welcome to edu4self/);
@@ -191,7 +192,7 @@ test("a focus block starts, shows its clock, and stops", async () => {
 });
 
 test("Settings: change everything, upload music, survive a restart, then reset", async () => {
-  const page = await openPage(browser, server.url, { view: "bar" });
+  const page = await openPage(browser, server.url, { view: "bar", hour: 7 });   // the renamed voice (Grit) speaks only 5-9 and after 21
   await page.click("#btn-settings");
   await page.waitForSelector("#settings:not([hidden]) #set-name");
 
