@@ -8,6 +8,11 @@ Exit code 0 means no broken links. Run: edu4self check   (or: python3 check_link
 import os, re, sys
 from urllib.parse import unquote
 
+if os.name == "nt":      # a pipe or file on Windows defaults to the legacy code page, which can't print ✓ or ·
+    for _s in (sys.stdout, sys.stderr):
+        if _s is not None and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = os.path.abspath(os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("EDU4SELF_VAULT", ".")))
 SKIP_DIRS = {".obsidian", ".git", "logs", "music", "node_modules"}
 EXTERNAL = re.compile(r"^(https?:|mailto:|obsidian:|data:|javascript:|#|/api/)", re.I)

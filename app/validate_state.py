@@ -5,6 +5,11 @@ Run after every edit to state.json:  edu4self check   (or: python3 validate_stat
 """
 import json, os, re, sys
 
+if os.name == "nt":      # a pipe or file on Windows defaults to the legacy code page, which can't print ✓ or ·
+    for _s in (sys.stdout, sys.stderr):
+        if _s is not None and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8", errors="replace")
+
 ARG = os.path.abspath(os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("EDU4SELF_VAULT", ".")))
 # accept the vault folder or the state.json file itself
 ROOT = os.path.dirname(os.path.dirname(ARG)) if ARG.endswith(".json") else ARG

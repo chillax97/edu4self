@@ -131,7 +131,7 @@ class ServerTest(unittest.TestCase):
         body = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"Q": "A"}, "confidence": "shaky"}
         code, d, _ = self.req("POST", "/api/inbox", body)
         self.assertEqual(code, 201)
-        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl"), encoding="utf-8") if l.strip()]
         self.assertEqual([e for e in saved if e["id"] == d["id"]][0]["confidence"], "shaky")
         code, _, _ = self.req("POST", "/api/withdraw", {"id": d["id"]})
         self.assertEqual(code, 200)
@@ -157,10 +157,10 @@ class ServerTest(unittest.TestCase):
         calc = [{"expr": "2*32*128*2", "result": "16384"}, {"expr": "(1+2)*3^2", "result": "27"}]
         code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=calc))
         self.assertEqual(code, 201)
-        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl"), encoding="utf-8") if l.strip()]
         self.assertEqual([e for e in saved if e["id"] == d["id"]][0]["calc"], calc)
         code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=[]))
-        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl")) if l.strip()]
+        saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl"), encoding="utf-8") if l.strip()]
         self.assertNotIn("calc", [e for e in saved if e["id"] == d["id"]][0], "an empty history sends nothing")
         self.assertEqual(self.req("POST", "/api/inbox", dict(good, calc=[{"expr": "1", "result": "1"}] * 50))[0], 201)
         for bad in ([{"expr": "1", "result": "1"}] * 51, [{"expr": "x" * 201, "result": "1"}], [{"expr": "1", "result": "9" * 101}],
@@ -262,7 +262,7 @@ class ServerTest(unittest.TestCase):
             self.assertEqual(self.req("POST", "/api/blocks", {"block": "deep", "minutes": 45, "started": "2026-01-03T10:00:00Z"})[0], 201)
             self.assertEqual(self.req("POST", "/api/blocks", {"block": "lessons", "minutes": 45, "started": "2026-01-03T11:00:00Z"})[0], 400)
             # Claude's check still passes with the topic's block kind gone (it's only a note)
-            r = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, text=True)
+            r = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, encoding="utf-8")
             self.assertEqual(r.returncode, 0, r.stdout)
             self.assertIn("note:", r.stdout)
         finally:
@@ -303,14 +303,14 @@ class ServerTest(unittest.TestCase):
         with open(self.sys_path("music", "Old.mp3"), "wb") as fh:
             fh.write(b"ID3" + b"\0" * 64)
         raw = json.dumps({"music": {"file": "Old.mp3", "title": "Old one"}})
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             fh.write(raw)
         try:
             d = self.req("GET", "/api/config")[1]
             self.assertEqual(d["config"]["music"]["files"], [{"file": "Old.mp3", "title": "Old one"}])
             self.assertEqual(self.req("GET", "/music")[0], 200)
             self.req("GET", "/api/state")
-            with open(path) as fh:
+            with open(path, encoding="utf-8") as fh:
                 self.assertEqual(fh.read(), raw, "only a save in Settings writes the new shape")
         finally:
             os.remove(self.sys_path("music", "Old.mp3"))
@@ -359,7 +359,7 @@ class ServerTest(unittest.TestCase):
             self.assertIn(msg, str(cm.exception), bad)
 
     def test_a_full_jukebox_refuses_one_more_upload(self):
-        with open(self.sys_path("config.json"), "w") as fh:
+        with open(self.sys_path("config.json"), "w", encoding="utf-8") as fh:
             json.dump({"music": {"files": [{"file": "t%d.mp3" % i} for i in range(server.MAX_TRACKS)]}}, fh)
         try:
             code, d, _ = self.upload("one-more.mp3", b"ID3" + b"\0" * 64)
@@ -369,7 +369,7 @@ class ServerTest(unittest.TestCase):
             self.req("POST", "/api/config", {"config": {}})
 
     def test_broken_config_file_falls_back_to_defaults(self):
-        with open(self.sys_path("config.json"), "w") as fh:
+        with open(self.sys_path("config.json"), "w", encoding="utf-8") as fh:
             fh.write("{not json")
         try:
             code, d, _ = self.req("GET", "/api/state")
@@ -466,7 +466,7 @@ class ValidatorTest(unittest.TestCase):
     def check(self, state=None):
         if state is not None:
             write_json(self.state_path, state)
-        return subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, text=True)
+        return subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, encoding="utf-8")
 
     def test_template_is_valid_and_gate_is_optional(self):
         self.assertEqual(self.check().returncode, 0)
@@ -516,9 +516,9 @@ class ValidatorTest(unittest.TestCase):
         self.assertIn("calculator must be true or false", r.stdout)
 
     def test_link_checker_finds_a_broken_link(self):
-        with open(os.path.join(self.vault, "Home.md"), "a") as fh:
+        with open(os.path.join(self.vault, "Home.md"), "a", encoding="utf-8") as fh:
             fh.write("\n[[how-learning-works/NOPE]]\n")
-        r = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), self.vault], stdout=subprocess.PIPE, text=True)
+        r = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), self.vault], stdout=subprocess.PIPE, encoding="utf-8")
         self.assertEqual(r.returncode, 1)
         self.assertIn("BROKEN", r.stdout)
 
@@ -556,7 +556,7 @@ class ClaudeTest(unittest.TestCase):
         self.fail("claude run never finished")
 
     def calls(self):
-        with open(self.log) as fh:
+        with open(self.log, encoding="utf-8") as fh:
             return [json.loads(l) for l in fh if l.strip()]
 
     def test_grade_runs_claude_in_the_vault_and_checks_after(self):
@@ -695,7 +695,7 @@ class CliTest(unittest.TestCase):
             self.assertFalse(cli.lesson_skill_found())
             for skill in ("skills/write-lesson", "skills/check-inbox"):   # a lone skill is not the plugin
                 os.makedirs(os.path.join(home, "plugins/cache/edu4self/edu4self/1.3.0", skill))
-                open(os.path.join(home, "plugins/cache/edu4self/edu4self/1.3.0", skill, "SKILL.md"), "w").close()
+                open(os.path.join(home, "plugins/cache/edu4self/edu4self/1.3.0", skill, "SKILL.md"), "w", encoding="utf-8").close()
                 self.assertEqual(cli.lesson_skill_found(), skill.endswith("check-inbox"))
         finally:
             if old is None:
@@ -706,19 +706,19 @@ class CliTest(unittest.TestCase):
     def test_init_writes_a_working_vault_and_remembers_it(self):
         vault, env = make_vault(self.tmp)
         self.assertEqual(read_json(os.path.join(self.tmp, "cfg", "settings.json"))["vault"], vault)
-        with open(os.path.join(vault, "CLAUDE.md")) as fh:
+        with open(os.path.join(vault, "CLAUDE.md"), encoding="utf-8") as fh:
             claude = fh.read()
-        with open(os.path.join(vault, "AGENTS.md")) as fh:
+        with open(os.path.join(vault, "AGENTS.md"), encoding="utf-8") as fh:
             agents = fh.read()
         self.assertNotIn("{{", claude)
         self.assertIn("docs/PROTOCOL.md", claude)
         self.assertEqual(claude, agents)
-        r = subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, text=True)
+        r = subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_home_note_links_the_port_the_vault_was_made_for(self):
         vault, env = make_vault(self.tmp, "--port", "4801")
-        with open(os.path.join(vault, "Home.md")) as fh:
+        with open(os.path.join(vault, "Home.md"), encoding="utf-8") as fh:
             home = fh.read()
         self.assertIn("http://127.0.0.1:4801", home)
         self.assertNotIn("{{", home)
@@ -728,37 +728,37 @@ class CliTest(unittest.TestCase):
         # otherwise fall back to defaults without a word
         vault, env = make_vault(self.tmp)
         cfg_path = os.path.join(vault, "_system", "config.json")
-        check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        with open(cfg_path, "w") as fh:
+        check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8")
+        with open(cfg_path, "w", encoding="utf-8") as fh:
             json.dump({"name": "Kim", "goals": {"day_minutes": 5}}, fh)
         r = check()
         self.assertNotEqual(r.returncode, 0, r.stdout)
         self.assertIn("daily goal", r.stdout)
-        with open(cfg_path, "w") as fh:
+        with open(cfg_path, "w", encoding="utf-8") as fh:
             fh.write("{not json")
         self.assertNotEqual(check().returncode, 0)
-        with open(cfg_path, "w") as fh:
+        with open(cfg_path, "w", encoding="utf-8") as fh:
             json.dump({"music": {"file": "missing.mp3"}}, fh)
         r = check()
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("missing.mp3", r.stdout)
-        with open(cfg_path, "w") as fh:
+        with open(cfg_path, "w", encoding="utf-8") as fh:
             json.dump({"name": "Kim", "goals": {"day_minutes": 90}, "bar": {"names": [["The Night Shift", ""]]}}, fh)
         r = check()
         self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_a_new_vault_starts_with_a_running_plan(self):
         vault, _ = make_vault(self.tmp)
-        with open(os.path.join(vault, "PLAN.md")) as fh:
+        with open(os.path.join(vault, "PLAN.md"), encoding="utf-8") as fh:
             plan = fh.read()
         self.assertNotIn("{{", plan)
         self.assertIn("Retrieval beats rereading", plan, "the plan lists the example topic's units")
-        with open(os.path.join(vault, "CLAUDE.md")) as fh:
+        with open(os.path.join(vault, "CLAUDE.md"), encoding="utf-8") as fh:
             claude = fh.read()
         self.assertIn("PLAN.md", claude, "the tutor is told to keep it")
         self.assertIn("two units fully written", claude, "and to stay two units ahead")
         empty, _ = make_vault(os.path.join(self.tmp, "b"), "--no-example")
-        with open(os.path.join(empty, "PLAN.md")) as fh:
+        with open(os.path.join(empty, "PLAN.md"), encoding="utf-8") as fh:
             plan = fh.read()
         self.assertNotIn("How learning works", plan, "no units from a topic that isn't there")
         self.assertNotIn("{{", plan)
@@ -766,7 +766,7 @@ class CliTest(unittest.TestCase):
 
     def test_init_refuses_a_folder_with_files_in_it(self):
         vault, env = make_vault(self.tmp)
-        r = subprocess.run([sys.executable, CLI, "init", vault], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        r = subprocess.run([sys.executable, CLI, "init", vault], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("isn't empty", r.stderr)
 
@@ -778,7 +778,7 @@ class CliTest(unittest.TestCase):
         env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg3"), HOME=self.tmp)
         v3 = os.path.join(self.tmp, "g3", "vault")
         r = subprocess.run([sys.executable, CLI, "setup", "--vault", v3, "--name", "T", "--no-service", "--no-open", "--gifts", "off"],
-                           env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                           env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIs(read_json(os.path.join(v3, "_system", "config.json"))["gifts"], False)
         self.assertNotIn("Turn gifts on", r.stdout, "no question without a terminal")
@@ -803,7 +803,7 @@ class CliTest(unittest.TestCase):
         bin_dir = os.path.join(self.tmp, "my bin")
         os.makedirs(bin_dir)
         fake = os.path.join(bin_dir, "claude")
-        with open(fake, "w") as fh:
+        with open(fake, "w", encoding="utf-8") as fh:
             fh.write("#!/bin/sh\n")
         os.chmod(fake, 0o755)
         old = os.environ["PATH"]
@@ -817,7 +817,7 @@ class CliTest(unittest.TestCase):
         m = re.search(r"<key>PATH</key>\s*<string>([^<]*)</string>", plist)
         self.assertTrue(m, plist)
         self.assertEqual(m.group(1).split(os.pathsep)[0], bin_dir)
-        self.assertIn('Environment="PATH=%s' % bin_dir, unit)
+        self.assertIn('Environment="PATH=%s' % bin_dir.replace("\\", "\\\\"), unit)    # systemd wants backslashes doubled
         plistlib.loads(plist.encode())   # still a valid plist
 
 
@@ -825,13 +825,13 @@ class RepoTest(unittest.TestCase):
     """Copies and version numbers that must agree across the repo."""
 
     def test_plugin_protocol_matches_docs(self):
-        with open(os.path.join(ENGINE, "docs", "PROTOCOL.md")) as a, open(os.path.join(ENGINE, "plugin", "skills", "check-inbox", "PROTOCOL.md")) as b:
+        with open(os.path.join(ENGINE, "docs", "PROTOCOL.md"), encoding="utf-8") as a, open(os.path.join(ENGINE, "plugin", "skills", "check-inbox", "PROTOCOL.md"), encoding="utf-8") as b:
             self.assertEqual(a.read(), b.read(), "run: cp docs/PROTOCOL.md plugin/skills/check-inbox/PROTOCOL.md")
 
     def test_versions_agree(self):
         plugin = read_json(os.path.join(ENGINE, "plugin", ".claude-plugin", "plugin.json"))
         self.assertEqual(plugin["version"], server.VERSION)
-        with open(os.path.join(ENGINE, "CHANGELOG.md")) as fh:
+        with open(os.path.join(ENGINE, "CHANGELOG.md"), encoding="utf-8") as fh:
             self.assertIn("## %s" % server.VERSION, fh.read())
 
     def test_marketplace_points_at_the_plugin(self):

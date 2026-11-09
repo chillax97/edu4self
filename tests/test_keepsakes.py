@@ -133,7 +133,7 @@ class ServerTest(unittest.TestCase):
         os.environ["EDU4SELF_CLAUDE"] = FAKE
         os.environ["FAKE_CLAUDE_LOG"] = cls.log
         write_json(os.path.join(cls.vault, "_system", "config.json"), {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True})
-        with open(os.path.join(cls.vault, "_system", "blocks.jsonl"), "w") as fh:     # history from before trophies existed
+        with open(os.path.join(cls.vault, "_system", "blocks.jsonl"), "w", encoding="utf-8") as fh:     # history from before trophies existed
             for i in range(3):
                 fh.write(json.dumps(block(at(30 + i, 20), 45)) + "\n")
         cls.port = free_port()
@@ -179,7 +179,7 @@ class ServerTest(unittest.TestCase):
             time.sleep(0.1)
         self.assertEqual(item["gift"], "gifts/%s.html" % week)
         self.assertTrue(os.path.isfile(os.path.join(self.vault, item["gift"])))
-        run = [json.loads(l) for l in open(self.log)][-1]["args"]
+        run = [json.loads(l) for l in open(self.log, encoding="utf-8")][-1]["args"]
         allowed, denied = run[run.index("--allowedTools") + 1], run[run.index("--disallowedTools") + 1]
         self.assertNotIn("WebFetch", allowed, "a gift run has no web")
         self.assertIn("Bash", denied)
@@ -219,12 +219,12 @@ class ServerTest(unittest.TestCase):
                               "theme": "library", "name": "volume", "plural": "volumes", "stack": "row",
                               "art": data["items"][0]["art"], "backfill": False, "gift": "pending"})
         keepsakes.save(path, data)
-        runs = sum(1 for _ in open(self.log))
+        runs = sum(1 for _ in open(self.log, encoding="utf-8"))
         try:
             self.req("GET", "/api/state")
             item = next(i for i in keepsakes.load(path)["items"] if i["id"] == "die-99")
             self.assertEqual(item["gift"], "off")
-            self.assertEqual(sum(1 for _ in open(self.log)), runs, "no Claude run when gifts are off")
+            self.assertEqual(sum(1 for _ in open(self.log, encoding="utf-8")), runs, "no Claude run when gifts are off")
         finally:
             write_json(cfg, {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True})
 
@@ -238,13 +238,13 @@ class ServerTest(unittest.TestCase):
                               "theme": "library", "name": "volume", "plural": "volumes", "stack": "row",
                               "art": data["items"][0]["art"], "backfill": False, "gift": "pending"})
         keepsakes.save(path, data)
-        runs = sum(1 for _ in open(self.log))
+        runs = sum(1 for _ in open(self.log, encoding="utf-8"))
         try:
             self.req("GET", "/api/state")
             time.sleep(0.3)
             item = next(i for i in keepsakes.load(path)["items"] if i["id"] == "die-98")
             self.assertEqual(item["gift"], "pending", "kept, not skipped")
-            self.assertEqual(sum(1 for _ in open(self.log)), runs, "no Claude run before the learner says yes")
+            self.assertEqual(sum(1 for _ in open(self.log, encoding="utf-8")), runs, "no Claude run before the learner says yes")
             code, _, _ = self.req("POST", "/api/config", {"config": {"theme": "library", "goals": {"day_minutes": 30, "week_days": 1}, "gifts": True}})
             self.assertEqual(code, 200)
             self.req("GET", "/api/state")

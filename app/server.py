@@ -942,6 +942,10 @@ def with_quiz_shuffle(page):
 
 def claude_bin():
     exe = os.environ.get("EDU4SELF_CLAUDE") or shutil.which("claude")
+    if exe and os.name == "nt" and exe.lower().endswith((".cmd", ".bat")):
+        # npm's claude.cmd would run through cmd.exe, which mangles prompts (quotes, &, newlines) and can run
+        # text from them. Only the real claude.exe (the native installer) is safe to hand a prompt to.
+        exe = shutil.which("claude.exe")
     return exe if exe and os.path.isfile(exe) and os.access(exe, os.X_OK) else None
 
 
@@ -967,6 +971,14 @@ def tool_summary(name, inp):
     return name
 
 
+def engine_rule_path():
+    """The engine folder as Claude Code's permission rules spell an absolute path after `//`."""
+    p = ENGINE.replace("\\", "/")
+    if os.name == "nt" and p[1:2] == ":":
+        p = p[0].lower() + p[2:]                 # C:\x -> c/x (Claude Code's Windows form)
+    return p.lstrip("/")
+
+
 def claude_args(prompt, resume, kind="chat"):
     """The permission wall for a run started from the page. Lessons in the vault may come from someone
     else, and Claude reads them while grading, so the rules assume Claude can be talked into anything:
@@ -977,7 +989,7 @@ def claude_args(prompt, resume, kind="chat"):
     - no shell at all: the server runs the check itself after every run (claude_watch);
     - grading gets no web tools, so nothing Claude reads while grading can be sent anywhere.
     MCP servers listed in the vault are ignored, and local (unshared) settings files there too."""
-    tools = ["Read(//%s/**)" % ENGINE.lstrip("/"), "Read(~/.claude/plugins/**)", "Read(~/.claude/skills/**)",
+    tools = ["Read(//%s/**)" % engine_rule_path(), "Read(~/.claude/plugins/**)", "Read(~/.claude/skills/**)",
              "Skill", "TodoWrite"]
     if kind not in ("grade", "gift"):
         tools += ["WebSearch", "WebFetch"]
@@ -987,7 +999,8 @@ def claude_args(prompt, resume, kind="chat"):
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in ("grade", "gift"):
         deny += ["WebSearch", "WebFetch"]
-    args = [claude_bin(), "-p", prompt, "--output-format", "stream-json", "--verbose",
+    exe = claude_bin() or ""
+    args = ([sys.executable, exe] if exe.endswith(".py") else [exe]) + ["-p", prompt, "--output-format", "stream-json", "--verbose",
             "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
             "--disallowedTools", ",".join(deny), "--setting-sources", "user,project", "--strict-mcp-config",
             "--append-system-prompt", PANEL_NOTE]
@@ -1711,6 +1724,10 @@ def make_server(vault, port):
 
 
 def main(argv=None):
+    if os.name == "nt":
+        for _s in (sys.stdout, sys.stderr):
+            if _s is not None and hasattr(_s, "reconfigure"):
+                _s.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="edu4self dashboard server")
     ap.add_argument("--vault", default=os.environ.get("EDU4SELF_VAULT"), help="the learning vault folder")
     ap.add_argument("--port", type=int, default=int(os.environ.get("EDU4SELF_PORT", "4747")))

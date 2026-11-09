@@ -236,7 +236,7 @@ class CheckTest(unittest.TestCase):
         tmp = tempfile.mkdtemp(prefix="edu4self-themecheck-")
         try:
             vault, env = make_vault(tmp)
-            check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            check = lambda: subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8")
             make_theme(vault, "cosy", meta={"name": "Cosy"})
             write_json(os.path.join(vault, "_system", "config.json"), {"theme": "cosy"})
             r = check()
@@ -297,7 +297,7 @@ class NoRoomSharingTest(unittest.TestCase):
             httpd.shutdown()
             httpd.server_close()
         r = subprocess.run([sys.executable, CLI, "room", "export", "library", "--vault", self.vault],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=self.env)
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", env=self.env)
         self.assertEqual(r.returncode, 2, "argparse refuses an unknown command")
         self.assertFalse(hasattr(themes, "unpack"))
 

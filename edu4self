@@ -36,6 +36,11 @@ DEFAULT_PORT = 4747
 
 sys.path.insert(0, APP)
 
+if os.name == "nt":      # a pipe or file on Windows defaults to the legacy code page, which can't print ✓ or ·
+    for _s in (sys.stdin, sys.stdout, sys.stderr):
+        if _s is not None and hasattr(_s, "reconfigure"):
+            _s.reconfigure(encoding="utf-8", errors="replace")
+
 
 def settings_path():
     base = os.environ.get("EDU4SELF_CONFIG_HOME") or os.path.join(

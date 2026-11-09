@@ -16,7 +16,7 @@ session = args[args.index("--resume") + 1] if "--resume" in args else "fake-sess
 
 log = os.environ.get("FAKE_CLAUDE_LOG")
 if log:
-    with open(log, "a") as fh:
+    with open(log, "a", encoding="utf-8") as fh:
         fh.write(json.dumps({"args": args, "cwd": os.getcwd()}) + "\n")
 
 
@@ -30,16 +30,16 @@ say({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "
 
 if "check my inbox" in prompt:
     path = os.path.join("_system", "state.json")
-    with open(path) as fh:
+    with open(path, encoding="utf-8") as fh:
         state = json.load(fh)
     ids = []
-    with open(os.path.join("_system", "inbox.jsonl")) as fh:
+    with open(os.path.join("_system", "inbox.jsonl"), encoding="utf-8") as fh:
         for line in fh:
             if line.strip():
                 ids.append(json.loads(line)["id"])
     state["processed_inbox"] = sorted(set(state.get("processed_inbox", []) + ids))
     state["coach"]["headline"] = "Graded by the fake tutor."
-    with open(path, "w") as fh:
+    with open(path, "w", encoding="utf-8") as fh:
         json.dump(state, fh, indent=1)
     say({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": os.path.abspath(path)}}]}})
     say({"type": "assistant", "message": {"content": [{"type": "text", "text": "Graded %d submission(s)." % len(ids)}]}})
@@ -47,7 +47,7 @@ elif "A surprise for the learner" in prompt:
     import re
     gid = re.search(r"gifts/([A-Za-z0-9-]+)\.html", prompt).group(1)
     os.makedirs("gifts", exist_ok=True)
-    with open(os.path.join("gifts", gid + ".html"), "w") as fh:
+    with open(os.path.join("gifts", gid + ".html"), "w", encoding="utf-8") as fh:
         fh.write("<!doctype html><title>A gift</title><p>A map of what you know.</p>")
     say({"type": "assistant", "message": {"content": [{"type": "text", "text": "I made you a map."}]}})
 else:

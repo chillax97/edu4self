@@ -68,7 +68,7 @@ class RepoSizeTest(unittest.TestCase):
     def test_no_tracked_file_over_5mb(self):
         import subprocess
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        out = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, text=True)
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, encoding="utf-8")
         if out.returncode != 0:
             self.skipTest("not a git checkout")
         big = []

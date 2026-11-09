@@ -105,7 +105,7 @@ class RecallSchemaTest(unittest.TestCase):
 
     def check(self):
         write_json(self.path, self.state)
-        return subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, text=True)
+        return subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault], stdout=subprocess.PIPE, encoding="utf-8")
 
     def test_recall_questions_are_checked(self):
         self.state["recall"] = [{"id": "r1", "q": "What does storage strength mean?", "from": "hlw-lesson-01"}]
@@ -142,7 +142,7 @@ class RecallSchemaTest(unittest.TestCase):
 
     def test_a_recall_sent_after_a_gap_is_marked_as_the_comeback(self):
         server.configure(self.vault, 4799)
-        with open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w") as fh:
+        with open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w", encoding="utf-8") as fh:
             fh.write(json.dumps({"ts": (datetime.now().astimezone() - timedelta(days=5)).isoformat(), "minutes": 25}) + "\n")
         self.state["recall"] = [{"id": "r1", "q": "Q one?", "from": "hlw-lesson-01"}]
         e = server.clean_submission({"topic": "general", "task": "recall", "kind": "recall", "fields": {"Q one?": "x"}, "recall": ["r1"]}, self.state)
@@ -161,7 +161,7 @@ class StuckTest(unittest.TestCase):
         server.configure(self.vault, 4798)
         self.ex = os.path.join(self.vault, "topic", "ex")
         os.makedirs(os.path.join(self.ex, "trace"))
-        with open(os.path.join(self.ex, "HINTS.md"), "w") as fh:
+        with open(os.path.join(self.ex, "HINTS.md"), "w", encoding="utf-8") as fh:
             fh.write("# Hints\n\n## 1 · start\n- a\n\n## 2 · the loop\n- b\n\n## 3 · the end\n- c\n")
         self.task = {"id": "t-ex", "status": "todo", "exercise": "topic/ex"}
 
@@ -169,7 +169,7 @@ class StuckTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def put(self, name, rec):
-        with open(os.path.join(self.ex, "trace", name), "w") as fh:
+        with open(os.path.join(self.ex, "trace", name), "w", encoding="utf-8") as fh:
             json.dump(dict(rec, edu4self_trace=1), fh)
 
     def test_the_timeline_in_time_order_and_the_next_unopened_hint(self):
@@ -178,7 +178,7 @@ class StuckTest(unittest.TestCase):
         self.assertFalse(server.attempts(self.task)["stuck"], "two failing runs: not yet")
         self.put("2026-11-06T10-03-00.000-hint-1.json", {"kind": "hint", "ts": "2026-11-06T10:03:00+03:00", "hint": 1, "title": "1 · start"})
         self.put("2026-11-06T10-10-30.000-run.json", {"kind": "run", "ts": "2026-11-06T10:10:30+03:00", "exit": 1})
-        with open(os.path.join(self.ex, "trace", "notes.json"), "w") as fh:      # not the record's: ignored
+        with open(os.path.join(self.ex, "trace", "notes.json"), "w", encoding="utf-8") as fh:      # not the record's: ignored
             fh.write('{"kind": "run", "exit": 0}')
         before = sorted(os.listdir(os.path.join(self.ex, "trace")))
         a = server.attempts(self.task)

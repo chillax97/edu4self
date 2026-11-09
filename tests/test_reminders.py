@@ -178,7 +178,8 @@ class MailTest(unittest.TestCase):
 
     def test_mail_is_sent_and_the_account_file_is_private(self):
         reminders.save_mail(self.acct)
-        self.assertEqual(stat.S_IMODE(os.stat(reminders.mail_path()).st_mode), 0o600)
+        if os.name != "nt":      # Windows has no POSIX permission bits to check (the file lives in the user's profile)
+            self.assertEqual(stat.S_IMODE(os.stat(reminders.mail_path()).st_mode), 0o600)
         reminders.send_mail(reminders.load_mail(), "edu4self: hi", "body text")
         self.assertIn("Subject: edu4self: hi", self.smtp.mails[0])
         self.assertIn("body text", self.smtp.mails[0])
@@ -205,7 +206,7 @@ class MailTest(unittest.TestCase):
     def test_the_password_can_live_in_the_keychain_instead_of_the_file(self):
         kept = self.fake_store()
         reminders.save_mail(dict(self.acct, password="s3cret", password_store="keychain"))
-        on_disk = json.load(open(reminders.mail_path()))
+        on_disk = json.load(open(reminders.mail_path(), encoding="utf-8"))
         self.assertEqual((on_disk["password"], on_disk["password_store"]), ("", "keychain"), "not in the file")
         self.assertEqual(kept["pw"], "s3cret")
         m = reminders.load_mail()
@@ -248,7 +249,7 @@ class MailTest(unittest.TestCase):
 
     def test_cli_test_and_off(self):
         cli = os.path.join(ENGINE, "edu4self")
-        run = lambda *a: subprocess.run([sys.executable, cli, "mail"] + list(a), stdout=subprocess.PIPE, text=True, env=dict(os.environ))
+        run = lambda *a: subprocess.run([sys.executable, cli, "mail"] + list(a), stdout=subprocess.PIPE, encoding="utf-8", env=dict(os.environ))
         self.assertEqual(run("test").returncode, 1, "nothing set up yet")
         reminders.save_mail(self.acct)
         r = run("test")
@@ -284,12 +285,12 @@ class ServerLoopTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def blocks(self, *when):
-        with open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w") as fh:
+        with open(os.path.join(self.vault, "_system", "blocks.jsonl"), "w", encoding="utf-8") as fh:
             for w in when:
                 fh.write(json.dumps(blk(w)) + "\n")
 
     def config(self, c):
-        with open(os.path.join(self.vault, "_system", "config.json"), "w") as fh:
+        with open(os.path.join(self.vault, "_system", "config.json"), "w", encoding="utf-8") as fh:
             json.dump(c, fh)
 
     def test_one_mail_per_step_with_a_link_to_the_task(self):
@@ -308,7 +309,7 @@ class ServerLoopTest(unittest.TestCase):
         hours, reminders.MAIL_HOURS = reminders.MAIL_HOURS, (0, 24)   # so this runs at any hour
         self.addCleanup(setattr, reminders, "MAIL_HOURS", hours)
         self.blocks(now - timedelta(days=3))
-        with open(os.path.join(self.vault, "_system", "reminders.json"), "w") as fh:   # no recap in the way
+        with open(os.path.join(self.vault, "_system", "reminders.json"), "w", encoding="utf-8") as fh:   # no recap in the way
             json.dump({"recaps": [reminders.week_id(now.date()), reminders.week_id(now.date() - timedelta(days=1))]}, fh)
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         until = (datetime.now().astimezone() + timedelta(minutes=30)).isoformat()
@@ -344,7 +345,7 @@ class ServerLoopTest(unittest.TestCase):
         self.assertEqual(kind, "recap")
         path = os.path.join(self.vault, "recaps", "2026-W45.md")
         self.assertTrue(os.path.isfile(path))
-        self.assertIn("# Your week", open(path).read())
+        self.assertIn("# Your week", open(path, encoding="utf-8").read())
         self.assertIn("Subject: edu4self: Your week", self.smtp.mails[0])
         self.assertIsNone(server.reminder_tick(sun + timedelta(minutes=1)))
 

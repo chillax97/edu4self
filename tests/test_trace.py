@@ -67,14 +67,14 @@ class TraceTest(unittest.TestCase):
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
         cls.ex = os.path.join(cls.vault, "topic", "exercises", "e1")
         os.makedirs(cls.ex)
-        with open(os.path.join(cls.ex, "check.py"), "w") as fh:
+        with open(os.path.join(cls.ex, "check.py"), "w", encoding="utf-8") as fh:
             fh.write(CHECKER)
-        with open(os.path.join(cls.ex, "HINTS.md"), "w") as fh:
+        with open(os.path.join(cls.ex, "HINTS.md"), "w", encoding="utf-8") as fh:
             fh.write(HINTS)
         st = read_json(os.path.join(cls.vault, "_system", "state.json"))
         cls.task = st["topics"][0]["queue"][0]
         cls.task["exercise"] = "topic/exercises/e1"
-        with open(os.path.join(cls.vault, "_system", "state.json"), "w") as fh:
+        with open(os.path.join(cls.vault, "_system", "state.json"), "w", encoding="utf-8") as fh:
             json.dump(st, fh)
 
     @classmethod
@@ -87,11 +87,11 @@ class TraceTest(unittest.TestCase):
         shutil.rmtree(os.path.join(self.ex, "trace"), ignore_errors=True)
 
     def solve(self, body):
-        with open(os.path.join(self.ex, "sol.py"), "w") as fh:
+        with open(os.path.join(self.ex, "sol.py"), "w", encoding="utf-8") as fh:
             fh.write(body)
 
     def check(self):
-        return subprocess.run([sys.executable, os.path.join(self.ex, "check.py")], capture_output=True, text=True, timeout=30)
+        return subprocess.run([sys.executable, os.path.join(self.ex, "check.py")], capture_output=True, encoding="utf-8", timeout=30)
 
     def runs(self):
         d = os.path.join(self.ex, "trace")
@@ -140,7 +140,7 @@ class TraceTest(unittest.TestCase):
 
     def test_saving_can_fail_without_touching_the_checker(self):
         self.solve("def double(x):\n    return x * 2\n")
-        with open(os.path.join(self.ex, "trace"), "w") as fh:   # a file where the folder should be
+        with open(os.path.join(self.ex, "trace"), "w", encoding="utf-8") as fh:   # a file where the folder should be
             fh.write("in the way")
         try:
             res = self.check()
@@ -190,12 +190,12 @@ class TraceTest(unittest.TestCase):
         bad["topics"][0]["queue"][0]["exercise"] = "../outside"
         alt = os.path.join(self.tmp, "bad-vault", "_system")
         shutil.copytree(os.path.join(self.vault, "_system"), alt, dirs_exist_ok=True)
-        with open(os.path.join(alt, "state.json"), "w") as fh:
+        with open(os.path.join(alt, "state.json"), "w", encoding="utf-8") as fh:
             json.dump(bad, fh)
-        res = subprocess.run([sys.executable, validator, os.path.dirname(alt)], capture_output=True, text=True)
+        res = subprocess.run([sys.executable, validator, os.path.dirname(alt)], capture_output=True, encoding="utf-8")
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("exercise must be a folder in the vault", res.stdout)
-        self.assertEqual(subprocess.run([sys.executable, validator, self.vault], capture_output=True, text=True).returncode, 0,
+        self.assertEqual(subprocess.run([sys.executable, validator, self.vault], capture_output=True, encoding="utf-8").returncode, 0,
                          "a real exercise folder is fine")
 
     def test_the_learner_sees_what_is_kept_and_deleting_removes_only_the_record(self):
@@ -203,10 +203,10 @@ class TraceTest(unittest.TestCase):
         self.check()
         self.req("POST", "/api/hints", {"task": self.task["id"], "n": 1})
         other = os.path.join(self.ex, "notes.json")                  # the learner's own files are never touched
-        with open(other, "w") as fh:
+        with open(other, "w", encoding="utf-8") as fh:
             fh.write("{}")
         mine = os.path.join(self.ex, "trace", "my-own.json")          # not even one they put inside trace/
-        with open(mine, "w") as fh:
+        with open(mine, "w", encoding="utf-8") as fh:
             fh.write('{"kind": "run"}')
         code, s = self.req("GET", "/api/traces")
         self.assertEqual((code, s["runs"], s["hints"], s["exercises"]), (200, 1, 1, 1))

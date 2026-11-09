@@ -26,7 +26,7 @@ def talk(port, *calls, client="test-client"):
     for i, (method, params) in enumerate(calls, 1):
         msgs.append({"jsonrpc": "2.0", "id": i, "method": method, "params": params})
     p = subprocess.run([sys.executable, CLI, "mcp", "--port", str(port)], input="\n".join(json.dumps(m) for m in msgs) + "\n",
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", timeout=30)
     replies = [json.loads(l) for l in p.stdout.splitlines()]
     assert all(r.get("jsonrpc") == "2.0" for r in replies), p.stdout   # nothing but protocol on stdout
     return {r["id"]: r for r in replies}
@@ -46,7 +46,7 @@ class McpTest(unittest.TestCase):
         t = st["topics"][0]
         t["queue"][0]["rules"] = "Closed book. No AI."
         t["history"].append({"date": "2026-11-01", "kind": "lesson", "title": "Lesson 01: proved it", "evidence": True})
-        with open(os.path.join(cls.vault, "_system", "state.json"), "w") as fh:
+        with open(os.path.join(cls.vault, "_system", "state.json"), "w", encoding="utf-8") as fh:
             json.dump(st, fh)
         cls.topic = t["id"]
         cls.port = free_port()
@@ -89,7 +89,7 @@ class McpTest(unittest.TestCase):
     def test_a_note_lands_in_the_inbox_through_the_dashboard(self):
         res, out = tool(self.port, "leave_note", text="Why does rereading feel like learning?")
         self.assertFalse(res["isError"], res)
-        inbox = [json.loads(l) for l in open(os.path.join(self.vault, "_system", "inbox.jsonl")) if l.strip()]
+        inbox = [json.loads(l) for l in open(os.path.join(self.vault, "_system", "inbox.jsonl"), encoding="utf-8") if l.strip()]
         note = inbox[-1]
         self.assertEqual((note["kind"], note["topic"], note["note"]), ("note", "general", "Why does rereading feel like learning?"))
         self.assertIn("test-client", note["title"], "the tutor can see which tool it came from")

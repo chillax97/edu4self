@@ -159,9 +159,9 @@ def away(state, blocks, keepsake_items, cfg, step, last, pending_tasks, port):
     if stamped:
         t, b = max(stamped, key=lambda x: x[0])
         lines.append("- Your last session was on %s: %d minutes of %s." % (
-            t.strftime("%A %-d %B"), b.get("minutes") or 0, kinds.get(b.get("block"), b.get("block") or "study")))
+            day_name(t), b.get("minutes") or 0, kinds.get(b.get("block"), b.get("block") or "study")))
     else:
-        lines.append("- Your last session was on %s." % last.strftime("%A %-d %B"))
+        lines.append("- Your last session was on %s." % day_name(last))
     if proven:
         lines.append("- The last thing you proved: %s (%s)." % (proven[0][1], proven[0][2]))
     topic = nxt[0] if nxt else (state.get("topics") or [{}])[0]
@@ -236,7 +236,7 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
             q = todo[0]
             nxt.append("%s: %s%s" % (t.get("title", ""), (q.get("label") + ", ") if q.get("label") else "", q.get("title", "")))
     trophies = [i for i in keepsake_items if not i.get("backfill") and mon.isoformat() <= str(i.get("date", ""))[:10] <= sun.isoformat()]
-    title = "Your week, %s to %s: %s" % (mon.strftime("%-d %b"), sun.strftime("%-d %b"),
+    title = "Your week, %s to %s: %s" % ("%d %s" % (mon.day, mon.strftime("%b")), "%d %s" % (sun.day, sun.strftime("%b")),
                                          "goal met" if won else "%d of %d days" % (len(days), goal_days))
     lines = ["# " + title, "",
              "- %d focused minutes on %d day%s (goal: %d days)" % (mins, len(days), "" if len(days) == 1 else "s", goal_days),
@@ -258,6 +258,11 @@ def recap(state, blocks, keepsake_items, cfg, mon, port):
 def config_dir():
     return os.environ.get("EDU4SELF_CONFIG_HOME") or os.path.join(
         os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "edu4self")
+
+
+def day_name(t):
+    """'Wednesday 4 November' (strftime's %-d is not portable: Windows rejects it)."""
+    return "%s %d %s" % (t.strftime("%A"), t.day, t.strftime("%B"))
 
 
 def mail_path():
