@@ -10,6 +10,12 @@ import puppeteer from "puppeteer-core";
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const ENGINE = path.resolve(here, "..", "..");
 const CLI = path.join(ENGINE, "edu4self");
+// Node's fetch keeps connections open; after a test kills the server (a hard kill on Windows) the next fetch to the
+// same port trips an undici bug ("assert(!this.paused)"). One connection per request avoids reusing a dead one.
+if (process.platform === "win32") {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (url, opts = {}) => realFetch(url, { ...opts, headers: { ...(opts.headers || {}), connection: "close" } });
+}
 export const PYTHON = process.platform === "win32" ? "python" : "python3";
 
 const CHROME_CANDIDATES = [

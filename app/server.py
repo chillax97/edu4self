@@ -960,7 +960,7 @@ def tool_summary(name, inp):
         rel = path
         if os.path.isabs(path):   # realpath both: on macOS /var is /private/var, and a vault may sit behind a link
             rel = os.path.relpath(os.path.realpath(path), os.path.realpath(ROOT))
-            rel = path if rel.startswith("..") else rel
+            rel = path if rel.startswith("..") else rel.replace(os.sep, "/")
         return "%s %s" % ({"Read": "Reading", "Edit": "Editing", "Write": "Writing", "MultiEdit": "Editing"}.get(name, name), rel)
     if name == "Bash":
         return "Running " + (inp.get("description") or inp.get("command", ""))[:120]
