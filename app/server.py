@@ -1719,6 +1719,11 @@ def main(argv=None):
         sys.stderr.write("no vault: pass --vault PATH (a folder made by `edu4self init`)\n")
         return 2
     httpd = make_server(args.vault, args.port)
+    if sys.stderr is None or sys.stdout is None:     # pythonw.exe (Windows login task) has no console: log to a file
+        os.makedirs(os.path.join(ROOT, "_system", "logs"), exist_ok=True)
+        log = open(os.path.join(ROOT, "_system", "logs", "dashboard.log"), "a", encoding="utf-8", buffering=1)
+        sys.stderr = sys.stderr or log
+        sys.stdout = sys.stdout or log
     if os.environ.get("EDU4SELF_REMINDERS") != "0":
         threading.Thread(target=reminder_loop, daemon=True).start()
     sys.stderr.write("%s edu4self %s on http://%s:%d (vault %s)\n" % (now_iso(), VERSION, HOST, PORT, ROOT))

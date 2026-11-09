@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, windows]
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -29,6 +29,30 @@ jobs:
       - name: Unit tests (standard library only)
         run: python -m unittest discover -s tests -v
       - name: A fresh vault passes its own check
+        env:
+          EDU4SELF_CONFIG_HOME: ${{ runner.temp }}/cfg
+        run: |
+          python edu4self init "$RUNNER_TEMP/vault" --name CI
+          python edu4self check
+          python edu4self init "$RUNNER_TEMP/empty" --no-example
+          python edu4self check --vault "$RUNNER_TEMP/empty"
+
+  unit-windows:
+    name: unit (Windows) · Python ${{ matrix.python }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests (standard library only)
+        run: python -m unittest discover -s tests -v
+      - name: A fresh vault passes its own check
+        shell: bash
         env:
           EDU4SELF_CONFIG_HOME: ${{ runner.temp }}/cfg
         run: |

@@ -4,7 +4,7 @@
     ./edu4self setup                 first time: make a vault, start the dashboard, open it
     ./edu4self init PATH             make a new vault (learning folder) at PATH
     ./edu4self serve                 run the dashboard in this terminal (Ctrl-C stops it)
-    ./edu4self install               start the dashboard at login (macOS launchd, Linux systemd)
+    ./edu4self install               start the dashboard at login (macOS launchd, Linux systemd, Windows Task Scheduler)
     ./edu4self uninstall             stop doing that (your files stay)
     ./edu4self restart | status      restart the service / show what's running
     ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
@@ -340,6 +340,53 @@ def unit_path():
     return os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "systemd", "user", "edu4self.service")
 
 
+TASK_NAME = "edu4self"
+
+
+def windows_python():
+    """pythonw.exe (no console window) next to the running Python, else python.exe."""
+    d = os.path.dirname(os.path.abspath(sys.executable))
+    for name in ("pythonw.exe", "python.exe"):
+        if os.path.isfile(os.path.join(d, name)):
+            return os.path.join(d, name)
+    return sys.executable
+
+
+def windows_task_xml(vault, port, user=None):
+    """The Task Scheduler definition: run the server when this user logs on. It is XML (not plain
+    `schtasks /SC ONLOGON /TR ...`) because that route leaves Windows' default 72-hour limit on the task,
+    which would kill the dashboard after three days, and has no restart on failure."""
+    user = user or os.environ.get("USERDOMAIN", "") + "\\" + os.environ.get("USERNAME", "")
+    arguments = subprocess.list2cmdline([os.path.join(APP, "server.py"), "--vault", vault, "--port", str(port)])
+    return """<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>edu4self learning dashboard</Description></RegistrationInfo>
+  <Triggers>
+    <LogonTrigger><Enabled>true</Enabled><UserId>%s</UserId></LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author"><UserId>%s</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure><Interval>PT1M</Interval><Count>99</Count></RestartOnFailure>
+    <StartWhenAvailable>true</StartWhenAvailable>
+  </Settings>
+  <Actions Context="Author">
+    <Exec><Command>%s</Command><Arguments>%s</Arguments><WorkingDirectory>%s</WorkingDirectory></Exec>
+  </Actions>
+</Task>
+""" % (xml(user), xml(user), xml(windows_python()), xml(arguments), xml(vault))
+
+
+def schtasks(*a):
+    """The schtasks command line for one action (kept separate so tests can check it without Windows)."""
+    return ["schtasks"] + list(a)
+
+
 def run(cmd, check=False):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=check)
 
@@ -369,9 +416,17 @@ def cmd_install(args):
         r = run(["systemctl", "--user", "enable", "--now", "edu4self.service"])
         if r.returncode:
             sys.exit("systemctl couldn't start it:\n" + r.stdout)
+    elif system == "Windows":
+        xml_path = os.path.join(vault, "_system", "logs", "edu4self-task.xml")
+        with open(xml_path, "w", encoding="utf-16") as fh:      # schtasks wants UTF-16 with a BOM
+            fh.write(windows_task_xml(vault, port))
+        r = run(schtasks("/Create", "/F", "/TN", TASK_NAME, "/XML", xml_path))
+        if r.returncode:
+            sys.exit("Task Scheduler refused the task:\n" + r.stdout)
+        run(schtasks("/End", "/TN", TASK_NAME))
+        run(schtasks("/Run", "/TN", TASK_NAME))
     else:
-        print("Starting at login isn't automated on %s yet. Run  ./edu4self serve  in a terminal instead," % system)
-        print("or add that command to your startup apps (Windows: Task Scheduler, 'At log on').")
+        print("Starting at login isn't automated on %s yet. Run  ./edu4self serve  in a terminal instead." % system)
         return 1
     for _ in range(20):
         if health(port):
@@ -393,11 +448,16 @@ def cmd_uninstall(args):
         if os.path.exists(unit_path()):
             os.remove(unit_path())
             run(["systemctl", "--user", "daemon-reload"])
+    elif system == "Windows":
+        run(schtasks("/End", "/TN", TASK_NAME))
+        run(schtasks("/Delete", "/F", "/TN", TASK_NAME))
     print("The login service is removed. Your vault is untouched.")
     return 0
 
 
 def service_installed():
+    if platform.system() == "Windows":
+        return run(schtasks("/Query", "/TN", TASK_NAME)).returncode == 0
     return os.path.exists(plist_path()) if platform.system() == "Darwin" else os.path.exists(unit_path())
 
 
@@ -405,7 +465,10 @@ def cmd_restart(args):
     if not service_installed():
         print("No login service is installed. Use ./edu4self serve, or ./edu4self install.")
         return 1
-    if platform.system() == "Darwin":
+    if platform.system() == "Windows":
+        run(schtasks("/End", "/TN", TASK_NAME))
+        r = run(schtasks("/Run", "/TN", TASK_NAME))
+    elif platform.system() == "Darwin":
         r = run(["launchctl", "kickstart", "-k", "gui/%d/%s" % (os.getuid(), LABEL)])
     else:
         r = run(["systemctl", "--user", "restart", "edu4self.service"])
@@ -550,6 +613,10 @@ def cmd_mail(args):
             was = old.get("password_store", "file")
             pick = ask("Choose", str(stores.index(was) + 1 if was in stores else 1))
             m["password_store"] = stores[int(pick) - 1] if pick.isdigit() and 1 <= int(pick) <= len(stores) else "file"
+        elif platform.system() == "Windows":
+            print("\nOn Windows the app password is kept in a file in your user folder (%s)." % reminders.mail_path())
+            print("Windows has no password store this tool can use without extra software, and file permissions")
+            print("here don't hide it from other programs running as you. Use an app password, not your real one.")
     try:
         reminders.send_mail(m, "edu4self: mail works", "This is the test mail from edu4self. Away mails and your Sunday recap will come like this.")
     except Exception as exc:
