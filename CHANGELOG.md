@@ -5,6 +5,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+## 1.3.0 - 2026-11-09
+
 ### Added
 
 - Rooms name the back room and say more lines their own way: `words.collection`, `row`, `rows`,
@@ -72,7 +74,9 @@ versions follow [Semantic Versioning](https://semver.org).
   stay). Uploads take mp3, m4a/aac, ogg/oga, opus, wav, flac and webm, up to 1 GB each; a same-name file
   gets a suffix instead of overwriting, and a file that isn't audio is refused. A config with only
   `music.file` plays as before.
-
+- Sharing rooms. The `.room` export and import (Settings buttons, `/api/themes/export`,
+  `/api/themes/import`, `./edu4self room`) are gone. Your rooms and the ones you make with Claude work
+  as before.
 ### Fixed
 
 - The dashboard's New topic asked Claude to start the `teach` skill, which only a person can start
@@ -128,11 +132,10 @@ versions follow [Semantic Versioning](https://semver.org).
   The shelf caption says what each kind means. Rooms set the word with `keepsakes.<kind>.stamp`.
 - A reminder mail that fails shows on the dashboard until you dismiss it, with the reason and a way to
   the mail settings.
-
-### Removed
-- Sharing rooms. The `.room` export and import (Settings buttons, `/api/themes/export`,
-  `/api/themes/import`, `./edu4self room`) are gone. Your rooms and the ones you make with Claude work
-  as before.
+- The README says up front what you need (Claude Code, macOS or Linux, Python 3.9+) and opens on a room.
+- The plugin has its own README, and LICENSE is plain MIT text so GitHub detects it (the font note moved to CREDITS).
+- macOS CI runs on release tags and manual runs only; Linux runs on every push.
+- The two time-of-day dashboard tests pin the page clock, so they pass at any hour.
 
 ## 1.2.0 - 2026-11-04
 
