@@ -111,6 +111,10 @@ jobs:
   browser-windows:
     name: browser tests (Chrome, Windows)
     runs-on: windows-latest
+    # known flaky: about half the runs, one test out of ~97, a different one each time (Chrome's
+    # net::ERR_NO_BUFFER_SPACE on a local request). It still runs and reports; it doesn't turn main red.
+    # Ports and the listen queue are ruled out; next suspect is HTTP/1.0's connection per request.
+    continue-on-error: true
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5

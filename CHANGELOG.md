@@ -9,7 +9,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 - Windows is supported. `edu4self install` (and `setup`) adds a Task Scheduler task that starts the dashboard
   at logon, with no 72-hour limit and a restart after a crash; `uninstall`, `restart` and `status` use it
-  too. Unit and browser tests now run on Windows in CI. The login task itself is only unit-tested.
+  too. Unit and browser tests now run on Windows in CI (the browser job is known flaky and does not block). The
+  login task itself is only unit-tested.
 
 ### Fixed
 
