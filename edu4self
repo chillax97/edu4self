@@ -542,6 +542,8 @@ def cmd_doctor(args):
     say("✓" if service_installed() else "–", "login service %s" % ("installed" if service_installed() else "not installed (optional: ./edu4self install)"))
     if shutil.which("claude"):
         say("✓", "Claude Code found")
+        if platform.system() == "Windows" and not shutil.which("claude.exe"):
+            say("–", "only claude.cmd (npm) found: the dashboard's Claude panel needs claude.exe, from Anthropic's native installer")
     else:
         bad += 1
         say("✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)")

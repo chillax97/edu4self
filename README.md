@@ -12,8 +12,10 @@ your focused time into something you can see grow. Nothing leaves your machine.
 ## What you need
 
 - **Claude Code**, signed in with a Claude plan that includes it. Claude is the tutor, so nothing works without it.
-- **macOS or Linux.** Both start the dashboard for you at login. On Windows you can run it by hand ([details](#set-it-up-yourself)).
-- **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python.
+- **macOS, Linux or Windows.** All three can start the dashboard for you at login (launchd, systemd, Task Scheduler).
+  Windows is newer: the tests run on Windows in CI, but the login task has only been checked by unit tests so far
+  ([details](#windows)).
+- **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python; on Windows install it from python.org.
 
 [![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
 
@@ -135,10 +137,28 @@ A small example topic ("How learning works") is ready on day one, so you can try
 15 minutes. Delete it whenever you like: tell Claude "remove the example topic".
 
 <details>
-<summary>Windows, or you don't want a login service</summary>
+<summary>You don't want a login service</summary>
 
 Run `python3 edu4self setup --no-service`, then keep `python3 edu4self serve` running in a terminal
-while you study. Starting at login is automated on macOS (launchd) and Linux (systemd user services).
+while you study. Starting at login is automated on macOS (launchd), Linux (systemd user services) and
+Windows (a Task Scheduler task).
+</details>
+
+<a id="windows"></a>
+<details>
+<summary>Windows</summary>
+
+Use `python edu4self ...` wherever this page says `./edu4self` (for example `python edu4self setup`), in
+PowerShell or Command Prompt. `setup` and `install` add a Task Scheduler task named `edu4self` that starts
+the dashboard when you log on; `uninstall` removes it. You can also see it in the Task Scheduler app.
+
+- The Claude panel in the dashboard needs the native `claude.exe` from Anthropic's installer. The npm
+  `claude.cmd` is not used, because `cmd.exe` mangles the text of a prompt.
+- A mail app password is kept in a file in your user folder (Windows has no password store this tool can
+  use without extra software). Use an app password, not your real one.
+- What is tested: the unit and browser tests run on Windows in CI. What is not: the login task, which
+  needs a real logon session, is only covered by unit tests of the commands it would run, and the Claude
+  panel is only tested against a stand-in. If something is off, run `python edu4self doctor` and open an issue.
 </details>
 
 ## Everyday commands
@@ -199,7 +219,7 @@ own terms; the tool is asked to tell you so when it first reads it ([details](do
 When you run an exercise's checker, its output and a copy of your code are saved in that exercise's
 `trace/` folder, with the hints you open, for your tutor to read when you hand it in; Settings can
 delete all of it. If you set up mail, reminders go out through your own mail account; its app password stays outside
-the vault, in `~/.config/edu4self/` or, if you choose, the macOS Keychain or your Linux password store
+the vault, in `~/.config/edu4self/` (your user folder on Windows) or, if you choose, the macOS Keychain or your Linux password store
 ([risks of each](docs/CUSTOMIZING.md#reminders-and-the-sunday-recap)).
 
 ## Credits

@@ -5,6 +5,18 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Added
+
+- Windows is supported. `edu4self install` (and `setup`) adds a Task Scheduler task that starts the dashboard
+  at logon, with no 72-hour limit and a restart after a crash; `uninstall`, `restart` and `status` use it
+  too. Unit and browser tests now run on Windows in CI. The login task itself is only unit-tested.
+
+### Fixed
+
+- The away mail and the Sunday recap failed on Windows (a date format Windows rejects).
+- On Windows, the Claude panel runs only `claude.exe`, not npm's `claude.cmd`, and the dashboard server no
+  longer crashes when started without a console (as the login task does).
+
 ## 1.3.0 - 2026-11-09
 
 ### Added

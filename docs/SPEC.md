@@ -48,7 +48,7 @@ Non-users: classrooms and teachers managing many learners; anyone who needs the 
 - Multiple learners per vault.
 - An AI inside the app. The tutor is Claude Code, outside the app, invoked by the learner.
 - Spaced-repetition flashcards. Recall checks are scheduled by the tutor, not by an algorithm.
-- Windows login-service automation (manual `serve` works).
+- A Windows password store for the mail password (it stays in the config file there).
 
 ## 4. Principles
 
@@ -75,7 +75,7 @@ Each principle comes from evidence or from a failure observed while building the
 
 | id | requirement | verified by |
 |---|---|---|
-| FR-1 | `./edu4self setup` creates a vault, starts the dashboard at login (macOS, Linux) and opens it | `tests/test_server.py` CliTest; manual on macOS |
+| FR-1 | `./edu4self setup` creates a vault, starts the dashboard at login (macOS, Linux, Windows) and opens it | `tests/test_server.py` CliTest, `tests/test_service.py` (Windows commands); manual on macOS |
 | FR-2 | The dashboard shows the first `todo` task without a pending submission as **Up next** | e2e "submitting answers" |
 | FR-3 | The learner submits answers or notes; they append to `_system/inbox.jsonl`; a pending one can be withdrawn | unit `test_submission_and_withdraw`, e2e |
 | FR-4 | The tutor processes the inbox per [PROTOCOL.md](PROTOCOL.md) and edits only `state.json` | live run with Claude Code (CHANGELOG 1.0.0) |
@@ -111,7 +111,7 @@ Each principle comes from evidence or from a failure observed while building the
   the browser streams directly while it plays.
 - **Dependencies:** Python 3.9+ standard library; browser-native JS/CSS. Node is needed only for the
   browser tests.
-- **Portability:** macOS and Linux first-class; Windows runs `serve` manually.
+- **Portability:** macOS, Linux and Windows. Unit and browser tests run on all three in CI (macOS on release tags). The Windows login task (Task Scheduler) is verified only by unit tests of its commands, and the Claude panel needs `claude.exe` there.
 - **Accessibility:** keyboard reachable controls, visible focus, `aria-live` status, reduced-motion
   support, readable contrast in both themes. Phone width (390 px) without sideways scrolling.
 - **Robustness:** append-only logs with de-duplication; atomic writes for config; uploads streamed to a
@@ -164,7 +164,7 @@ lesson within 20 minutes of cloning; `doctor` explains every failed setup step i
 
 ## 11. Roadmap (not committed)
 
-Windows login service · an optional local "recall check" scheduler · export of the evidence log as a
+an optional local "recall check" scheduler · export of the evidence log as a
 shareable page · translations of the dashboard UI.
 
 ## References
