@@ -62,7 +62,7 @@ jobs:
           python edu4self check --vault "$RUNNER_TEMP/empty"
 
   unit-macos:
-    name: unit (mac) · ${{ matrix.os }} · Python ${{ matrix.python }}
+    name: unit (macOS)
     # macOS runners are slow: release tags and manual runs only (day to day, the Mac check is a local run)
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
@@ -126,7 +126,16 @@ jobs:
         working-directory: tests/e2e
       - name: Run against a throwaway vault
         working-directory: tests/e2e
-        run: npm test
+        env:
+          E2E_ARTIFACTS: ${{ github.workspace }}/e2e-artifacts
+        run: npm test -- --test-timeout=180000
+      - name: Keep screenshots of failed clicks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-windows
+          path: e2e-artifacts
+          if-no-files-found: ignore
 
   plugin:
     name: Claude Code plugin manifests

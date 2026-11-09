@@ -12,7 +12,17 @@ let PORT;
 // has a sticky footer that can cover a control sitting at the bottom edge.
 async function tap(page, sel) {
   await page.$eval(sel, (e) => e.scrollIntoView({ block: "center" }));
-  await page.click(sel);
+  try {
+    await page.click(sel);
+  } catch (err) {
+    // say where the element was and what the page looked like, so a failure on a machine we can't see is readable
+    const box = await page.$eval(sel, (e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
+      return { x: r.x, y: r.y, w: r.width, h: r.height, display: cs.display, visibility: cs.visibility, inner: [innerWidth, innerHeight] }; }).catch((e) => String(e));
+    const dir = process.env.E2E_ARTIFACTS;
+    if (dir) { fs.mkdirSync(dir, { recursive: true }); await page.screenshot({ path: path.join(dir, "tap-" + Date.now() + ".png"), fullPage: true }).catch(() => {}); }
+    err.message += " | " + sel + " " + JSON.stringify(box);
+    throw err;
+  }
 }
 let v, server, browser;
 
