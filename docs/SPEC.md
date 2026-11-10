@@ -75,7 +75,7 @@ Each principle comes from evidence or from a failure observed while building the
 
 | id | requirement | verified by |
 |---|---|---|
-| FR-1 | `./edu4self setup` creates a vault, starts the dashboard at login (macOS, Linux, Windows) and opens it | `tests/test_server.py` CliTest, `tests/test_service.py` (Windows commands); manual on macOS |
+| FR-1 | `./edu4self setup` creates a vault, installs the tutor plugin for Claude Code (asked once, checked with `claude plugin list`), starts the dashboard at login (macOS, Linux, Windows) and opens it | `tests/test_server.py` CliTest and SetupPluginTest (fake claude), `tests/test_service.py` (Windows commands); manual on macOS |
 | FR-2 | The dashboard shows the first `todo` task without a pending submission as **Up next** | e2e "submitting answers" |
 | FR-3 | The learner submits answers or notes; they append to `_system/inbox.jsonl`; a pending one can be withdrawn | unit `test_submission_and_withdraw`, e2e |
 | FR-4 | The tutor processes the inbox per [PROTOCOL.md](PROTOCOL.md) and edits only `state.json` | live run with Claude Code (CHANGELOG 1.0.0) |

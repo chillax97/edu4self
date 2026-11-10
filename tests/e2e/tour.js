@@ -166,11 +166,12 @@ await page.evaluate(() => window.__tour.term("Terminal", [
   ["out", "edu4self setup. Press Enter to accept the suggestion in brackets.\n"],
   ["out", "Where should your learning vault go? [~/learn]: ", 700],
   ["out", "What should the dashboard call you? [friend]: Sam", 600],
+  ["out", "Install the tutor plugin now? (y/n) [y]: ", 600],
   ["out", "Made a vault at ~/learn"],
   ["ok", "The dashboard is running at http://127.0.0.1:4747/ and starts at login.", 500],
-  ["cmd", "claude plugin marketplace add chillax97/edu4self"],
-  ["cmd", "claude plugin install edu4self@edu4self"],
-  ["ok", "✔ Installed edu4self", 1400],
+  ["dim", "$ claude plugin marketplace add chillax97/edu4self", 400],
+  ["dim", "$ claude plugin install edu4self@edu4self", 400],
+  ["ok", "✓ the tutor plugin is installed and enabled", 1400],
 ]));
 await hush();
 await page.goto(server.url, { waitUntil: "networkidle0" });

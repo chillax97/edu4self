@@ -115,13 +115,17 @@ cd edu4self
 ./edu4self setup
 ```
 
-`setup` asks where to put your learning vault (default `~/learn`) and what to call you. Then it starts
-the dashboard at login and opens <http://127.0.0.1:4747>. After that, give Claude the tutor skills (once):
+`setup` asks where to put your learning vault (default `~/learn`) and what to call you, and offers to
+give Claude the tutor skills (the edu4self plugin). Then it starts the dashboard at login and opens
+<http://127.0.0.1:4747>. It installs the plugin by running these two commands for you, and checks that
+it worked. If it couldn't (or you said no, or passed `--no-plugin`), run them yourself once:
 
 ```sh
 claude plugin marketplace add chillax97/edu4self
 claude plugin install edu4self@edu4self
 ```
+
+`./edu4self doctor` tells you whether the plugin is installed and enabled.
 
 Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
 questions in the side panel), **✦ Grade** grades what you submitted, and **✦ Claude** opens a chat with

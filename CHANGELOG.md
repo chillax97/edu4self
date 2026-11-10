@@ -16,6 +16,16 @@ versions follow [Semantic Versioning](https://semver.org).
   with `claude auth status`, which costs nothing, and again when you come back to the tab; the note goes by
   itself once Claude works. A gift waits while Claude is signed out.
 
+### Changed
+
+- `edu4self setup` installs the tutor plugin itself when Claude Code is found: it asks once (default yes),
+  runs `claude plugin marketplace add` and `claude plugin install`, skips what is already there, and checks
+  `claude plugin list` afterwards. If that fails it prints the two commands to run by hand, and setup
+  still finishes. `--no-plugin` skips it. Without Claude Code, setup says it's needed. Before, setup only
+  printed the commands, and people who skipped them had no tutor skills.
+- `edu4self doctor` asks Claude Code whether the plugin is installed and enabled (the same check setup
+  uses), and says so when it's installed but disabled.
+
 ### Fixed
 
 - The away mail and the Sunday recap failed on Windows (a date format Windows rejects).
