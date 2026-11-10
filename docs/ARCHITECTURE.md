@@ -76,8 +76,8 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/card?id=` | | a printable card for one trophy, in its room's colours; 404 if unknown |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |
 | POST | `/api/music` | raw audio, `X-Filename` header | 201 `{config}`; 413 over 1 GB; 415 not audio |
-| GET | `/api/claude?since=N` | | `{available, busy, kind, conversation, events[N:], next}` |
-| POST | `/api/claude` | `{kind: grade\|chat\|topic, text}` | 202; 409 busy; 503 no Claude Code |
+| GET | `/api/claude?since=N[&recheck=1]` | | `{available, logged_in, problem, busy, kind, conversation, events[N:], next}` |
+| POST | `/api/claude` | `{kind: grade\|chat\|topic, text}` | 202; 409 busy; 503 no Claude Code, or signed out |
 | POST | `/api/claude/stop`, `/api/claude/reset` | `{}` | stop the run; forget the conversation |
 
 **Claude from the page.** `/api/claude` starts `claude -p` in the vault, one run at a time, and turns its
@@ -85,6 +85,13 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 "check my inbox" in a fresh session; `topic` starts a new conversation with the plugin's new-topic skill; `chat`
 resumes the last one. After every run the server runs `edu4self check` itself and adds the result.
 The page polls while a run is busy and reloads the state when it ends.
+
+**Is Claude usable?** `problem` is `missing` (no `claude` found), `signed_out`, or null. The login comes from
+`claude auth status` (it reads the saved login: no prompt, nothing billed), asked only when `claude --help` lists
+`auth`, since an older Claude Code would read "auth status" as a prompt; without it the login is unknown
+(`logged_in: null`) and counts as usable. Polls share one answer for 3 minutes; `recheck=1` (the page got focus)
+asks again at most every 5 s, and a failed run clears it. While there's a problem the page shows a note under the
+top bar with the fix and greys out Grade.
 
 ## The page
 

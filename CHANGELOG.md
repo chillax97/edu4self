@@ -11,6 +11,10 @@ versions follow [Semantic Versioning](https://semver.org).
   at logon, with no 72-hour limit and a restart after a crash; `uninstall`, `restart` and `status` use it
   too. Unit and browser tests now run on Windows in CI (the browser job is known flaky and does not block). The
   login task itself is only unit-tested.
+- The dashboard says when it opens if Claude Code is missing or not signed in, before any lesson: a note under
+  the top bar (classic page and rooms) with the one-line fix, and Grade greyed out with the reason. It checks
+  with `claude auth status`, which costs nothing, and again when you come back to the tab; the note goes by
+  itself once Claude works. A gift waits while Claude is signed out.
 
 ### Fixed
 
@@ -21,6 +25,8 @@ versions follow [Semantic Versioning](https://semver.org).
   directly (the package's `bin/claude.exe`, or `node` and the script in older versions), so a prompt arrives
   unchanged. `claude.exe` from Anthropic's installer still comes first. When the npm install is broken
   (missing file, install step skipped, no Node.js), `doctor` says which and how to fix it.
+- After a Claude run that failed, the page could still say "Claude is done." (the check after it passed because
+  nothing had changed). It says so now only when the run itself succeeded.
 
 ## 1.3.0 - 2026-11-09
 
