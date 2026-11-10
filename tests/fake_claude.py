@@ -4,6 +4,7 @@
 It records its arguments and working folder to $FAKE_CLAUDE_LOG, and acts out a tiny part of the job:
 for "check my inbox" it marks every pending inbox entry as processed in state.json, the way the real
 tutor would, and for a gift it writes gifts/<id>.html. FAKE_CLAUDE_SLEEP makes it slow, to test the "one run at a time" rule.
+It also answers the login check (see below).
 """
 import json
 import os
@@ -11,6 +12,25 @@ import sys
 import time
 
 args = sys.argv[1:]
+
+# `claude --help` and `claude auth status`, as the real CLI answers them (the dashboard's login check).
+# FAKE_CLAUDE_SIGNED_OUT plays a Claude Code nobody has signed in to: "1", or a file path (signed out while it exists).
+# FAKE_CLAUDE_OLD=1 plays one too old to have `auth`: its help doesn't list it, and "auth status" becomes a prompt.
+# These calls go to $FAKE_CLAUDE_CHECK_LOG, not $FAKE_CLAUDE_LOG, which is for real runs.
+old = os.environ.get("FAKE_CLAUDE_OLD")
+if args == ["--help"] or (args[:2] == ["auth", "status"] and not old):
+    if os.environ.get("FAKE_CLAUDE_CHECK_LOG"):
+        with open(os.environ["FAKE_CLAUDE_CHECK_LOG"], "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(args) + "\n")
+    if args == ["--help"]:
+        print("Usage: claude [options] [command] [prompt]\n\nCommands:\n" +
+              ("" if old else "  auth                                  Manage authentication\n") +
+              "  doctor                                Check the health of your Claude Code installation")
+        sys.exit(0)
+    flag = os.environ.get("FAKE_CLAUDE_SIGNED_OUT", "")
+    out = flag == "1" or (len(flag) > 1 and os.path.exists(flag))
+    print(json.dumps({"loggedIn": not out, "authMethod": "none" if out else "claude.ai", "apiProvider": "firstParty"}, indent=2))
+    sys.exit(1 if out else 0)
 prompt = args[args.index("-p") + 1] if "-p" in args else ""
 session = args[args.index("--resume") + 1] if "--resume" in args else "fake-session-%d" % os.getpid()
 

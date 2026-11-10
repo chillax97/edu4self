@@ -947,6 +947,48 @@ def claude_cmd():
     return claude_cli.find(os.environ.get("EDU4SELF_CLAUDE"))[0]
 
 
+# Whether the page can run Claude at all: the program is found, and it's signed in. `claude auth status` reads the
+# login saved on this computer (no prompt, nothing billed, about 0.1 s) and exits 1 when signed out. A Claude Code
+# too old to have that command would read "auth status" as a prompt, so it's only asked when `claude --help` lists
+# `auth`; otherwise the login is "unknown" and the page carries on as if signed in. Polls share one answer for a
+# few minutes, so they don't start a process each time.
+LOGIN = {"cmd": None, "at": 0.0, "logged_in": None}
+LOGIN_TTL = 180
+LOGIN_RECHECK = 5             # a forced re-check (the page got focus) runs at most this often
+LOGIN_LOCK = threading.Lock()  # one check at a time; the others wait for its answer
+
+
+def claude_logged_in(cmd):
+    """True or False from `claude auth status`, or None when this Claude Code can't say. cmd is a list (no shell)."""
+    def run(*args):
+        return subprocess.run(cmd + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, text=True, timeout=15)
+    try:
+        if not re.search(r"^\s+auth\b", run("--help").stdout, re.M):
+            return None
+        r = run("auth", "status")
+    except (OSError, subprocess.SubprocessError):
+        return None
+    try:
+        return bool(json.loads(r.stdout)["loggedIn"])
+    except (ValueError, KeyError, TypeError):
+        return r.returncode == 0
+
+
+def claude_ready(force=False):
+    """{"installed", "logged_in", "problem", "detail"}: problem is "missing", "signed_out" or None (usable);
+    detail is claude_cli's own words for why it's missing (an npm install it can't run, say)."""
+    cmd, why = claude_cli.find(os.environ.get("EDU4SELF_CLAUDE"))
+    if not cmd:
+        return {"installed": False, "logged_in": None, "problem": "missing", "detail": why}
+    with LOGIN_LOCK:
+        age = time.time() - LOGIN["at"]
+        if LOGIN["cmd"] != cmd or age > LOGIN_TTL or (force and age > LOGIN_RECHECK):
+            LOGIN.update(cmd=cmd, at=time.time(), logged_in=claude_logged_in(cmd))
+        ok = LOGIN["logged_in"]
+    return {"installed": True, "logged_in": ok, "problem": "signed_out" if ok is False else None, "detail": None}
+
+
 def claude_event(kind, text):
     RUN["events"].append({"n": len(RUN["events"]), "kind": kind, "text": text[:4000], "ts": now_iso()})
 
@@ -1006,13 +1048,15 @@ def claude_args(prompt, resume, kind="chat"):
     return args
 
 
-def claude_status(since="0"):
+def claude_status(since="0", recheck=False):
     try:
         since = max(0, int(since))
     except ValueError:
         since = 0
+    ready = claude_ready(recheck)          # outside the lock: it may start a process
     with CLAUDE_LOCK:
-        return {"available": bool(claude_cmd()), "busy": RUN["busy"], "kind": RUN["kind"],
+        return {"available": ready["installed"], "logged_in": ready["logged_in"], "problem": ready["problem"], "detail": ready["detail"],
+                "busy": RUN["busy"], "kind": RUN["kind"],
                 "conversation": bool(RUN["session"]), "events": RUN["events"][since:], "next": len(RUN["events"])}
 
 
@@ -1026,6 +1070,8 @@ def claude_start(body):
         return 400, {"error": "keep it under %d characters" % MAX_PROMPT}
     if not claude_cmd():
         return 503, {"error": "Claude Code isn't installed on this computer (or isn't on the PATH)"}
+    if claude_ready(force=LOGIN["logged_in"] is False)["problem"] == "signed_out":   # maybe they just signed in
+        return 503, {"error": "Claude Code isn't signed in. In a terminal, run: claude auth login"}
     with CLAUDE_LOCK:
         if RUN["busy"]:
             return 409, {"error": "Claude is busy with the last request"}
@@ -1089,6 +1135,7 @@ def claude_watch(proc, kind):
         elif code < 0:
             claude_event("error", "Stopped.")
         else:
+            LOGIN["at"] = 0.0              # a failed run may mean the login ran out: ask again on the next poll
             why = (result or {}).get("result") or err.strip().splitlines()[-1:] or ["exited with %d" % code]
             claude_event("error", "Claude stopped with a problem: %s" % (why if isinstance(why, str) else why[0]))
     check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT],
@@ -1241,7 +1288,7 @@ Finish with one short sentence saying what you made."""
 
 
 def maybe_gift():
-    """Start the oldest waiting gift if Claude is installed and free. Otherwise it keeps waiting."""
+    """Start the oldest waiting gift if Claude is installed, signed in and free. Otherwise it keeps waiting."""
     item = keepsakes.pending_gift(KEEPSAKES)
     if not item:
         return False
@@ -1253,7 +1300,7 @@ def maybe_gift():
         # doesn't make a pile of old ones)
         keepsakes.set_gift(KEEPSAKES, item["id"], "off")
         return maybe_gift()
-    if not claude_cmd():
+    if claude_ready()["problem"]:      # not installed or not signed in: the gift waits
         return False
     tid, meta = active_theme()
     what = ("met their goal for the week of %s" % item["date"] if item["kind"] == "week"
@@ -1467,7 +1514,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(404, {"error": "this task has no exercise"})
             return self.send_json(200, a)
         if route == "/api/claude":
-            return self.send_json(200, claude_status(urllib.parse.parse_qs(parsed.query).get("since", ["0"])[0]))
+            q = urllib.parse.parse_qs(parsed.query)
+            return self.send_json(200, claude_status(q.get("since", ["0"])[0], q.get("recheck", [""])[0] == "1"))
         if route in ("/", "/index.html"):
             return self.send_file(os.path.join(DASH, "index.html"), {"Content-Security-Policy": PAGE_CSP})
         if route == "/api/themes":

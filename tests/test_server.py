@@ -645,6 +645,7 @@ class ClaudeTest(unittest.TestCase):
         self.assertEqual(code, 403)
 
     def test_a_failed_run_says_so(self):
+        self.login_env()
         os.environ["FAKE_CLAUDE_FAIL"] = "1"
         try:
             self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "break"})[0], 202)
@@ -652,6 +653,7 @@ class ClaudeTest(unittest.TestCase):
         finally:
             os.environ.pop("FAKE_CLAUDE_FAIL")
         self.assertTrue(any(e["kind"] == "error" for e in d["events"]), d["events"])
+        self.assertEqual(self.check_calls().count(["auth", "status"]), 2, "a failed run asks about the login again (it may have run out)")
 
     def test_no_claude_installed(self):
         old = os.environ["EDU4SELF_CLAUDE"]
@@ -661,6 +663,70 @@ class ClaudeTest(unittest.TestCase):
             self.assertEqual(self.req("POST", "/api/claude", {"kind": "grade"})[0], 503)
         finally:
             os.environ["EDU4SELF_CLAUDE"] = old
+
+    def check_calls(self):
+        if not os.path.exists(self.check_log):
+            return []
+        with open(self.check_log, encoding="utf-8") as fh:
+            return [json.loads(l) for l in fh if l.strip()]
+
+    def login_env(self, **env):
+        """Run the login check against the fake with these settings, from a clean cache."""
+        self.check_log = os.path.join(self.tmp, "check-calls-%s.jsonl" % self.id().rsplit(".", 1)[-1])
+        env["FAKE_CLAUDE_CHECK_LOG"] = self.check_log
+        for k, v in env.items():
+            os.environ[k] = v
+        self.addCleanup(lambda: [os.environ.pop(k, None) for k in env])
+        server.LOGIN.update(cmd=None, at=0.0, logged_in=None)
+        self.addCleanup(server.LOGIN.update, cmd=None, at=0.0, logged_in=None)
+
+    def test_signed_in_claude_is_ready_and_polls_share_one_check(self):
+        self.login_env()
+        d = self.req("GET", "/api/claude")[1]
+        self.assertEqual((d["available"], d["logged_in"], d["problem"]), (True, True, None))
+        for _ in range(5):
+            self.req("GET", "/api/claude")
+        self.assertEqual(self.check_calls(), [["--help"], ["auth", "status"]], "one check for six polls")
+        # a forced re-check (the page got focus) runs again, but not more than once every few seconds
+        server.LOGIN["at"] -= server.LOGIN_RECHECK + 1
+        self.req("GET", "/api/claude?recheck=1")
+        self.req("GET", "/api/claude?recheck=1")
+        self.assertEqual(len(self.check_calls()), 4)
+
+    def test_signed_out_claude_says_so_and_wont_start(self):
+        self.login_env(FAKE_CLAUDE_SIGNED_OUT="1")
+        d = self.req("GET", "/api/claude")[1]
+        self.assertEqual((d["available"], d["logged_in"], d["problem"]), (True, False, "signed_out"))
+        code, d, _ = self.req("POST", "/api/claude", {"kind": "chat", "text": "hi"})
+        self.assertEqual(code, 503)
+        self.assertIn("claude auth login", d["error"])
+        self.assertFalse(os.path.exists(self.log) and any("hi" in c["args"] for c in self.calls()), "no run was started")
+        # signing in is picked up by the next start, without waiting for the cache
+        os.environ.pop("FAKE_CLAUDE_SIGNED_OUT")
+        server.LOGIN["at"] -= server.LOGIN_RECHECK + 1
+        self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "signed in now"})[0], 202)
+        self.wait_idle()
+        self.assertIsNone(self.req("GET", "/api/claude")[1]["problem"])
+
+    def test_a_claude_without_auth_status_is_never_handed_it_as_a_prompt(self):
+        self.login_env(FAKE_CLAUDE_OLD="1")
+        before = len(self.calls()) if os.path.exists(self.log) else 0
+        d = self.req("GET", "/api/claude")[1]
+        self.assertEqual((d["available"], d["logged_in"], d["problem"]), (True, None, None), "unknown counts as usable")
+        self.assertEqual(self.check_calls(), [["--help"]])
+        self.assertEqual(len(self.calls()) if os.path.exists(self.log) else 0, before, "no run was started")
+
+    def test_missing_claude_is_reported_without_starting_anything(self):
+        self.login_env()
+        old = os.environ["EDU4SELF_CLAUDE"]
+        os.environ["EDU4SELF_CLAUDE"] = os.path.join(self.tmp, "nope")
+        try:
+            d = self.req("GET", "/api/claude")[1]
+        finally:
+            os.environ["EDU4SELF_CLAUDE"] = old
+        self.assertEqual((d["available"], d["problem"]), (False, "missing"))
+        self.assertIn("not found", d["detail"])          # claude_cli's own words, for the page's note
+        self.assertEqual(self.check_calls(), [])
 
     def test_vault_pages_are_sandboxed(self):
         # a lesson (maybe one someone shared) can't act as the dashboard: no API calls, no agent
