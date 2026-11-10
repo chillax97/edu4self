@@ -2665,19 +2665,21 @@
   // CL.problem, from the server's check when the page opens (and again on focus): "missing" (not installed, or not
   // on the PATH), "signed_out", or null. While there is one, a note at the top says how to fix it, and the buttons
   // that need Claude show greyed out with the reason, so nobody does a lesson first and finds out after.
-  var CL = { available: false, problem: null, known: false, busy: false, conversation: false, next: 0, events: [], timer: 0, gen: 0 };
+  var CL = { available: false, problem: null, detail: null, known: false, busy: false, conversation: false, next: 0, events: [], timer: 0, gen: 0 };
   function claudeOK() { return CL.available && !CL.problem; }
   function claudeWhy() { return CL.problem === "signed_out" ? "Sign in to Claude Code first" : "Needs Claude Code"; }
   function paintGate() {
     var el = $("#cl-gate"), p = CL.known && !claudeOK() ? CL.problem || "missing" : null;
     el.hidden = !p;
-    if (!p || el.dataset.problem === p) return;
-    el.dataset.problem = p;
+    // the server's own words when they say more than "not found" (an npm install on Windows it can't run, say)
+    var more = p === "missing" && CL.detail && !/^Claude Code not found/.test(CL.detail) ? CL.detail : "";
+    if (!p || el.dataset.problem === p + more) return;
+    el.dataset.problem = p + more;
     el.innerHTML = p === "signed_out"
       ? "<span><b>Claude Code isn't signed in, so nothing here can be graded yet.</b> In a terminal, run <code>claude auth login</code>. This note goes away once you're in.</span>"
       : "<span><b>Claude Code isn't set up, so nothing here can be graded yet.</b> Install it from " +
         '<a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a>, then run <code>claude</code> once in a terminal to sign in. ' +
-        "Already installed? Restart the dashboard so it can find it.</span>";
+        (more ? esc(more) : "Already installed? Restart the dashboard so it can find it.") + "</span>";
   }
   function pendingCount() { return (DATA && DATA.inbox && DATA.inbox.pending || []).filter(function (e) { return e.kind !== "note"; }).length; }
   function gradeButton(label) {
@@ -2700,7 +2702,7 @@
       if (gen !== CL.gen) return;
       var wasOK = claudeOK(), wasKnown = CL.known, wasBusy = CL.busy;
       if (j.next < CL.next) { CL.events = []; CL.next = 0; return claudePoll(); }   // the server started over
-      CL.available = j.available; CL.problem = j.problem || null; CL.known = true; CL.busy = j.busy; CL.conversation = j.conversation;
+      CL.available = j.available; CL.problem = j.problem || null; CL.detail = j.detail || null; CL.known = true; CL.busy = j.busy; CL.conversation = j.conversation;
       var fresh = j.events.filter(function (e) { return e.n >= CL.next; });
       if (fresh.length) { CL.events = CL.events.concat(fresh); }
       CL.next = Math.max(CL.next, j.next);
