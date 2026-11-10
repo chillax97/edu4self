@@ -843,7 +843,8 @@ class CliTest(unittest.TestCase):
         self.assertIs(read_json(os.path.join(on, "_system", "config.json"))["gifts"], True)
         env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg3"), HOME=self.tmp)
         v3 = os.path.join(self.tmp, "g3", "vault")
-        r = subprocess.run([sys.executable, CLI, "setup", "--vault", v3, "--name", "T", "--no-service", "--no-open", "--gifts", "off"],
+        r = subprocess.run([sys.executable, CLI, "setup", "--vault", v3, "--name", "T", "--no-service", "--no-open", "--gifts", "off",
+                            "--no-plugin"],
                            env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIs(read_json(os.path.join(v3, "_system", "config.json"))["gifts"], False)
@@ -885,6 +886,103 @@ class CliTest(unittest.TestCase):
         self.assertEqual(m.group(1).split(os.pathsep)[0], bin_dir)
         self.assertIn('Environment="PATH=%s' % bin_dir.replace("\\", "\\\\"), unit)    # systemd wants backslashes doubled
         plistlib.loads(plist.encode())   # still a valid plist
+
+
+class SetupPluginTest(unittest.TestCase):
+    """setup installs the tutor plugin itself, and doctor asks claude whether it's there. A fake claude stands in."""
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="edu4self-plugin-")
+        self.log = os.path.join(self.tmp, "calls.jsonl")
+        self.state = os.path.join(self.tmp, "plugins.json")
+        self.env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg"), HOME=self.tmp,
+                        CLAUDE_CONFIG_DIR=os.path.join(self.tmp, "claude"), FAKE_CLAUDE_LOG=self.log, FAKE_PLUGIN_STATE=self.state,
+                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude_plugin.py"))
+        self.env.pop("FAKE_PLUGIN_FAIL", None)
+        self.runs = 0
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def setup(self, *extra):
+        self.runs += 1
+        vault = os.path.join(self.tmp, "vault%d" % self.runs)
+        r = subprocess.run([sys.executable, CLI, "setup", "--vault", vault, "--name", "T", "--no-service", "--no-open",
+                            "--gifts", "off", *extra], env=self.env, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        return r.stdout
+
+    def doctor(self):
+        r = subprocess.run([sys.executable, CLI, "doctor", "--port", str(free_port())], env=self.env, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+        return [l for l in r.stdout.splitlines() if "tutor skills" in l or "edu4self plugin" in l]
+
+    def calls(self):
+        if not os.path.exists(self.log):
+            return []
+        with open(self.log, encoding="utf-8") as fh:
+            return [json.loads(l)["args"] for l in fh if l.strip()]
+
+    def changes(self):
+        return [a for a in self.calls() if "--json" not in a]
+
+    def test_fresh_install_runs_both_commands_in_order_then_checks(self):
+        out = self.setup()
+        self.assertEqual(self.changes(), [["plugin", "marketplace", "add", "chillax97/edu4self"], ["plugin", "install", "edu4self@edu4self"]])
+        self.assertEqual(self.calls()[-1], ["plugin", "list", "--json"], "checked after installing")
+        self.assertIn("Successfully installed plugin", out, "claude's own output is shown")
+        self.assertIn("the tutor plugin is installed and enabled", out)
+        self.assertNotIn("Give Claude the tutor skills", out, "no step left to do by hand")
+        self.assertIn("1. Open the dashboard", out)
+        self.assertEqual(len(self.doctor()), 1)
+        self.assertIn("✓", self.doctor()[0])
+
+    def test_setup_twice_says_it_is_already_there(self):
+        self.setup()
+        n = len(self.changes())
+        out = self.setup()
+        self.assertEqual(len(self.changes()), n, "nothing installed twice")
+        self.assertIn("already installed", out)
+
+    def test_marketplace_already_added_only_installs(self):
+        write_json(self.state, {"marketplaces": ["edu4self"], "plugins": []})
+        out = self.setup()
+        self.assertEqual(self.changes(), [["plugin", "install", "edu4self@edu4self"]])
+        self.assertIn("marketplace is already added", out)
+
+    def test_disabled_plugin_is_enabled_and_doctor_tells_the_truth(self):
+        write_json(self.state, {"marketplaces": ["edu4self"], "plugins": [{"id": "edu4self@edu4self", "enabled": False}]})
+        self.assertIn("✗", self.doctor()[0])
+        self.assertIn("disabled", self.doctor()[0])
+        self.setup()
+        self.assertEqual(self.changes(), [["plugin", "enable", "edu4self@edu4self"]])
+        self.assertIn("✓", self.doctor()[0])
+
+    def test_failed_install_prints_the_commands_and_setup_still_succeeds(self):
+        self.env["FAKE_PLUGIN_FAIL"] = "install"
+        out = self.setup()
+        self.assertIn("network error", out)
+        self.assertIn("didn't install", out)
+        self.assertIn("claude plugin marketplace add chillax97/edu4self", out)
+        self.assertIn("claude plugin install edu4self@edu4self", out)
+        self.assertIn("1. Give Claude the tutor skills", out)
+        line = self.doctor()[0]
+        self.assertIn("✗", line)
+        self.assertIn("claude plugin install edu4self@edu4self", line)
+
+    def test_no_claude_prints_the_steps_and_says_claude_is_needed(self):
+        self.env["EDU4SELF_CLAUDE"] = os.path.join(self.tmp, "no-such-claude")
+        out = self.setup()
+        self.assertEqual(self.calls(), [])
+        self.assertIn("Claude Code is needed", out)
+        self.assertIn("claude plugin install edu4self@edu4self", out)
+        self.assertNotIn("Install the tutor plugin now", out)
+
+    def test_no_plugin_flag_runs_nothing(self):
+        out = self.setup("--no-plugin")
+        self.assertEqual(self.calls(), [])
+        self.assertIn("1. Give Claude the tutor skills", out)
+        self.assertIn("✗", self.doctor()[0])
 
 
 class RepoTest(unittest.TestCase):
