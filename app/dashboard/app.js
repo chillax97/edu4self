@@ -2686,6 +2686,13 @@
       ' <small class="muted cl-why">' + esc(claudeWhy()) + ", see the note at the top.</small>";
     return '<button class="btn btn-topic btn-sm" type="button" data-claude="grade"' + (CL.busy ? " disabled" : "") + ">" + (label || "✦ Grade it now") + "</button>";
   }
+  // How a run ended, from its events: Claude's own verdict (done, or an error/stop) and the check after it.
+  function runEnding() {
+    var last = CL.events[CL.events.length - 1] || {}, verdict = null;
+    for (var i = CL.events.length - 1; i >= 0 && !verdict; i--) if (/^(done|error)$/.test(CL.events[i].kind)) verdict = CL.events[i];
+    if (verdict && verdict.kind === "error" && verdict.text === "Stopped.") return "stopped";
+    return verdict && verdict.kind === "done" && last.kind === "check" && /^Check OK/.test(last.text) ? "ok" : "problem";
+  }
   // A poll that left before a send or reset answers about the old world: CL.gen drops those answers.
   function claudePoll(recheck) {
     var gen = CL.gen;
@@ -2699,8 +2706,10 @@
       CL.next = Math.max(CL.next, j.next);
       paintClaude();
       if (wasBusy && !j.busy) {
-        var last = CL.events[CL.events.length - 1] || {};
-        toast(last.kind === "check" && /OK/.test(last.text) ? "<span>✦</span><span><b>Claude is done.</b></span>" : "<span>!</span><span><b>Claude finished with a problem.</b> Open ✦ Claude to see it.</span>", 5000);
+        var end = runEnding();
+        toast(end === "ok" ? "<span>✦</span><span><b>Claude is done.</b></span>"
+          : end === "stopped" ? "<span>■</span><span><b>Stopped.</b> Nothing else will change.</span>"
+          : "<span>!</span><span><b>Claude finished with a problem.</b> Open ✦ Claude to see it.</span>", end === "ok" ? 5000 : 8000);
         load();
       }
       if (wasKnown !== CL.known || wasOK !== claudeOK() || wasBusy !== j.busy) { if (DATA) render(); }
