@@ -111,7 +111,7 @@ Each principle comes from evidence or from a failure observed while building the
   the browser streams directly while it plays.
 - **Dependencies:** Python 3.9+ standard library; browser-native JS/CSS. Node is needed only for the
   browser tests.
-- **Portability:** macOS, Linux and Windows. Unit and browser tests run on all three in CI (macOS on release tags). The Windows login task (Task Scheduler) is verified only by unit tests of its commands, and the Claude panel needs `claude.exe` there.
+- **Portability:** macOS, Linux and Windows. Unit and browser tests run on all three in CI (macOS on release tags). The Windows login task (Task Scheduler) is verified only by unit tests of its commands, and the Claude panel runs `claude.exe`, or for an npm install the program or `node` script that npm's `claude.cmd` points at (never `cmd.exe`; unit `test_claude_cli.py`, with a round trip through a real node).
 - **Accessibility:** keyboard reachable controls, visible focus, `aria-live` status, reduced-motion
   support, readable contrast in both themes. Phone width (390 px) without sideways scrolling.
 - **Robustness:** append-only logs with de-duplication; atomic writes for config; uploads streamed to a

@@ -15,8 +15,12 @@ versions follow [Semantic Versioning](https://semver.org).
 ### Fixed
 
 - The away mail and the Sunday recap failed on Windows (a date format Windows rejects).
-- On Windows, the Claude panel runs only `claude.exe`, not npm's `claude.cmd`, and the dashboard server no
-  longer crashes when started without a console (as the login task does).
+- On Windows, the Claude panel never runs npm's `claude.cmd` through `cmd.exe` (which mangles a prompt), and
+  the dashboard server no longer crashes when started without a console (as the login task does).
+- On Windows, the Claude panel works with Claude Code installed by npm: it runs what `claude.cmd` points at
+  directly (the package's `bin/claude.exe`, or `node` and the script in older versions), so a prompt arrives
+  unchanged. `claude.exe` from Anthropic's installer still comes first. When the npm install is broken
+  (missing file, install step skipped, no Node.js), `doctor` says which and how to fix it.
 
 ## 1.3.0 - 2026-11-09
 

@@ -152,8 +152,10 @@ Use `python edu4self ...` wherever this page says `./edu4self` (for example `pyt
 PowerShell or Command Prompt. `setup` and `install` add a Task Scheduler task named `edu4self` that starts
 the dashboard when you log on; `uninstall` removes it. You can also see it in the Task Scheduler app.
 
-- The Claude panel in the dashboard needs the native `claude.exe` from Anthropic's installer. The npm
-  `claude.cmd` is not used, because `cmd.exe` mangles the text of a prompt.
+- The Claude panel works with Claude Code from Anthropic's installer (`claude.exe`) or from npm
+  (`npm i -g @anthropic-ai/claude-code`). npm's `claude.cmd` is never run itself, because `cmd.exe` mangles
+  the text of a prompt: the dashboard runs the program (or `node` and the script) it points at. If that
+  can't be found, `python edu4self doctor` says why and what to do.
 - A mail app password is kept in a file in your user folder (Windows has no password store this tool can
   use without extra software). Use an app password, not your real one.
 - What is tested: the unit and browser tests run on Windows in CI. What is not: the login task, which
