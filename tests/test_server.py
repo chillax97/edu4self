@@ -978,6 +978,16 @@ class SetupPluginTest(unittest.TestCase):
         self.assertIn("claude plugin install edu4self@edu4self", out)
         self.assertNotIn("Install the tutor plugin now", out)
 
+    def test_a_question_with_no_input_takes_the_default(self):
+        # Windows calls the NUL device a terminal, so isatty() says yes and input() then meets end of file
+        import builtins, io
+        from unittest import mock
+        cli = load_cli()
+        tty = mock.Mock(isatty=lambda: True)
+        with mock.patch.object(sys, "stdin", tty), mock.patch.object(builtins, "input", side_effect=EOFError), \
+                mock.patch.object(sys, "stdout", io.StringIO()):
+            self.assertEqual(cli.ask("Install the tutor plugin now? (y/n)", "y"), "y")
+
     def test_no_plugin_flag_runs_nothing(self):
         out = self.setup("--no-plugin")
         self.assertEqual(self.calls(), [])

@@ -651,7 +651,11 @@ def cmd_doctor(args):
 def ask(prompt, default):
     if not sys.stdin.isatty():
         return default
-    got = input("%s [%s]: " % (prompt, default)).strip()
+    try:
+        got = input("%s [%s]: " % (prompt, default)).strip()
+    except EOFError:        # Windows calls the NUL device a terminal, so isatty() lets a closed input through
+        print()
+        return default
     return got or default
 
 

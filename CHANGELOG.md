@@ -28,6 +28,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Fixed
 
+- `edu4self setup` crashed on Windows when its input wasn't a terminal (Windows calls the `NUL` device one):
+  a question with no answer now takes the suggestion in brackets.
 - The away mail and the Sunday recap failed on Windows (a date format Windows rejects).
 - On Windows, the Claude panel never runs npm's `claude.cmd` through `cmd.exe` (which mangles a prompt), and
   the dashboard server no longer crashes when started without a console (as the login task does).
