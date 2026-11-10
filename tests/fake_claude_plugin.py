@@ -9,6 +9,9 @@ import json
 import os
 import sys
 
+for _s in (sys.stdout, sys.stderr):      # the real CLI writes UTF-8; Windows would default a pipe to its code page
+    _s.reconfigure(encoding="utf-8")
+
 args = sys.argv[1:]
 log = os.environ.get("FAKE_CLAUDE_LOG")
 if log:
