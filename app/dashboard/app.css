@@ -1073,6 +1073,12 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .att .att-hint { border-left-style: dashed; }
 .stuck { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); }
 .bx-stuck { background: rgba(255,233,207,.06); border-color: rgba(255,233,207,.16); color: inherit; }
+/* Claude can't run yet (app.js paintGate): the stuck note's look, edged like the warnings in Settings */
+.cl-gate { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); color: var(--ink-2); font-size: 13.5px;
+  border: 1px solid color-mix(in srgb, var(--amber, #d9822b) 45%, var(--line)); }
+.cl-gate[hidden] { display: none; }
+.cl-gate b { color: var(--ink); }
+.cl-why { font-size: 12.5px; }
 
 /* ---------------------------------------------------------------- the bar, alive
    Hooks the engine sets (app.js, the room stage): data-new on the one child that changed, a one-shot

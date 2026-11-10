@@ -340,7 +340,7 @@
     if (!entry) {
       return '<section class="hero hero-empty"><h2>Nothing waiting on you.</h2>' +
         '<p class="hero-why">' + (claudeOK() && pendingCount() ? gradeButton() + " Claude grades what's in your inbox and lines up your next step."
-          : 'Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.') + "</p></section>";
+          : 'Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></section>";
     }
     var t = entry.task, topic = entry.topic, meta = kindMeta(t.kind);
     var pend = pendingFor(t.id);
@@ -1768,7 +1768,7 @@
   function barJob(hero) {
     if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">' + esc(W("job")) + '</div><h2>Nothing waiting on you.</h2><p>' +
       (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
-        : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.') + "</p></div>";
+        : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></div>";
     var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id);
     return '<div class="bx-job" style="--c:var(--' + (KIND[t.kind] ? t.kind : "lesson") + ')">' +
       '<div class="bx-k">' + esc(W("job")) + " · " + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
@@ -1778,7 +1778,7 @@
         (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
         (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + calcChip(t) + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
-      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? " " + gradeButton() : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + "</div>" : stuckNudge(t, true)) +
+      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : stuckNudge(t, true)) +
       "</div>";
   }
 
@@ -2662,20 +2662,38 @@
   // The server runs Claude Code in the vault (see /api/claude). Grading, chatting and starting a topic
   // all happen here; the drawer shows what Claude is doing while it works. Without Claude Code
   // installed, the page keeps its old instructions for doing it in a terminal.
-  var CL = { available: false, busy: false, conversation: false, next: 0, events: [], timer: 0, gen: 0 };
-  function claudeOK() { return CL.available; }
+  // CL.problem, from the server's check when the page opens (and again on focus): "missing" (not installed, or not
+  // on the PATH), "signed_out", or null. While there is one, a note at the top says how to fix it, and the buttons
+  // that need Claude show greyed out with the reason, so nobody does a lesson first and finds out after.
+  var CL = { available: false, problem: null, known: false, busy: false, conversation: false, next: 0, events: [], timer: 0, gen: 0 };
+  function claudeOK() { return CL.available && !CL.problem; }
+  function claudeWhy() { return CL.problem === "signed_out" ? "Sign in to Claude Code first" : "Needs Claude Code"; }
+  function paintGate() {
+    var el = $("#cl-gate"), p = CL.known && !claudeOK() ? CL.problem || "missing" : null;
+    el.hidden = !p;
+    if (!p || el.dataset.problem === p) return;
+    el.dataset.problem = p;
+    el.innerHTML = p === "signed_out"
+      ? "<span><b>Claude Code isn't signed in, so nothing here can be graded yet.</b> In a terminal, run <code>claude auth login</code>. This note goes away once you're in.</span>"
+      : "<span><b>Claude Code isn't set up, so nothing here can be graded yet.</b> Install it from " +
+        '<a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a>, then run <code>claude</code> once in a terminal to sign in. ' +
+        "Already installed? Restart the dashboard so it can find it.</span>";
+  }
   function pendingCount() { return (DATA && DATA.inbox && DATA.inbox.pending || []).filter(function (e) { return e.kind !== "note"; }).length; }
   function gradeButton(label) {
-    return claudeOK() ? '<button class="btn btn-topic btn-sm" type="button" data-claude="grade"' + (CL.busy ? " disabled" : "") + ">" + (label || "✦ Grade it now") + "</button>" : "";
+    if (!CL.known) return "";
+    if (!claudeOK()) return '<button class="btn btn-topic btn-sm" type="button" disabled title="' + esc(claudeWhy()) + '">' + (label || "✦ Grade it now") + "</button>" +
+      ' <small class="muted cl-why">' + esc(claudeWhy()) + ", see the note at the top.</small>";
+    return '<button class="btn btn-topic btn-sm" type="button" data-claude="grade"' + (CL.busy ? " disabled" : "") + ">" + (label || "✦ Grade it now") + "</button>";
   }
   // A poll that left before a send or reset answers about the old world: CL.gen drops those answers.
-  function claudePoll() {
+  function claudePoll(recheck) {
     var gen = CL.gen;
-    return fetch("/api/claude?since=" + CL.next, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    return fetch("/api/claude?since=" + CL.next + (recheck ? "&recheck=1" : ""), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (gen !== CL.gen) return;
-      var wasAvail = CL.available, wasBusy = CL.busy;
+      var wasOK = claudeOK(), wasKnown = CL.known, wasBusy = CL.busy;
       if (j.next < CL.next) { CL.events = []; CL.next = 0; return claudePoll(); }   // the server started over
-      CL.available = j.available; CL.busy = j.busy; CL.conversation = j.conversation;
+      CL.available = j.available; CL.problem = j.problem || null; CL.known = true; CL.busy = j.busy; CL.conversation = j.conversation;
       var fresh = j.events.filter(function (e) { return e.n >= CL.next; });
       if (fresh.length) { CL.events = CL.events.concat(fresh); }
       CL.next = Math.max(CL.next, j.next);
@@ -2685,7 +2703,7 @@
         toast(last.kind === "check" && /OK/.test(last.text) ? "<span>✦</span><span><b>Claude is done.</b></span>" : "<span>!</span><span><b>Claude finished with a problem.</b> Open ✦ Claude to see it.</span>", 5000);
         load();
       }
-      if (wasAvail !== j.available || wasBusy !== j.busy) { if (DATA) render(); }
+      if (wasKnown !== CL.known || wasOK !== claudeOK() || wasBusy !== j.busy) { if (DATA) render(); }
       clearTimeout(CL.timer);
       if (j.busy) CL.timer = setTimeout(claudePoll, 700);
     }).catch(function () {});
@@ -2817,6 +2835,7 @@
     flush();
     if (!CL.events.length) html = '<div class="cl-empty">' + (claudeOK()
       ? "Nothing here yet. Try “what should I work on tonight?”, or press <b>Grade my inbox</b>."
+      : CL.problem === "signed_out" ? "Claude Code isn't signed in, so the page can't run it. In a terminal, run <code>claude auth login</code>, then come back."
       : "Claude Code isn't installed on this computer, or isn't on the PATH, so the page can't run it. Install it from <a href=\"https://claude.com/claude-code\" target=\"_blank\" rel=\"noopener\">claude.com/claude-code</a>, sign in once in a terminal, then restart the dashboard.") + "</div>";
     if (CL.busy) html += '<div class="cl-working"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Claude is working…</div>';
     var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
@@ -2828,14 +2847,17 @@
     $("#cl-stop").hidden = !CL.busy;
     $("#cl-new").disabled = CL.busy || !CL.events.length;
     var st = $("#cl-status"); if (!st.classList.contains("is-err")) st.textContent = "";
-    // the top bar: the Claude button, and a grade button while something waits
+    // the top bar: the Claude button, and a grade button while something waits. Without a usable Claude the
+    // grade button shows greyed out with the reason (once the page knows), and the note button stands in for Claude.
     $("#btn-claude").hidden = !claudeOK();
     $("#btn-claude").classList.toggle("is-busy", CL.busy);
     $("#btn-note").hidden = claudeOK();
     var g = $("#btn-grade"), n = pendingCount();
-    g.hidden = !claudeOK() || (!n && !CL.busy);
-    g.disabled = CL.busy;
-    g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + " <span class=\"hide-sm\">waiting</span>";
+    g.hidden = !CL.known || (!n && !CL.busy);
+    g.disabled = CL.busy || !claudeOK();
+    g.title = claudeOK() ? "" : claudeWhy();
+    g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + (claudeOK() ? " <span class=\"hide-sm\">waiting</span>" : "");   // greyed: the note button is wider than Claude's
+    paintGate();
   }
 
   function openNewTopic() {
@@ -3366,8 +3388,13 @@
   $("#mail-alert-ok").addEventListener("click", dismissMailAlert);
   $("#mail-alert-open").addEventListener("click", function () { dismissMailAlert(); openSettings("reminders"); });
   $("#gift-no").addEventListener("click", function () { answerGifts(false); });
+  // is Claude usable now? Ask again when the learner comes back to the tab (they may have just signed in),
+  // and every minute while it isn't; the server answers from its cache otherwise.
+  window.addEventListener("focus", function () { if (!CL.busy) claudePoll(true); });
+  setInterval(function () { if (!document.hidden && !CL.busy) claudePoll(!claudeOK()); }, 60000);
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;
+    if (!CL.busy) claudePoll(true);
     load();
     if (celebrateNext) showCelebration();
   });
@@ -3388,7 +3415,7 @@
   window.addEventListener("hashchange", followHash);
 
   Promise.all([claudePoll(), load()]).then(function () {
-    if (claudeOK()) render();
+    if (CL.known && DATA) render();   // the Claude buttons depend on what the check said
     resumeBlock();
     if (location.hash) return followHash();
     if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding(); else askGifts();
