@@ -512,6 +512,21 @@ def lesson_skill_found():
     return found == {"write-lesson", "check-inbox"}
 
 
+def claude_line(windows=None, which=shutil.which):
+    """doctor's line about Claude Code: found, or why the dashboard can't run it."""
+    sys.path.insert(0, APP)
+    import claude_cli
+    windows = os.name == "nt" if windows is None else windows
+    override = os.environ.get("EDU4SELF_CLAUDE") or ""
+    cmd, why = claude_cli.find(override, which, windows)
+    if cmd:
+        npm = windows and "node_modules" in cmd[-1]
+        return "✓", "Claude Code found" + (" (npm's: the dashboard runs %s directly, not claude.cmd)" % " ".join(cmd) if npm else "")
+    if windows and (which("claude.cmd") or override.lower().endswith((".cmd", ".bat"))):
+        return "✗", "npm's claude.cmd found, but the dashboard's Claude panel can't use it: %s" % why
+    return "✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)"
+
+
 def cmd_doctor(args):
     vault, port = resolve(args)
     bad = 0
@@ -540,13 +555,10 @@ def cmd_doctor(args):
         bad += 1
         say("✗", "nothing answers on port %d: ./edu4self serve, or ./edu4self install" % port)
     say("✓" if service_installed() else "–", "login service %s" % ("installed" if service_installed() else "not installed (optional: ./edu4self install)"))
-    if shutil.which("claude"):
-        say("✓", "Claude Code found")
-        if platform.system() == "Windows" and not shutil.which("claude.exe"):
-            say("–", "only claude.cmd (npm) found: the dashboard's Claude panel needs claude.exe, from Anthropic's native installer")
-    else:
+    mark, line = claude_line()
+    if mark == "✗":
         bad += 1
-        say("✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)")
+    say(mark, line)
     if lesson_skill_found():
         say("✓", "tutor skills installed (edu4self plugin)")
     else:
