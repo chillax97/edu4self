@@ -35,6 +35,7 @@ APP = os.path.dirname(os.path.abspath(__file__))
 DASH = os.path.join(APP, "dashboard")
 THEMES_DIR = os.path.join(DASH, "themes")
 sys.path.insert(0, APP)
+import claude_cli  # noqa: E402  (app/claude_cli.py: the command that runs Claude Code)
 import edu_trace  # noqa: E402  (app/edu_trace.py: what a checker run saves for the tutor)
 import keepsakes
 import reminders  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
@@ -940,13 +941,10 @@ def with_quiz_shuffle(page):
     return page[:i] + QUIZ_SHUFFLE + page[i:] if i >= 0 else QUIZ_SHUFFLE + page
 
 
-def claude_bin():
-    exe = os.environ.get("EDU4SELF_CLAUDE") or shutil.which("claude")
-    if exe and os.name == "nt" and exe.lower().endswith((".cmd", ".bat")):
-        # npm's claude.cmd would run through cmd.exe, which mangles prompts (quotes, &, newlines) and can run
-        # text from them. Only the real claude.exe (the native installer) is safe to hand a prompt to.
-        exe = shutil.which("claude.exe")
-    return exe if exe and os.path.isfile(exe) and os.access(exe, os.X_OK) else None
+def claude_cmd():
+    """The command that runs Claude Code, as a list (never through a shell), or None. See claude_cli.py:
+    on Windows, npm's claude.cmd is resolved to the program or script behind it, never run through cmd.exe."""
+    return claude_cli.find(os.environ.get("EDU4SELF_CLAUDE"))[0]
 
 
 def claude_event(kind, text):
@@ -999,8 +997,7 @@ def claude_args(prompt, resume, kind="chat"):
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in ("grade", "gift"):
         deny += ["WebSearch", "WebFetch"]
-    exe = claude_bin() or ""
-    args = ([sys.executable, exe] if exe.endswith(".py") else [exe]) + ["-p", prompt, "--output-format", "stream-json", "--verbose",
+    args = (claude_cmd() or [""]) + ["-p", prompt, "--output-format", "stream-json", "--verbose",
             "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
             "--disallowedTools", ",".join(deny), "--setting-sources", "user,project", "--strict-mcp-config",
             "--append-system-prompt", PANEL_NOTE]
@@ -1015,7 +1012,7 @@ def claude_status(since="0"):
     except ValueError:
         since = 0
     with CLAUDE_LOCK:
-        return {"available": bool(claude_bin()), "busy": RUN["busy"], "kind": RUN["kind"],
+        return {"available": bool(claude_cmd()), "busy": RUN["busy"], "kind": RUN["kind"],
                 "conversation": bool(RUN["session"]), "events": RUN["events"][since:], "next": len(RUN["events"])}
 
 
@@ -1027,7 +1024,7 @@ def claude_start(body):
         return 400, {"error": "say something first"}
     if len(text) > MAX_PROMPT:
         return 400, {"error": "keep it under %d characters" % MAX_PROMPT}
-    if not claude_bin():
+    if not claude_cmd():
         return 503, {"error": "Claude Code isn't installed on this computer (or isn't on the PATH)"}
     with CLAUDE_LOCK:
         if RUN["busy"]:
@@ -1256,7 +1253,7 @@ def maybe_gift():
         # doesn't make a pile of old ones)
         keepsakes.set_gift(KEEPSAKES, item["id"], "off")
         return maybe_gift()
-    if not claude_bin():
+    if not claude_cmd():
         return False
     tid, meta = active_theme()
     what = ("met their goal for the week of %s" % item["date"] if item["kind"] == "week"
