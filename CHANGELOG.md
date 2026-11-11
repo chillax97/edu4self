@@ -17,6 +17,8 @@ versions follow [Semantic Versioning](https://semver.org).
   classic page and in every room: no colour fill or glow, a dashed edge, a not-allowed cursor, and the
   reason on hover. Its label and the reason beside it stay readable (at least 4.5:1), also on the paper
   cards of the library, tea and train rooms.
+- The green "Submitted just now" line on the task card was almost invisible (about 1.2:1) on the paper cards of the
+  library, tea and train rooms. Each now draws it in a dark green that suits the room (at least 4.5:1).
 
 ## 1.4.0 - 2026-11-11
 

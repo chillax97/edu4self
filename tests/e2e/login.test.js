@@ -117,6 +117,21 @@ test("the greyed Grade in the top bar reads as off, in classic and in every room
   setTheme(v, "bar");
 });
 
+// The green "Submitted just now" line on the card of the task up next. Light green is right on a dark room, but on
+// the paper cards (library, tea, train) it was about 1.2:1, so each room has to give it a colour readable on its card.
+test("the Submitted line on the task card is readable in every room, whatever Claude's state", async () => {
+  for (const where of ROOMS) {
+    setTheme(waiting, where);
+    const page = await openPage(browser, waitingServer.url, { view: "bar" });
+    await page.waitForSelector(".room .bx-sent");
+    const line = await offLook(page, ".room .bx-sent");
+    assert.ok(line.ratio >= 4.5, `${where}: the Submitted line is readable (contrast ${line.ratio}:1)`);
+    assert.deepEqual(page.errors, []);
+    await closePage(page);
+  }
+  setTheme(waiting, "bar");
+});
+
 // The card of the task up next (classic: the hero; rooms: the job) and the Grade inside it
 const CARD = { classic: ".hero-submitted", bar: ".room .bx-sent" };
 const cardGrade = (page, where) => page.$eval(CARD[where], (c) => {
