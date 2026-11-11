@@ -44,38 +44,58 @@
   <a href="#" id="footer-help">How it works</a>
 </footer>
 
-<!-- onboarding -->
+<!-- onboarding: the first try. One idea, hidden, answered from memory, checked, then the learner picks
+     their own topic or the example. Shown once (edu.onboarded.v1); "Replay the intro" in Help shows it again. -->
 <div class="overlay" id="onboarding" hidden>
-  <div class="dialog onboard" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+  <div class="dialog onboard ft" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <div class="ft-head">
+      <span class="ft-kicker" id="ft-kicker">Two minutes: one idea, one question</span>
+      <button class="ft-skip" id="ob-skip" type="button">Skip</button>
+    </div>
     <div class="ob-slides">
       <section class="ob-slide" data-step="0">
-        <div class="ob-art art-1" aria-hidden="true"><span>1</span></div>
         <h2 id="ob-title">Welcome to edu4self</h2>
-        <p>This is home base for everything you're learning. It always shows <strong>one clear next step</strong>, so you never have to wonder what to do.</p>
-        <p class="ob-small">There's a small example topic to try the loop with. Your own topics show up here as soon as Claude sets them up.</p>
+        <p class="ft-lede">Here you learn by pulling things out of your head, not by reading them again. Try it once: read one idea, then answer from memory.</p>
+        <div class="ft-card"><div class="ft-face">
+          <span class="ft-label">The idea</span>
+          <p><b>Pulling an idea out of your head is what makes it stay.</b> Reading it again makes it feel familiar, and familiar feels like knowing. It isn't.</p>
+          <p>In a classic study, students who reread a passage did a little better five minutes later. A week later, the ones who had tested themselves remembered clearly more.</p>
+          <small>Roediger and Karpicke, 2006</small>
+        </div></div>
       </section>
       <section class="ob-slide" data-step="1" hidden>
-        <div class="ob-art art-2" aria-hidden="true"><span>2</span></div>
-        <h2>Do the work, then submit it here</h2>
-        <p>Open the lesson or probe from the <strong>Up next</strong> card. When you're done, press <strong>Submit answers</strong> and type what you got.</p>
-        <p class="ob-small"><strong>Probes</strong> test what you know without teaching anything, so do them honestly: no running code, no AI.</p>
+        <div class="ft-card is-down" aria-hidden="true"><div class="ft-face ft-back"><span>Hidden. From memory now.</span></div></div>
+        <label class="ft-q" for="ft-answer">Why does testing yourself beat rereading? <span>Your own words, a sentence or two.</span></label>
+        <textarea id="ft-answer" rows="3" maxlength="2000" placeholder="Type what you remember. A rough answer is fine."></textarea>
+        <fieldset class="sure ft-sure" id="ft-sure">
+          <legend>How sure are you?</legend>
+          <div class="sure-row">
+            <label><input type="radio" name="ft-sure" value="guessed"><span>Guessed</span></label>
+            <label><input type="radio" name="ft-sure" value="shaky"><span>Shaky</span></label>
+            <label><input type="radio" name="ft-sure" value="solid"><span>Solid</span></label>
+          </div>
+        </fieldset>
+        <p class="form-error" id="ft-error" role="alert" hidden></p>
       </section>
       <section class="ob-slide" data-step="2" hidden>
-        <div class="ob-art art-3" aria-hidden="true"><span>3</span></div>
-        <h2>Then tell Claude to check your inbox</h2>
-        <p>Your answers wait in an inbox on this computer. Press <strong>✦ Grade it now</strong> and Claude grades them right here. (Or, in Claude Code, say <strong>"check my inbox"</strong>.)</p>
-        <p class="ob-small">Claude grades your work, writes down what you've proven, and updates this page. It refreshes on its own.</p>
+        <h2 id="ft-verdict"></h2>
+        <div id="ft-check"></div>
+        <div class="ft-grade" id="ft-grade" aria-live="polite"></div>
+        <form class="ft-own" id="ft-own">
+          <label for="ft-what">What do you want to learn?</label>
+          <div class="ft-own-row">
+            <input id="ft-what" type="text" maxlength="2000" placeholder="Rust, for a CLI tool by March" autocomplete="off">
+            <button class="btn btn-primary" type="submit" id="ft-own-go">Start my topic</button>
+          </div>
+          <p class="form-error" id="ft-own-error" role="alert" hidden></p>
+        </form>
       </section>
     </div>
     <div class="ob-footer">
-      <div class="ob-dots" role="tablist" aria-label="Onboarding steps">
-        <button class="dot is-on" data-go="0" aria-label="Step 1"></button>
-        <button class="dot" data-go="1" aria-label="Step 2"></button>
-        <button class="dot" data-go="2" aria-label="Step 3"></button>
-      </div>
+      <div class="ob-dots" aria-hidden="true"><span class="dot is-on"></span><span class="dot"></span><span class="dot"></span></div>
       <div class="ob-buttons">
         <button class="btn btn-ghost" id="ob-back" type="button" hidden>Back</button>
-        <button class="btn btn-primary" id="ob-next" type="button">Next</button>
+        <button class="btn btn-primary" id="ob-next" type="button">Hide it and test me</button>
       </div>
     </div>
   </div>

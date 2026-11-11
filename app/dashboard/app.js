@@ -54,6 +54,7 @@
     return h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   }
   function toast(html, ms) {
+    if (!$("#onboarding").hidden) return;   // the first try shows its own result, and a toast would cover its buttons
     var t = $("#toast");
     t.innerHTML = html;
     t.hidden = false;
@@ -714,16 +715,147 @@
       .catch(function () { toast("Couldn't withdraw it. It may already have been graded."); load(); });
   }
 
-  // onboarding
+  // onboarding: the first try (docs/SPEC.md FR-28). Before any dashboard, one idea, hidden, answered from memory.
+  // Two checks, named for what they are: a quick check here, by key words (instant, free, can be fooled), and,
+  // one click and opt-in, Claude's real grade of the same answer from the inbox. Only Claude writes state.json,
+  // so only Claude can keep it as proof; this card just shows what it wrote. Then the learner picks: their own
+  // topic, or the example lesson. Done or skipped, it never shows again (ONBOARD_KEY).
   var obStep = 0;
-  function showOnboarding() { obStep = 0; paintOnboarding(); openOverlay("onboarding"); setTimeout(function () { $("#ob-next").focus(); }, 60); }
+  var FT_TASK = "first-try";
+  var FT_Q = "Why does testing yourself beat rereading? (First try: the idea was shown, then hidden before this question.)";
+  var FT_KEYS = [
+    { label: "Recalling is what builds the memory", re: /recall|retriev|remember|pull|out of (your|my|the) (head|mind)|from (your|my) (head|mind)|test(ing)? (your|my|one)?self|self.?test|quiz|bring (it )?(back|up)|produc|effort|struggl|practi/i },
+    { label: "Rereading only feels like knowing", re: /familiar|feel|seem|illusion|recogni|fool|trick|false|confiden|looks? (easy|right|known)|passive|exposure/i },
+    { label: "The difference shows later, and lasts", re: /week|later|last|long|stick|stay|retain|retention|durable|forget|fade|keep/i }
+  ];
+  var FT_MODEL = "Pulling an idea out of your head makes the memory stronger and longer lasting. Rereading makes it feel familiar, which feels like knowing, so it looks better at first, but a week later the people who tested themselves remember more.";
+  var FT_HELLO = { bar: "First round's on the house: one idea, one question", library: "Before the stacks: one idea, one question",
+    space: "Before your shift: one idea, one question", tea: "While the water heats: one idea, one question", train: "Before the first stop: one idea, one question" };
+  var FT = {};
+  function showOnboarding() {
+    obStep = 0; FT = {};
+    $("#ft-answer").value = ""; $("#ft-what").value = ""; $("#ft-error").hidden = true; $("#ft-own-error").hidden = true;
+    document.querySelectorAll('input[name="ft-sure"]').forEach(function (r) { r.checked = false; });
+    paintOnboarding(); openOverlay("onboarding"); setTimeout(function () { $("#ob-next").focus(); }, 60);
+  }
   function paintOnboarding() {
     document.querySelectorAll(".ob-slide").forEach(function (s) { s.hidden = Number(s.dataset.step) !== obStep; });
-    document.querySelectorAll(".ob-dots .dot").forEach(function (d) { d.classList.toggle("is-on", Number(d.dataset.go) === obStep); });
-    $("#ob-back").hidden = obStep === 0;
-    $("#ob-next").textContent = obStep === 2 ? "Let's go" : "Next";
+    document.querySelectorAll(".ob-dots .dot").forEach(function (d, i) { d.classList.toggle("is-on", i === obStep); });
+    $("#ft-kicker").textContent = (isBar() && FT_HELLO[wantTheme()]) || "Two minutes: one idea, one question";
+    $("#ob-skip").hidden = obStep === 2;
+    var next = $("#ob-next");
+    next.textContent = obStep === 0 ? "Hide it and test me" : obStep === 1 ? ($("#ft-answer").value.trim() ? "Check my answer" : "I don't remember") : "Try the example lesson";
+    next.classList.toggle("btn-primary", obStep !== 2);
+    next.classList.toggle("btn-ghost", obStep === 2);
+    if (obStep === 2) paintFirstGrade();
   }
-  function finishOnboarding() { store(ONBOARD_KEY, "1"); closeOverlay($("#onboarding")); askGifts(); }
+  function obNext() {
+    if (obStep === 0) { obStep = 1; paintOnboarding(); setTimeout(function () { $("#ft-answer").focus(); }, 60); return; }
+    if (obStep === 1) return firstCheck();
+    finishOnboarding();
+  }
+  // no gift question on top of the first try: it waits for the next visit (askGifts runs on every load)
+  function finishOnboarding() { store(ONBOARD_KEY, "1"); closeOverlay($("#onboarding")); }
+  // the quick check: which key points the answer names, and the learner's own "how sure" next to it
+  function firstCheck() {
+    var text = $("#ft-answer").value.trim(), sure = document.querySelector('input[name="ft-sure"]:checked'), err = $("#ft-error");
+    if (text && !sure) { err.textContent = "Pick how sure you are. Any answer is fine, as long as it's honest."; err.hidden = false; return; }
+    err.hidden = true;
+    FT.text = text; FT.sure = sure ? sure.value : null; FT.hits = FT_KEYS.map(function (k) { return k.re.test(text); });
+    var n = FT.hits.filter(Boolean).length;
+    $("#ft-verdict").textContent = !text ? "That's fine. Here it is again." : n === 3 ? "All three key points, from memory." :
+      n === 2 ? "Two of the three key points, from memory." : n === 1 ? "One of three. Normal for a first try." : "None of the key points yet.";
+    var cal = !text ? "" : FT.sure === "solid" && n < 2 ? "You said solid, and the quick check found " + n + " of 3. Worth noticing."
+      : FT.sure === "guessed" && n >= 2 ? "You said guessed, and you got " + n + " of 3. Trust yourself more." : "";
+    $("#ft-check").innerHTML = (text ? '<blockquote class="ft-yours">' + esc(text) + "</blockquote>" +
+        '<ul class="ft-keys">' + FT_KEYS.map(function (k, i) { return '<li class="' + (FT.hits[i] ? "is-hit" : "is-miss") + '"><span aria-hidden="true">' + (FT.hits[i] ? "✓" : "○") + "</span>" + esc(k.label) + '<span class="sr-only">' + (FT.hits[i] ? ": in your answer" : ": not in your answer") + "</span></li>"; }).join("") + "</ul>"
+        : '<p class="ft-note">Trying first and missing still helps: the answer sticks better now that you went looking for it.</p>') +
+      (cal ? '<p class="ft-cal">' + esc(cal) + "</p>" : "") +
+      '<details class="ft-model"' + (text ? "" : " open") + "><summary>A good answer</summary><p>" + esc(FT_MODEL) + "</p></details>";
+    obStep = 2; paintOnboarding();
+    if (!text) return;
+    store(ONBOARD_KEY, "1");   // an answer is in: a reload goes to the dashboard, where it waits for ✦ Grade
+    var topics = (DATA && DATA.state && DATA.state.topics) || [];
+    var topic = topics.some(function (t) { return t.id === "how-learning-works"; }) ? "how-learning-works" : "general";
+    var fields = {}; fields[FT_Q] = text;
+    FT.saving = true; paintFirstGrade();
+    fetch("/api/inbox", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, task: FT_TASK, kind: "answers", title: "First try: why testing yourself beats rereading", fields: fields, note: "", confidence: FT.sure }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "couldn't save"); return j; }); })
+      .then(function (j) { FT.id = j.id; FT.saving = false; paintFirstGrade(); load(); })
+      .catch(function (e) { FT.saving = false; FT.saveErr = e.message; paintFirstGrade(); });
+  }
+  function firstGradeGo() {
+    if (!FT.id || !claudeOK() || CL.busy) return;
+    FT.phase = "busy"; FT.since = CL.next; paintFirstGrade();
+    CL.gen++;
+    fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "grade" }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "couldn't start"); }); })
+      .then(function () { CL.gen++; CL.busy = true; paintClaude(); return claudePoll(); })
+      .catch(function (e) { FT.phase = "problem"; FT.why = e.message; paintFirstGrade(); });
+  }
+  // what Claude wrote about this answer: the history entry that names it, else the coach note
+  function firstGraded() {
+    var out = null, recall = false;
+    ((DATA && DATA.state && DATA.state.topics) || []).forEach(function (t) {
+      (t.history || []).forEach(function (h) { if (h.inbox === FT.id) out = h; });
+    });
+    ((DATA && DATA.state && DATA.state.recall) || []).forEach(function (q) { if (q.from === FT_TASK) recall = true; });
+    return { entry: out, recall: recall, coach: (DATA && DATA.state && DATA.state.coach) || {} };
+  }
+  function paintFirstGrade() {
+    var box = $("#ft-grade");
+    if (!box || obStep !== 2) return;
+    if (FT.phase === "busy" && !CL.busy && CL.events.length > FT.since) {
+      FT.phase = runEnding() === "ok" ? "done" : "problem";
+      if (FT.phase === "done") load().then(function () { FT.read = true; paintFirstGrade(); });   // read what Claude wrote
+    }
+    var html;
+    if (!FT.text) html = "";
+    else if (FT.saving) html = '<p class="ft-g-line">Saving your answer…</p>';
+    else if (FT.saveErr) html = '<p class="ft-g-line form-error">Couldn\'t save your answer: ' + esc(FT.saveErr) + ".</p>";
+    else if (FT.phase === "busy") {
+      var tools = CL.events.slice(FT.since).filter(function (e) { return e.kind === "tool"; }).slice(-3);
+      html = '<p class="ft-g-head"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Claude is grading your answer…</p>' +
+        (tools.length ? '<ul class="ft-g-tools">' + tools.map(function (e) { return "<li>" + esc(e.text) + "</li>"; }).join("") + "</ul>" : "") +
+        '<p class="ft-g-small">It reads your answer, writes the grade into your record and lines up what\'s next. You can pick below while it works.</p>';
+    } else if (FT.phase === "done" && !FT.read) {
+      html = '<p class="ft-g-head"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Reading what Claude wrote…</p>';
+    } else if (FT.phase === "done") {
+      var g = firstGraded(), e = g.entry;
+      html = '<p class="ft-g-badge' + (e && e.evidence ? " is-proof" : "") + '">✦ ' + (e ? (e.evidence ? "Graded by Claude, and kept as proof" : "Graded by Claude, and kept in your record") : "Graded by Claude") + "</p>" +
+        (e ? "<p><b>" + esc(e.title) + "</b>" + (e.detail ? " " + esc(e.detail) : "") + "</p>"
+          : (g.coach.headline ? "<p><b>" + esc(g.coach.headline) + "</b>" + (g.coach.body ? " " + esc(g.coach.body) : "") + "</p>" : "")) +
+        (e && !e.evidence ? '<p class="ft-g-small">Not proof yet: one answer right after reading shows understanding, not memory. Proof comes when you can still say it days later.</p>' : "") +
+        (g.recall ? '<p class="ft-g-small">In a few days this page asks you again, cold. If you still know it then, it\'s yours.</p>' : "");
+    } else if (FT.phase === "problem") {
+      html = '<p class="ft-g-line"><b>Claude couldn\'t finish the grade.</b> ' + esc(FT.why || "Open ✦ Claude to see what happened.") + " Your answer is still in your inbox; ✦ Grade tries again.</p>";
+    } else if (claudeOK()) {
+      html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. <b>Claude reads what you meant</b>, and only Claude can keep it as proof.</p>' +
+        '<button class="btn btn-topic" type="button" id="ft-grade-go"' + (CL.busy ? " disabled" : "") + ">✦ Have Claude grade it</button>" +
+        '<p class="ft-g-small">Takes a minute or two and uses a little of your Claude plan.' + (CL.busy ? " Claude is busy with something else right now." : "") + "</p>";
+    } else {
+      html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. <b>The real grade, and the proof, come from Claude, your tutor.</b> ' +
+        (CL.problem === "signed_out" ? "Claude Code is installed but not signed in: in a terminal, run <code>claude auth login</code>."
+          : 'Claude Code isn\'t set up on this computer yet: get it from <a href="https://claude.com/claude-code" target="_blank" rel="noopener">claude.com/claude-code</a> and sign in once.') +
+        "</p><p class=\"ft-g-small\">Your answer is saved in your inbox on this computer. When Claude is ready, ✦ Grade grades it first.</p>";
+    }
+    if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+    box.hidden = !html;
+    var go = $("#ft-grade-go"); if (go) go.onclick = firstGradeGo;
+  }
+  $("#ft-answer").addEventListener("input", function () { if (obStep === 1) $("#ob-next").textContent = this.value.trim() ? "Check my answer" : "I don't remember"; });
+  $("#ft-answer").addEventListener("keydown", function (ev) { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); obNext(); } });
+  $("#ob-skip").addEventListener("click", function () { finishOnboarding(); });
+  $("#ft-own").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var what = $("#ft-what").value.trim(), err = $("#ft-own-error");
+    if (what && claudeOK() && CL.busy) { err.textContent = "Claude is still grading your answer. One thing at a time: try again in a moment."; err.hidden = false; return; }
+    finishOnboarding();
+    if (what && claudeOK()) return claudeSend("topic", what);
+    openNewTopic();
+    var w = $("#nt-what"); if (w && what) w.value = what;
+  });
 
   // gifts cost the learner's Claude plan, so they start undecided (null) and the page asks once
   function askGifts() {
@@ -2870,6 +3002,7 @@
     g.title = claudeOK() ? "" : claudeWhy();
     g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + (claudeOK() ? " <span class=\"hide-sm\">waiting</span>" : "");   // greyed: the note button is wider than Claude's
     paintGate();
+    if (obStep === 2 && FT.text) paintFirstGrade();   // the first try shows Claude's grade in its card
   }
 
   function openNewTopic() {
@@ -3393,7 +3526,7 @@
   });
   document.body.classList.toggle("v-bar", isBar());
   paintViewButton();
-  $("#ob-next").addEventListener("click", function () { if (obStep < 2) { obStep++; paintOnboarding(); } else finishOnboarding(); });
+  $("#ob-next").addEventListener("click", obNext);
   $("#ob-back").addEventListener("click", function () { if (obStep > 0) { obStep--; paintOnboarding(); } });
   $("#replay-onboarding").addEventListener("click", function () { closeOverlay($("#help")); showOnboarding(); });
   $("#gift-yes").addEventListener("click", function () { answerGifts(true); });
