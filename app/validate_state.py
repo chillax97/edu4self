@@ -137,6 +137,8 @@ for r in recall:
         err("recall %s: q must be one line of 1-300 characters" % rid)
     if "calculator" in r and not isinstance(r["calculator"], bool):
         err("recall %s: calculator must be true or false, got %r" % (rid, r["calculator"]))
+    if "added" in r and (not isinstance(r["added"], str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", r["added"])):
+        err("recall %s: added must be a date like 2026-11-11, got %r" % (rid, r["added"]))
     if r.get("from") not in ids:
         err("recall %s: from must be the id of the task it tests, got %r" % (rid, r.get("from")))
 

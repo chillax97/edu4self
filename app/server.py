@@ -783,6 +783,7 @@ def clean_submission(body, state):
 # The page asks a few each day, from memory. After 3 or more days away it becomes the welcome back:
 # only questions on passed work, the most recently passed first, so the first thing back is a win.
 RECALL_PICK = 3
+RECALL_MIN_AGE_DAYS = 3        # a question is shown only once its task passed this long ago (the page promises "in a few days")
 
 
 def recall_questions(state):
@@ -790,9 +791,42 @@ def recall_questions(state):
     return [q for q in out if isinstance(q, dict) and isinstance(q.get("id"), str) and isinstance(q.get("q"), str)]
 
 
+def recall_passed_at(state, entries):
+    """{task id: when it passed} for every task we can date. When = its latest processed submission, or
+    the date of the graded history entry that names that submission if that is later (grading can come
+    days after the learner sent it). A task with no such submission is simply missing here."""
+    processed = set(state.get("processed_inbox", []))
+    graded = {}
+    for t in state.get("topics", []):
+        for h in t.get("history", []):
+            if isinstance(h, dict) and isinstance(h.get("inbox"), str) and h.get("evidence") and h.get("date"):
+                graded[h["inbox"]] = h["date"]
+    out = {}
+    for e in entries:
+        if e.get("id") not in processed or not e.get("task"):
+            continue
+        when = max([x for x in (reminders.local_dt(e.get("ts") or ""), reminders.local_dt(graded.get(e.get("id")) or "")) if x], default=None)
+        if when and (e["task"] not in out or when > out[e["task"]]):
+            out[e["task"]] = when
+    return out
+
+
+def recall_due(q, state, passed, now):
+    """May this question be shown today? Only when its task is done and passed at least RECALL_MIN_AGE_DAYS
+    ago. Date of the pass: `passed` (recall_passed_at); if the task has none, the question's own optional
+    `added` date (YYYY-MM-DD, the day the tutor wrote it); if neither, the task is done but undatable
+    (an old vault), so it is shown rather than hidden for good."""
+    done = {x.get("id") for t in state.get("topics", []) for x in t.get("queue", []) if x.get("status") == "done"}
+    if q.get("from") not in done:
+        return False
+    when = passed.get(q.get("from")) or reminders.local_dt(q.get("added") or "")
+    return when is None or now - when >= timedelta(days=RECALL_MIN_AGE_DAYS)
+
+
 def pick_recall(state, entries, blocks, now):
     """{questions, comeback, sent_today}: what the warm-up card asks today.
 
+    Only questions whose task passed at least RECALL_MIN_AGE_DAYS ago are ever shown (recall_due).
     A normal day asks the questions not asked for the longest (never asked first, then the oldest).
     After a gap (the away mail's rule: 3+ days since the last block, answer or note, counted before
     today so the card stays the same all day) it asks only questions whose task is done, most recently
@@ -807,16 +841,10 @@ def pick_recall(state, entries, blocks, now):
     before = lambda items: [x for x in items if (reminders.local_dt(x.get("ts") or x.get("started") or "") or now).date() < today]
     last = reminders.last_activity(before(blocks), before(entries))
     comeback = reminders.away_step(last, now) is not None
-    qs = recall_questions(state)
+    passed = recall_passed_at(state, entries)
+    qs = [q for q in recall_questions(state) if recall_due(q, state, passed, now)]
     if comeback:
-        done = {q.get("id") for t in state.get("topics", []) for q in t.get("queue", []) if q.get("status") == "done"}
-        processed = set(state.get("processed_inbox", []))
-        passed = {}
-        for e in entries:
-            if e.get("id") in processed and e.get("task") in done:
-                passed[e["task"]] = max(passed.get(e["task"], ""), e.get("ts") or "")
-        qs = [q for q in qs if q.get("from") in done]
-        qs.sort(key=lambda q: passed.get(q.get("from"), ""), reverse=True)
+        qs.sort(key=lambda q: passed[q["from"]].timestamp() if q.get("from") in passed else 0, reverse=True)
     else:
         qs.sort(key=lambda q: asked.get(q["id"], ""))       # stable: ties keep the tutor's order
     return {"questions": [dict({k: q.get(k) for k in ("id", "q", "from")}, **({"calculator": True} if q.get("calculator") is True else {}))
