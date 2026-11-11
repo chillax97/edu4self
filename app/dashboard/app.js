@@ -732,16 +732,18 @@
   var FT_HELLO = { bar: "First round's on the house: one idea, one question", library: "Before the stacks: one idea, one question",
     space: "Before your shift: one idea, one question", tea: "While the water heats: one idea, one question", train: "Before the first stop: one idea, one question" };
   var FT = {};
+  function ftKicker() { return (isBar() && FT_HELLO[wantTheme()]) || "Two minutes: one idea, one question"; }
   function showOnboarding() {
     obStep = 0; FT = {};
     $("#ft-answer").value = ""; $("#ft-what").value = ""; $("#ft-error").hidden = true; $("#ft-own-error").hidden = true;
     document.querySelectorAll('input[name="ft-sure"]').forEach(function (r) { r.checked = false; });
+    document.body.classList.add("ft-on");   // the first try is a stage of its own: nothing of the dashboard shows or takes clicks
     paintOnboarding(); openOverlay("onboarding"); setTimeout(function () { $("#ob-next").focus(); }, 60);
   }
   function paintOnboarding() {
     document.querySelectorAll(".ob-slide").forEach(function (s) { s.hidden = Number(s.dataset.step) !== obStep; });
     document.querySelectorAll(".ob-dots .dot").forEach(function (d, i) { d.classList.toggle("is-on", i === obStep); });
-    $("#ft-kicker").textContent = (isBar() && FT_HELLO[wantTheme()]) || "Two minutes: one idea, one question";
+    $("#ft-kicker").textContent = ftKicker();
     $("#ob-skip").hidden = obStep === 2;
     var next = $("#ob-next");
     next.textContent = obStep === 0 ? "Hide it and test me" : obStep === 1 ? ($("#ft-answer").value.trim() ? "Check my answer" : "I don't remember") : "Try the example lesson";
@@ -755,7 +757,7 @@
     finishOnboarding();
   }
   // no gift question on top of the first try: it waits for the next visit (askGifts runs on every load)
-  function finishOnboarding() { store(ONBOARD_KEY, "1"); closeOverlay($("#onboarding")); }
+  function finishOnboarding() { store(ONBOARD_KEY, "1"); document.body.classList.remove("ft-on"); closeOverlay($("#onboarding")); }
   // the quick check: which key points the answer names, and the learner's own "how sure" next to it
   function firstCheck() {
     var text = $("#ft-answer").value.trim(), sure = document.querySelector('input[name="ft-sure"]:checked'), err = $("#ft-error");
@@ -767,6 +769,7 @@
       n === 2 ? "Two of the three key points, from memory." : n === 1 ? "One of three. Normal for a first try." : "None of the key points yet.";
     var cal = !text ? "" : FT.sure === "solid" && n < 2 ? "You said solid, and the quick check found " + n + " of 3. Worth noticing."
       : FT.sure === "guessed" && n >= 2 ? "You said guessed, and you got " + n + " of 3. Trust yourself more." : "";
+    $("#ft-qc-label").hidden = !text;
     $("#ft-check").innerHTML = (text ? '<blockquote class="ft-yours">' + esc(text) + "</blockquote>" +
         '<ul class="ft-keys">' + FT_KEYS.map(function (k, i) { return '<li class="' + (FT.hits[i] ? "is-hit" : "is-miss") + '"><span aria-hidden="true">' + (FT.hits[i] ? "✓" : "○") + "</span>" + esc(k.label) + '<span class="sr-only">' + (FT.hits[i] ? ": in your answer" : ": not in your answer") + "</span></li>"; }).join("") + "</ul>"
         : '<p class="ft-note">Trying first and missing still helps: the answer sticks better now that you went looking for it.</p>') +
@@ -789,7 +792,7 @@
     if (!FT.id || !claudeOK() || CL.busy) return;
     FT.phase = "busy"; FT.since = CL.next; paintFirstGrade();
     CL.gen++;
-    fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "grade" }) })
+    fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "first" }) })   // grade-only: just this answer, no planning
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "couldn't start"); }); })
       .then(function () { CL.gen++; CL.busy = true; paintClaude(); return claudePoll(); })
       .catch(function (e) { FT.phase = "problem"; FT.why = e.message; paintFirstGrade(); });
@@ -818,7 +821,7 @@
       var tools = CL.events.slice(FT.since).filter(function (e) { return e.kind === "tool"; }).slice(-3);
       html = '<p class="ft-g-head"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Claude is grading your answer…</p>' +
         (tools.length ? '<ul class="ft-g-tools">' + tools.map(function (e) { return "<li>" + esc(e.text) + "</li>"; }).join("") + "</ul>" : "") +
-        '<p class="ft-g-small">It reads your answer, writes the grade into your record and lines up what\'s next. You can pick below while it works.</p>';
+        '<p class="ft-g-small">It reads your answer and writes the grade into your record. You can pick below while it works.</p>';
     } else if (FT.phase === "done" && !FT.read) {
       html = '<p class="ft-g-head"><span class="cl-dots" aria-hidden="true"><i></i><i></i><i></i></span> Reading what Claude wrote…</p>';
     } else if (FT.phase === "done") {
@@ -830,10 +833,12 @@
         (g.recall ? '<p class="ft-g-small">In a few days this page asks you again, cold. If you still know it then, it\'s yours.</p>' : "");
     } else if (FT.phase === "problem") {
       html = '<p class="ft-g-line"><b>Claude couldn\'t finish the grade.</b> ' + esc(FT.why || "Open ✦ Claude to see what happened.") + " Your answer is still in your inbox; ✦ Grade tries again.</p>";
+    } else if (!CL.known) {
+      html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. Checking whether Claude is ready to grade it…</p>';
     } else if (claudeOK()) {
-      html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. <b>Claude reads what you meant</b>, and only Claude can keep it as proof.</p>' +
+      html = '<p class="ft-g-line">That was only the quick check: it looks for key words, so it can be fooled. <b>Your real grade comes from Claude</b>, who reads what you meant. Only Claude can keep it as proof.</p>' +
         '<button class="btn btn-topic" type="button" id="ft-grade-go"' + (CL.busy ? " disabled" : "") + ">✦ Have Claude grade it</button>" +
-        '<p class="ft-g-small">Takes a minute or two and uses a little of your Claude plan.' + (CL.busy ? " Claude is busy with something else right now." : "") + "</p>";
+        '<p class="ft-g-small">Claude grades just this answer. It uses a little of your Claude plan.' + (CL.busy ? " Claude is busy with something else right now." : "") + "</p>";
     } else {
       html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. <b>The real grade, and the proof, come from Claude, your tutor.</b> ' +
         (CL.problem === "signed_out" ? "Claude Code is installed but not signed in: in a terminal, run <code>claude auth login</code>."
@@ -3526,6 +3531,9 @@
   });
   document.body.classList.toggle("v-bar", isBar());
   paintViewButton();
+  // a first visit opens the first try now, before any data: the card needs none, and the busy page never shows first
+  var FIRST = !store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search) && !location.hash;
+  if (FIRST) showOnboarding();
   $("#ob-next").addEventListener("click", obNext);
   $("#ob-back").addEventListener("click", function () { if (obStep > 0) { obStep--; paintOnboarding(); } });
   $("#replay-onboarding").addEventListener("click", function () { closeOverlay($("#help")); showOnboarding(); });
@@ -3563,7 +3571,8 @@
     if (CL.known && DATA) render();   // the Claude buttons depend on what the check said
     resumeBlock();
     if (location.hash) return followHash();
-    if (!store(ONBOARD_KEY) && !/[?&]noonboard/.test(location.search)) showOnboarding(); else askGifts();
+    if (FIRST) { if (!$("#onboarding").hidden) $("#ft-kicker").textContent = ftKicker(); return; }   // the room is known now
+    askGifts();
   });
   setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
   setInterval(function () { if (!document.hidden && !active) barTick(); }, 2000);
