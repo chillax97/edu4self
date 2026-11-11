@@ -103,6 +103,8 @@ test("your attempts: every run and hint in order, and a gentle nudge after three
   assert.equal(traceFiles().length, filesBefore, "showing the nudge writes nothing");
   await page.click(".hero [data-stuck-hint]");
   await page.waitForFunction(() => /Read it twice/.test(document.querySelector("#hints-list").innerText));
+  // the runs and the hints come from two requests that can answer in either order: wait for the runs too
+  await page.waitForFunction(() => /Hint 1 opened/.test(document.querySelector("#hints-attempts").innerText));
   const att = await page.$eval("#hints-attempts", (e) => e.innerText);
   assert.match(att, /Run 1: didn't pass[\s\S]*first run[\s\S]*Run 2: didn't pass[\s\S]*(right after|later)[\s\S]*Run 3: didn't pass[\s\S]*Hint 1 opened/);
   assert.match(traceFiles().pop(), /-hint-1\.json$/, "the hint asked for is noted like any other");

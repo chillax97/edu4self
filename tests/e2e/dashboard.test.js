@@ -155,7 +155,7 @@ test("submitting answers lands in the inbox", async () => {
   assert.equal(inbox[0].confidence, "solid");
   assert.equal(inbox[0].fields["1. Retrieval strength vs storage strength, in your own words"], "How easy it is now vs how long it lasts");
   // Up next moves on to the probe; the lesson waits for Claude
-  await page.waitForFunction(() => /How you study now/.test(document.querySelector(".bx-job h2").textContent));
+  await page.waitForFunction(() => /How you study now/.test((document.querySelector(".bx-job h2")?.textContent ?? "")));
   assert.match(await page.$eval(".bx-replies", (e) => e.textContent), /submitted, waiting for Claude/);
   assert.deepEqual(page.errors, []);
   await closePage(page);
@@ -244,7 +244,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")));
 
   // the page uses it at once
-  await page.waitForFunction(() => /The Test Bar/.test(document.querySelector(".bx-neon").textContent));
+  await page.waitForFunction(() => /The Test Bar/.test((document.querySelector(".bx-neon")?.textContent ?? "")));
   assert.match(await page.$eval(".bx-music", (e) => e.textContent), /Test Tone/);
   const voices = await page.$$eval(".bx-who", (els) => els.map((e) => e.textContent));
   assert.ok(voices.includes("Grit"), "renamed voice shows: " + voices.join(", "));
@@ -274,7 +274,7 @@ test("Settings: change everything, upload music, survive a restart, then reset",
   assert.equal(after.blocks.kinds.length, 5);
   assert.equal(after.music.file, "Test-Tone.wav", "reset keeps the uploaded track");
   // the default look is the bar again, with the default names
-  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /The Rubber Duck/.test(document.querySelector(".bx-neon").textContent))
+  await p2.waitForFunction(() => document.body.classList.contains("v-bar") && /The Rubber Duck/.test((document.querySelector(".bx-neon")?.textContent ?? "")))
     .catch(async (err) => {
       // say what the page showed instead, so a failure on a machine we can't see is readable
       const seen = await p2.evaluate(() => ({ body: document.body.className, neon: document.querySelector(".bx-neon")?.textContent ?? null,
@@ -292,7 +292,7 @@ test("the jukebox plays the track, remembers the spot, and a bad setting is refu
   if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
   await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
   // let it actually move before pausing: a slow machine can report "playing" at 0:00
-  await page.waitForFunction(() => !/^0:00 /.test(document.querySelector(".bx-music [data-mu-time]").textContent), { timeout: 8000 });
+  await page.waitForFunction(() => !/^0:00 /.test((document.querySelector(".bx-music [data-mu-time]")?.textContent ?? "")), { timeout: 8000 });
   await page.click('.bx-music [data-mu="toggle"]');   // pause: saves the position
   await page.waitForFunction(() => !document.body.classList.contains("music-on"));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("edu.music.v1")));
@@ -320,7 +320,7 @@ test("the jukebox plays the track, remembers the spot, and a bad setting is refu
   assert.deepEqual(readJSON(path.join(v.vault, "_system", "config.json")).music.files, []);
   assert.ok(fs.existsSync(path.join(v.vault, "_system", "music", "Test-Tone.wav")), "the file is still there");
   // no song left: back to the soundscape
-  await page.waitForFunction(() => /Night shift|Rain|Brown noise/.test(document.querySelector(".bx-music").textContent));
+  await page.waitForFunction(() => /Night shift|Rain|Brown noise/.test((document.querySelector(".bx-music")?.textContent ?? "")));
   assert.equal(readJSON(path.join(v.vault, "_system", "config.json")).music.source, "scape");
   assert.deepEqual(page.errors, []);
   await closePage(page);
@@ -371,7 +371,7 @@ test("your songs: add several, reorder, rename, remove; the jukebox plays them i
 
   // the jukebox: song 1, then each "ended" moves on, and after the last it goes back to the first
   const now = () => page.$eval(".bx-music .bx-mu-title b", (e) => e.textContent);
-  const playing = (t) => page.waitForFunction((t) => document.querySelector(".bx-music .bx-mu-title b").textContent === t, {}, t);
+  const playing = (t) => page.waitForFunction((t) => (document.querySelector(".bx-music .bx-mu-title b")?.textContent ?? "") === t, {}, t);
   const end = () => page.evaluate(() => window.__jukebox().dispatchEvent(new Event("ended")));
   await playing("Song B");
   assert.match(await page.$eval(".bx-mu-skip", (e) => e.textContent), /1 \/ 3/);
@@ -425,7 +425,7 @@ test("radio: pick a station in Settings, and the jukebox streams it", async () =
   await page.waitForSelector("#settings", { hidden: true });
   m = readJSON(path.join(v.vault, "_system", "config.json")).music;
   assert.deepEqual(m.stream, { url, name: "Test FM" });
-  await page.waitForFunction(() => /Test FM/.test(document.querySelector(".bx-music").textContent));
+  await page.waitForFunction(() => /Test FM/.test((document.querySelector(".bx-music")?.textContent ?? "")));
   if (!(await page.evaluate(() => document.body.classList.contains("music-on")))) await page.click('.bx-music [data-mu="toggle"]');
   await page.waitForFunction(() => document.body.classList.contains("music-on"), { timeout: 8000 });
   assert.match(await page.$eval(".bx-music", (e) => e.textContent), /live radio · 127\.0\.0\.1/);
