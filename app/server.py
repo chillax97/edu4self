@@ -660,6 +660,14 @@ def inbox_entries():
     return read_jsonl(INBOX)
 
 
+def read_state_safe():
+    """state.json as a dict, or {} when it's missing or unreadable."""
+    try:
+        return json.loads(read_text(STATE) or "{}")
+    except ValueError:
+        return {}
+
+
 def pending_entries(state):
     entries = inbox_entries()
     processed = set(state.get("processed_inbox", []))
@@ -1047,6 +1055,16 @@ def engine_rule_path():
     return p.lstrip("/")
 
 
+# Runs that read what the learner (or a lesson from someone else) wrote get no web tools, so nothing can leave.
+# "first" is the welcome card's grade of the first try: grading only, see FIRST_PROMPT.
+FENCED = ("grade", "first", "gift")
+FIRST_PROMPT = ("Grade only my first try: the pending inbox entry with task \"first-try\", from the dashboard's welcome card. "
+                "Follow the edu4self PROTOCOL.md for a first-try entry (section 1) and keep it quick: grade that one answer, "
+                "add a history entry whose inbox is that entry's id, add the id to processed_inbox, write the coach note, "
+                "set updated, and run the check. Leave every other inbox entry for a later \"check my inbox\". "
+                "Don't write learning records, don't change PLAN.md, and don't write new lessons or probes.")
+
+
 def claude_args(prompt, resume, kind="chat"):
     """The permission wall for a run started from the page. Lessons in the vault may come from someone
     else, and Claude reads them while grading, so the rules assume Claude can be talked into anything:
@@ -1059,13 +1077,13 @@ def claude_args(prompt, resume, kind="chat"):
     MCP servers listed in the vault are ignored, and local (unshared) settings files there too."""
     tools = ["Read(//%s/**)" % engine_rule_path(), "Read(~/.claude/plugins/**)", "Read(~/.claude/skills/**)",
              "Skill", "TodoWrite"]
-    if kind not in ("grade", "gift"):
+    if kind not in FENCED:
         tools += ["WebSearch", "WebFetch"]
     # edu_trace.py runs inside every checker, and trace/ is the learner's record: neither is Claude's to change
     locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json",
               "_system/edu_trace.py", "**/trace/**"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
-    if kind in ("grade", "gift"):
+    if kind in FENCED:
         deny += ["WebSearch", "WebFetch"]
     args = (claude_cmd() or [""]) + ["-p", prompt, "--output-format", "stream-json", "--verbose",
             "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
@@ -1090,9 +1108,9 @@ def claude_status(since="0", recheck=False):
 
 def claude_start(body):
     kind, text = body.get("kind"), (body.get("text") or "").strip() if isinstance(body.get("text"), str) else ""
-    if kind not in ("grade", "chat", "topic"):
-        return 400, {"error": "kind is grade, chat or topic"}
-    if kind != "grade" and not text:
+    if kind not in ("grade", "first", "chat", "topic"):
+        return 400, {"error": "kind is grade, first, chat or topic"}
+    if kind not in ("grade", "first") and not text:
         return 400, {"error": "say something first"}
     if len(text) > MAX_PROMPT:
         return 400, {"error": "keep it under %d characters" % MAX_PROMPT}
@@ -1106,6 +1124,11 @@ def claude_start(body):
         if kind == "grade":
             prompt, resume = "check my inbox", None
             claude_event("you", "Grade my inbox")
+        elif kind == "first":
+            if not any(e.get("task") == "first-try" for e in pending_entries(read_state_safe())):
+                return 409, {"error": "there's no first try waiting to be graded"}
+            prompt, resume = FIRST_PROMPT, None
+            claude_event("you", "Grade my first try")
         elif kind == "topic":
             prompt = ("Start a new topic with the edu4self new-topic skill. "
                       "What I want to learn, in my words: %s\n"
@@ -1138,7 +1161,7 @@ def claude_watch(proc, kind):
         except ValueError:
             continue
         with CLAUDE_LOCK:
-            if msg.get("session_id") and kind not in ("grade", "gift"):
+            if msg.get("session_id") and kind not in FENCED:
                 RUN["session"] = msg["session_id"]
             if kind == "gift":   # a surprise: nothing shows in the panel while it's being made
                 if msg.get("type") == "result":

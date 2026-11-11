@@ -691,6 +691,35 @@ class ClaudeTest(unittest.TestCase):
         self.assertIn("WebFetch", denied)
         self.assertIn("--strict-mcp-config", args)
 
+    def test_first_try_grade_is_grade_only_and_fenced(self):
+        # nothing to grade yet: refused, nothing runs
+        before = len(self.calls()) if os.path.exists(self.log) else 0
+        code, d, _ = self.req("POST", "/api/claude", {"kind": "first"})
+        self.assertEqual(code, 409, d)
+        self.assertEqual(len(self.calls()) if os.path.exists(self.log) else 0, before)
+        other = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "x"}, "confidence": "solid"}
+        first = {"topic": "how-learning-works", "task": "first-try", "kind": "answers", "fields": {"Why?": "recall sticks"}, "confidence": "shaky"}
+        _, o, _ = self.req("POST", "/api/inbox", other)
+        _, f, _ = self.req("POST", "/api/inbox", first)
+        code, d, _ = self.req("POST", "/api/claude", {"kind": "first"})
+        self.assertEqual(code, 202, d)
+        d = self.wait_idle()
+        self.assertEqual(d["events"][-1]["kind"], "check")
+        self.assertIn("OK", d["events"][-1]["text"])
+        args = self.calls()[-1]["args"]
+        prompt = args[args.index("-p") + 1]
+        self.assertIn("first-try", prompt)
+        self.assertIn("don't change PLAN.md", prompt)
+        self.assertNotIn("check my inbox\"", prompt.split("Leave")[0])   # it isn't the full grading run
+        self.assertIn("WebFetch", args[args.index("--disallowedTools") + 1].split(","))   # fenced like grading
+        self.assertNotIn("WebFetch", args[args.index("--allowedTools") + 1].split(","))
+        self.assertNotIn("--resume", args)   # never joins the chat's conversation
+        # only the first try was graded; the other answer still waits for check my inbox
+        _, st, _ = self.req("GET", "/api/state")
+        self.assertEqual([e["id"] for e in st["inbox"]["pending"]], [o["id"]])
+        self.assertTrue(any(h.get("inbox") == f["id"] for h in st["state"]["topics"][0]["history"]))
+        self.req("POST", "/api/claude", {"kind": "grade"}); self.wait_idle()   # leave the inbox empty for the other tests
+
     def test_chat_keeps_one_conversation_until_reset(self):
         self.assertEqual(self.req("POST", "/api/claude/reset", {})[0], 200)
         self.assertEqual(self.req("POST", "/api/claude", {"kind": "chat", "text": "hello"})[0], 202)

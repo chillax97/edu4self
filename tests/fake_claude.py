@@ -3,7 +3,7 @@
 
 It records its arguments and working folder to $FAKE_CLAUDE_LOG, and acts out a tiny part of the job:
 for "check my inbox" it marks every pending inbox entry as processed in state.json, the way the real
-tutor would, and for a gift it writes gifts/<id>.html. FAKE_CLAUDE_SLEEP makes it slow, to test the "one run at a time" rule.
+tutor would (for the welcome card's "Grade only my first try", just the first-try entry, with a history entry), and for a gift it writes gifts/<id>.html. FAKE_CLAUDE_SLEEP makes it slow, to test the "one run at a time" rule.
 It also answers the login check (see below).
 """
 import json
@@ -48,7 +48,23 @@ say({"type": "system", "subtype": "init", "session_id": session})
 time.sleep(float(os.environ.get("FAKE_CLAUDE_SLEEP", "0")))
 say({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read", "input": {"file_path": os.path.join(os.getcwd(), "_system", "inbox.jsonl")}}]}})
 
-if "check my inbox" in prompt:
+if "Grade only my first try" in prompt:
+    # the welcome card's grade-only run: just the first-try entry, with a history entry that names it
+    path = os.path.join("_system", "state.json")
+    with open(path, encoding="utf-8") as fh:
+        state = json.load(fh)
+    done = set(state.get("processed_inbox", []))
+    with open(os.path.join("_system", "inbox.jsonl"), encoding="utf-8") as fh:
+        firsts = [e for e in (json.loads(l) for l in fh if l.strip()) if e.get("task") == "first-try" and e["id"] not in done]
+    for e in firsts:
+        state["topics"][0]["history"].append({"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "title": "First try graded by the fake tutor.",
+                                              "detail": "All three points.", "evidence": False, "inbox": e["id"]})
+    state["processed_inbox"] = sorted(done | {e["id"] for e in firsts})
+    state["coach"]["headline"] = "First try graded by the fake tutor."
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(state, fh, indent=1)
+    say({"type": "assistant", "message": {"content": [{"type": "text", "text": "Graded your first try."}]}})
+elif "check my inbox" in prompt:
     path = os.path.join("_system", "state.json")
     with open(path, encoding="utf-8") as fh:
         state = json.load(fh)
