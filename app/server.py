@@ -1401,14 +1401,31 @@ def card_page(item_id):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "edu4self/" + VERSION
+    # HTTP/1.1 keeps a connection open for the next request, so a page load is a few connections, not one per
+    # file (HTTP/1.0's churn made Chrome on Windows drop local requests with ERR_NO_BUFFER_SPACE). Every response
+    # must then say where it ends: Content-Length, or "Connection: close".
+    protocol_version = "HTTP/1.1"
+    # an idle kept-open connection holds a thread; this closes it after a while (also a reader that stops reading)
+    timeout = 30
+
+    def handle(self):
+        try:
+            super().handle()
+        except ConnectionError:   # the browser dropped a kept-open connection (reset, aborted): normal, not news
+            pass
 
     def log_message(self, fmt, *args):
+        if fmt.startswith("Request timed out"):   # an idle kept-open connection closing: normal, not news
+            return
         sys.stderr.write("%s %s\n" % (now_iso(), fmt % args))
 
     # responses
     def send_json(self, code, payload):
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
+        if self.command == "POST" and not getattr(self, "body_read", True):
+            # refused before reading the body: its bytes are still on the line, so this connection can't carry on
+            self.send_header("Connection", "close")
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(data)))
@@ -1448,6 +1465,7 @@ class Handler(BaseHTTPRequestHandler):
                 if start > end or start >= size:
                     self.send_response(416)
                     self.send_header("Content-Range", "bytes */%d" % size)
+                    self.send_header("Content-Length", "0")
                     self.end_headers()
                     return
                 self.send_response(206)
@@ -1467,11 +1485,12 @@ class Handler(BaseHTTPRequestHandler):
                 while left > 0:
                     chunk = fh.read(min(left, 1 << 20))
                     if not chunk:
+                        self.close_connection = True   # the file shrank: fewer bytes than promised, so end here
                         break
                     self.wfile.write(chunk)
                     left -= len(chunk)
-            except (BrokenPipeError, ConnectionResetError):
-                pass   # the player moved on (seek, pause, tab closed)
+            except OSError:   # the player moved on (seek, pause, tab closed) or stopped reading past the timeout
+                self.close_connection = True
 
     def host_ok(self):
         if self.headers.get("Host", "") not in ALLOWED_HOSTS:
@@ -1576,6 +1595,7 @@ class Handler(BaseHTTPRequestHandler):
             file_param = urllib.parse.quote("/".join(parts)[:-3], safe="")
             self.send_response(302)
             self.send_header("Location", "obsidian://open?vault=%s&file=%s" % (urllib.parse.quote(vault), file_param))
+            self.send_header("Content-Length", "0")
             self.end_headers()
             return
         # Pages in the vault (lessons, maybe shared by someone) run in a sandbox: their own blank
@@ -1595,6 +1615,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_file(target)
 
     def do_POST(self):
+        self.body_read = False   # set once the body is read; until then a refusal also closes the connection
         if not self.host_ok():
             return
         origin = self.headers.get("Origin")
@@ -1611,7 +1632,9 @@ class Handler(BaseHTTPRequestHandler):
         if length < 0 or length > MAX_BODY:
             return self.send_json(413, {"error": "body too large"})
         try:
-            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            raw = self.rfile.read(length)
+            self.body_read = True
+            body = json.loads(raw.decode("utf-8") or "{}")
             if not isinstance(body, dict):
                 raise ValueError("expected an object")
         except (ValueError, UnicodeDecodeError):
@@ -1732,6 +1755,7 @@ class Handler(BaseHTTPRequestHandler):
                     if looks_like_audio(head):           # not audio: read the rest, keep none of it
                         fh.write(chunk)
                     left -= len(chunk)
+            self.body_read = True
         except OSError as exc:
             if os.path.exists(tmp):
                 os.remove(tmp)

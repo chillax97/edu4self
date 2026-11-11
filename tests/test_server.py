@@ -452,6 +452,100 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(c.getresponse().status, 413)
         c.close()
 
+    # ------------------------------------------------------------ keep-alive (HTTP/1.1)
+    def keepalive(self):
+        return http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+
+    def on(self, c, method, path, raw=None, headers=None):
+        """One request on an open connection; the body is read to its end, as a browser would."""
+        h = {"Host": "127.0.0.1:%d" % self.port}
+        h.update(headers or {})
+        c.request(method, path, body=raw, headers=h)
+        r = c.getresponse()
+        return r, r.read()
+
+    def test_one_connection_carries_many_requests(self):
+        data = b"ID3" + bytes(range(256)) * 40
+        try:
+            c = self.keepalive()
+            r, _ = self.on(c, "GET", "/api/health")
+            self.assertEqual((r.status, r.version), (200, 11))
+            sock = c.sock
+            self.assertIsNotNone(sock)
+            steps = [
+                ("GET", "/", None, None, 200),
+                ("GET", "/fonts/monoton.woff2", None, None, 200),
+                ("GET", "/theme/lesson.css", None, None, 200),
+                ("GET", "/api/state", None, None, 200),
+                ("GET", "/api/hints?task=nope", None, None, 404),        # an error, still on this connection
+                ("POST", "/api/inbox", b"{}", {"Content-Type": "application/json"}, 400),
+                ("POST", "/api/music", data, {"Content-Type": "audio/mpeg", "X-Filename": "keep.mp3"}, 201),
+                ("GET", "/music", None, {"Range": "bytes=100-199"}, 206),
+                ("GET", "/music", None, {"Range": "bytes=999999-"}, 416),
+                ("GET", "/music", None, None, 200),
+                ("GET", "/api/health", None, None, 200),
+            ]
+            for method, path, raw, headers, want in steps:
+                r, body = self.on(c, method, path, raw, headers)
+                self.assertEqual(r.status, want, path)
+                self.assertFalse(r.will_close, "%s %s closed the connection" % (method, path))
+                self.assertIs(c.sock, sock, "%s %s: a new connection was opened" % (method, path))
+                if want == 206:
+                    self.assertEqual(body, data[100:200])
+                if path == "/music" and want == 200:
+                    self.assertEqual(body, data)
+            c.close()
+        finally:
+            self.req("POST", "/api/config", {"config": {}, "remove_music": True})
+
+    def test_a_redirect_says_it_has_no_body(self):
+        cfg = server.load_config()[0]
+        cfg["obsidian"] = {"enabled": True, "vault": "My Vault"}
+        server.save_config(cfg)
+        try:
+            c = self.keepalive()
+            r, body = self.on(c, "GET", "/vault/how-learning-works/MISSION.md")
+            self.assertEqual((r.status, r.getheader("Content-Length"), body), (302, "0", b""))
+            self.assertFalse(r.will_close)
+            self.assertEqual(self.on(c, "GET", "/api/health")[0].status, 200)
+            c.close()
+        finally:
+            cfg["obsidian"] = {"enabled": False, "vault": ""}
+            server.save_config(cfg)
+
+    def test_a_plain_404_closes_and_the_next_request_still_works(self):
+        c = self.keepalive()
+        r, _ = self.on(c, "GET", "/no-such-page")
+        self.assertEqual(r.status, 404)
+        self.assertIsNotNone(r.getheader("Content-Length"))
+        self.assertTrue(r.will_close, "send_error says Connection: close")
+        self.assertEqual(self.on(c, "GET", "/api/health")[0].status, 200, "http.client reconnects")
+        c.close()
+
+    def test_a_refusal_before_reading_the_body_closes_the_connection(self):
+        # the unread body is still on the line; reading it as the next request would be wrong
+        c = self.keepalive()
+        r, _ = self.on(c, "POST", "/api/inbox", b'{"x": 1}', {"Content-Type": "text/plain"})
+        self.assertEqual(r.status, 415)
+        self.assertTrue(r.will_close)
+        r, _ = self.on(c, "POST", "/api/music", b"ID3" + b"x" * 100, {"Content-Type": "text/html", "X-Filename": "a.mp3"})
+        self.assertEqual(r.status, 415)
+        self.assertTrue(r.will_close)
+        self.assertEqual(self.on(c, "GET", "/api/health")[0].status, 200)
+        c.close()
+
+    def test_an_idle_connection_is_closed_by_the_server(self):
+        old = server.Handler.timeout
+        server.Handler.timeout = 0.3
+        try:
+            c = self.keepalive()
+            self.assertEqual(self.on(c, "GET", "/api/health")[0].status, 200)
+            c.sock.settimeout(5)
+            self.assertEqual(c.sock.recv(1), b"", "the server hung up on the idle connection")
+            c.close()
+        finally:
+            server.Handler.timeout = old
+
 
 class ValidatorTest(unittest.TestCase):
     def setUp(self):
