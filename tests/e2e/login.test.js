@@ -65,6 +65,48 @@ test("without Claude Code: the note is there from the start, in both views, and 
   await closePage(page);
 });
 
+// What the greyed Grade looks like: plainly off (no fill, no glow, a not-allowed cursor), with the reason on hover,
+// and its label still readable (WCAG 4.5:1 against what's behind it). Returns null when there's no such button.
+const offLook = (page, sel) => page.$eval(sel, (el) => {
+  const parse = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const k = c.startsWith("color(") ? 255 : 1; return { r: m[0] * k, g: m[1] * k, b: m[2] * k, a: m[3] === undefined ? 1 : +m[3] }; };
+  const over = (t, u) => ({ r: t.r * t.a + u.r * (1 - t.a), g: t.g * t.a + u.g * (1 - t.a), b: t.b * t.a + u.b * (1 - t.a), a: 1 });
+  const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+  const layers = []; let opacity = 1;
+  for (let e = el; e; e = e.parentElement) { const st = getComputedStyle(e), bg = parse(st.backgroundColor); opacity *= +st.opacity; if (bg && bg.a > 0) layers.push(bg); if (bg && bg.a >= 1) break; }
+  let bg = { r: 255, g: 255, b: 255, a: 1 };
+  for (let i = layers.length - 1; i >= 0; i--) bg = over(layers[i], bg);
+  const st = getComputedStyle(el), fg = parse(st.color); fg.a *= opacity;
+  const L1 = lum(over(fg, bg)), L2 = lum(bg);
+  return { disabled: el.disabled, title: el.title, fill: parse(st.backgroundColor).a, glow: st.boxShadow, cursor: st.cursor,
+    ratio: +((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)).toFixed(2) };
+});
+function assertOff(look, where) {
+  assert.ok(look, `${where}: a greyed Grade is there`);
+  assert.equal(look.disabled, true, `${where}: Grade is disabled`);
+  assert.equal(look.fill, 0, `${where}: no accent fill`);
+  assert.equal(look.glow, "none", `${where}: no glow`);
+  assert.equal(look.cursor, "not-allowed", `${where}: the cursor says no`);
+  assert.ok(look.title, `${where}: the reason is on hover`);
+  assert.ok(look.ratio >= 4.5, `${where}: the label is readable (contrast ${look.ratio}:1)`);
+}
+const ROOMS = fs.readdirSync(path.join(ENGINE, "app", "dashboard", "themes")).sort();
+const setTheme = (x, theme) => {
+  const p = path.join(x.vault, "_system", "config.json"), c = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {};
+  fs.writeFileSync(p, JSON.stringify({ ...c, theme }));
+};
+
+test("the greyed Grade in the top bar reads as off, in classic and in every room", async () => {
+  for (const where of ["classic", ...ROOMS]) {
+    if (where !== "classic") setTheme(v, where);
+    const page = await openPage(browser, server.url, { view: where === "classic" ? "classic" : "bar" });
+    await page.waitForSelector("#btn-grade:not([hidden])");
+    assertOff(await offLook(page, "#btn-grade"), where + " top bar");
+    assert.deepEqual(page.errors, []);
+    await closePage(page);
+  }
+  setTheme(v, "bar");
+});
+
 test("installed but signed out: the note says how to sign in; once signed in, it goes and Grade works", async () => {
   const page = await openPage(browser, server.url, { view: "bar" });
   await page.waitForSelector("#cl-gate:not([hidden])");

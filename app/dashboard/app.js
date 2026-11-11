@@ -2684,8 +2684,8 @@
   function pendingCount() { return (DATA && DATA.inbox && DATA.inbox.pending || []).filter(function (e) { return e.kind !== "note"; }).length; }
   function gradeButton(label) {
     if (!CL.known) return "";
-    if (!claudeOK()) return '<button class="btn btn-topic btn-sm" type="button" disabled title="' + esc(claudeWhy()) + '">' + (label || "✦ Grade it now") + "</button>" +
-      ' <small class="muted cl-why">' + esc(claudeWhy()) + ", see the note at the top.</small>";
+    if (!claudeOK()) return '<button class="btn btn-topic btn-sm is-off" type="button" disabled title="' + esc(claudeWhy()) + '">' + (label || "✦ Grade it now") + "</button>" +
+      ' <small class="cl-why">' + esc(claudeWhy()) + ", see the note at the top.</small>";
     return '<button class="btn btn-topic btn-sm" type="button" data-claude="grade"' + (CL.busy ? " disabled" : "") + ">" + (label || "✦ Grade it now") + "</button>";
   }
   // How a run ended, from its events: Claude's own verdict (done, or an error/stop) and the check after it.
@@ -2866,6 +2866,7 @@
     var g = $("#btn-grade"), n = pendingCount();
     g.hidden = !CL.known || (!n && !CL.busy);
     g.disabled = CL.busy || !claudeOK();
+    g.classList.toggle("is-off", !claudeOK());
     g.title = claudeOK() ? "" : claudeWhy();
     g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + (claudeOK() ? " <span class=\"hide-sm\">waiting</span>" : "");   // greyed: the note button is wider than Claude's
     paintGate();

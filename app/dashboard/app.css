@@ -1078,7 +1078,11 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
   border: 1px solid color-mix(in srgb, var(--amber, #d9822b) 45%, var(--line)); }
 .cl-gate[hidden] { display: none; }
 .cl-gate b { color: var(--ink); }
-.cl-why { font-size: 12.5px; }
+.cl-why { font-size: 12.5px; color: var(--off-ink, var(--ink-2)); }
+/* Grade while Claude can't run: plainly off at a glance (no fill, no glow, a dashed edge) with the label still
+   readable. A room whose card is paper sets --off-ink to its own dark ink there. */
+.btn.is-off, .btn.is-off:hover { background: transparent; color: var(--off-ink, var(--ink-2)); border: 1px dashed color-mix(in srgb, currentColor 55%, transparent);
+  box-shadow: none; filter: none; opacity: 1; cursor: not-allowed; transform: none; }
 
 /* ---------------------------------------------------------------- the bar, alive
    Hooks the engine sets (app.js, the room stage): data-new on the one child that changed, a one-shot

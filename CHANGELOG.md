@@ -3,6 +3,15 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- A Grade button greyed out because Claude Code is missing or signed out now looks off at a glance, in the
+  classic page and in every room: no colour fill or glow, a dashed edge, a not-allowed cursor, and the
+  reason on hover. Its label and the reason beside it stay readable (at least 4.5:1), also on the paper
+  cards of the library, tea and train rooms.
+
 ## 1.4.0 - 2026-11-11
 
 ### Added
