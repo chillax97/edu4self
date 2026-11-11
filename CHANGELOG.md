@@ -37,6 +37,14 @@ versions follow [Semantic Versioning](https://semver.org).
   ran out of buffer space (`ERR_NO_BUFFER_SPACE`) with one connection per file, and some browser waits gave up
   for good if the page was mid-redraw when they checked.
 
+### Changed
+
+- The first visit is a two-minute try instead of a three-card tour: one idea, hidden, answered from memory, a
+  quick check on the spot (it looks for three key points and says it can be fooled), and, one click and
+  opt-in, Claude's real grade of the same answer in the card. Without Claude the check still runs and the card
+  says what's missing. It ends with a pick: your own topic (straight into New topic) or the example lesson.
+  Shown once; existing users never see it. "Replay the intro" in Help shows it again.
+
 ## 1.4.0 - 2026-11-11
 
 ### Added

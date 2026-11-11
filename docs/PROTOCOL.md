@@ -36,6 +36,14 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    An entry may carry `calc: [{expr, result}]`, the calculator lines the learner ran (on tasks with
    `calculator: true`), oldest first. Read it as the working: when the total is wrong, name the wrong
    step (for example 4 bytes per value where the task uses 2), not only the wrong total.
+   A `first-try` entry (task `first-try`) is the welcome card's two-minute try: the card showed one idea
+   (pulling an idea out of your head makes it stay; rereading only feels familiar; a week later testing wins),
+   hid it, and asked the question in `fields`. It isn't in the queue. Grade it like any answer, briefly, and
+   add a `history` entry with `inbox` set to its id: the card shows that entry's `title` (the verdict) and
+   `detail` to the learner. One answer right after reading shows understanding, not memory, so it is not
+   `evidence` yet; to ask it again in a few days, add the task to the topic's queue as done
+   (`{id: "first-try", kind: "lesson", status: "done", label: "First try", title: …}`) and a `recall`
+   question from it. Keep this grade fast: don't write new lessons for it.
    A `recall` entry is the dashboard's warm-up: `fields` maps each question to what the learner
    typed from memory, `recall` lists the question ids (section 3), and `comeback: true` marks the
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught.

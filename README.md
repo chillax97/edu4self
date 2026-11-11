@@ -137,8 +137,9 @@ cd ~/learn && claude
 > check my inbox                          # after you submit something on the dashboard
 ```
 
-A small example topic ("How learning works") is ready on day one, so you can try the whole loop in
-15 minutes. Delete it whenever you like: tell Claude "remove the example topic".
+The first time you open the dashboard it asks you to try the method once, in about two minutes: one idea,
+hidden, answered from memory, checked, and graded by Claude if you like. Then you pick your own topic or the
+example one ("How learning works"), which runs the whole loop in 15 minutes. Delete it whenever you like: tell Claude "remove the example topic".
 
 <details>
 <summary>You don't want a login service</summary>
