@@ -44,7 +44,7 @@ class RecallPickTest(unittest.TestCase):
                    {"id": "blk", "ts": iso(1), "kind": "note"}]                    # active yesterday: a normal day
         p = server.pick_recall(st, entries, [], NOW)
         self.assertFalse(p["comeback"])
-        self.assertEqual(self.ids(p), ["q3", "q4", "q2"], "never asked first (in the tutor's order), then the oldest")
+        self.assertEqual(self.ids(p), ["q3", "q2", "q1"], "never asked first (in the tutor's order), then the oldest; q4's task is not passed")
         self.assertFalse(p["sent_today"])
 
     def test_a_withdrawn_recall_does_not_count_as_asked(self):
@@ -93,6 +93,51 @@ class RecallPickTest(unittest.TestCase):
         self.assertEqual(len(server.pick_recall(st, [], [], NOW)["questions"]), 3)
 
 
+class RecallAgeTest(unittest.TestCase):
+    """A question is shown only once its task passed RECALL_MIN_AGE_DAYS (3) ago."""
+    def shown(self, passed_ago, st=None, added=None):
+        st = st or state(q("q1", "a"))
+        if added:
+            st["recall"][0]["added"] = added
+        entries = [{"id": "s-a", "ts": (NOW - passed_ago).isoformat(timespec="seconds"), "task": "a", "kind": "answers"}] if passed_ago is not None else []
+        return [x["id"] for x in server.pick_recall(st, entries, [], NOW)["questions"]]
+
+    def test_the_age_is_one_named_constant_of_three_days(self):
+        self.assertEqual(server.RECALL_MIN_AGE_DAYS, 3)
+
+    def test_passed_today_is_hidden(self):
+        self.assertEqual(self.shown(timedelta(0)), [])
+
+    def test_two_days_23_hours_is_hidden(self):
+        self.assertEqual(self.shown(timedelta(days=2, hours=23)), [])
+
+    def test_three_days_is_shown(self):
+        self.assertEqual(self.shown(timedelta(days=3)), ["q1"])
+
+    def test_the_grading_date_counts_when_it_is_later_than_the_submission(self):
+        st = state(q("q1", "a"))
+        st["topics"][0]["history"] = [{"date": (NOW - timedelta(days=1)).date().isoformat(), "kind": "grade", "evidence": True, "inbox": "s-a"}]
+        entries = [{"id": "s-a", "ts": iso(10), "task": "a", "kind": "answers"}]
+        self.assertEqual(server.pick_recall(st, entries, [], NOW)["questions"], [], "graded yesterday")
+
+    def test_an_unpassed_task_is_never_shown(self):
+        st = state(q("q1", "open"))
+        self.assertEqual(server.pick_recall(st, [], [], NOW)["questions"], [])
+
+    def test_no_pass_date_falls_back_to_the_questions_added_date_else_shows(self):
+        self.assertEqual(self.shown(None, added=(NOW - timedelta(days=1)).date().isoformat()), [], "written yesterday")
+        self.assertEqual(self.shown(None, added=(NOW - timedelta(days=5)).date().isoformat()), ["q1"])
+        self.assertEqual(self.shown(None), ["q1"], "done task, nothing to date it by: shown, not hidden for good")
+
+    def test_the_comeback_card_obeys_the_same_age(self):
+        st = state(q("q1", "a"), q("q2", "b"))
+        entries = [{"id": "s-a", "ts": iso(4), "task": "a", "kind": "answers"}, {"id": "s-b", "ts": iso(6), "task": "b", "kind": "answers"}]
+        st["topics"][0]["history"] = [{"date": (NOW - timedelta(days=1)).date().isoformat(), "kind": "grade", "evidence": True, "inbox": "s-a"}]   # a was graded yesterday
+        p = server.pick_recall(st, entries, [], NOW)
+        self.assertTrue(p["comeback"])
+        self.assertEqual([x["id"] for x in p["questions"]], ["q2"])
+
+
 class RecallSchemaTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="edu4self-recall-")
@@ -113,6 +158,7 @@ class RecallSchemaTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout)
         self.assertIn("1 recall question", r.stdout)
         self.state["recall"][0]["calculator"] = True
+        self.state["recall"][0]["added"] = "2026-11-11"
         self.assertEqual(self.check().returncode, 0)
         for bad, msg in (([{"id": "r1", "q": "x", "from": "nope"}], "from must be the id of the task"),
                          ([{"id": "r 1", "q": "x", "from": "hlw-lesson-01"}], "must be letters"),
@@ -120,6 +166,7 @@ class RecallSchemaTest(unittest.TestCase):
                          ([{"id": "r1", "q": "x" * 301, "from": "hlw-lesson-01"}], "one line"),
                          ([{"id": "r1", "q": "a", "from": "hlw-lesson-01"}, {"id": "r1", "q": "b", "from": "hlw-lesson-01"}], "duplicate recall"),
                          ([{"id": "r1", "q": "x", "from": "hlw-lesson-01", "calculator": "yes"}], "calculator must be true or false"),
+                         ([{"id": "r1", "q": "x", "from": "hlw-lesson-01", "added": "yesterday"}], "added must be a date"),
                          ({"r1": "x"}, "recall must be a list")):
             self.state["recall"] = bad
             r = self.check()
