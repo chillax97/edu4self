@@ -105,7 +105,7 @@ Everything that should survive a browser change lives in the vault.
 
 **Learner aids** (server-side, so the rules are unit tested; the page only draws them). `/api/state`
 carries three of them in `derived`: `calibration` ("How sure are you?" against graded history entries
-that name their `inbox` entry), `recall` (`pick_recall`: today's warm-up questions, whether it's the
+that name their `inbox` entry), `recall` (`pick_recall`: today's warm-up questions, only from tasks passed 3+ days ago, whether it's the
 welcome back after a 3-day gap, whether one was sent today) and `stuck` (`stuck_tasks`: open
 exercises whose last 3 or more runs failed, with the next hint not opened yet). None of them writes.
 

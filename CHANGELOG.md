@@ -5,6 +5,14 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Fixed
+
+- The "From memory" warm-up no longer asks a question the moment Claude writes it. A recall question is
+  shown only once its task passed at least 3 days ago (one constant, `RECALL_MIN_AGE_DAYS`), on a normal
+  day and on the welcome back alike, and never for a task that has not passed. The pass date is the
+  latest graded submission; a question may carry an optional `added: YYYY-MM-DD` for a task marked done
+  without one, and a done task with no date at all is still shown.
+
 ### Added
 
 - `edu4self doctor` reports the Claude Code login: signed in, signed out (with the fix, `claude auth login`,

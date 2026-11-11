@@ -118,10 +118,12 @@ pending submission, across all topics, becomes **Up next**.
   inbox?: "<inbox entry id>"}`. `inbox` links a grade to the submission it grades; with `evidence` it
   counts as a pass for "How sure vs how it went".
 - `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from,
-  calculator?}` (`calculator` as on a task).
+  calculator?, added?}` (`calculator` as on a task; `added` is the day you wrote it, `YYYY-MM-DD`).
   `id` is unique (`[A-Za-z0-9._-]`), `q` is one line (at most 300 characters) answerable from memory
   in under a minute, and `from` is the id of the task it tests. Write them only from passed work, a
-  handful per lesson, and keep about 5 to 15. The page asks up to 3 a day before Up next, the ones
+  handful per lesson, and keep about 5 to 15. A question is never shown until its task passed at
+  least 3 days ago (so you may write it right at grading; the page holds it back), and a task you
+  mark `done` without a graded submission needs `added`, which counts from then. The page asks up to 3 a day before Up next, the ones
   not asked for the longest. After 3 or more days without a block, answer or note (the away mail's
   rule) the card becomes the welcome back: about 5 minutes, only questions whose `from` task is
   `done`, the most recently passed first, so the first thing back is a win. Never ask the learner to
