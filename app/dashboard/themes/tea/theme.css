@@ -35,6 +35,7 @@
 .room .te-scroll .bx-job h2 { font: 400 32px/1.15 var(--serif); text-transform: none; color: #2d261d; }
 .room .te-scroll .bx-job p, .room .te-scroll .bx-meta { color: #4b4033; }
 .room .te-scroll { --off-ink: #4b4033; }   /* a greyed Grade and its reason, on the scroll */
+.room .te-scroll .bx-sent { color: #3f5a1e; }   /* the Submitted line: dark green on the scroll */
 .room .te-scroll .bx-rules { color: #8a3b1e; }
 .room .bx-label { color: var(--te-red); }
 .room .bx-r { color: #3d5a1c; }

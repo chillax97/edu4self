@@ -43,6 +43,7 @@
 .room .tr-ticket .bx-job h2 { color: #2a1a10; font-size: 30px; }
 .room .tr-ticket .bx-job p, .room .tr-ticket .bx-meta { color: #4a3420; }
 .room .tr-ticket { --off-ink: #4a3420; }   /* a greyed Grade and its reason, on the ticket */
+.room .tr-ticket .bx-sent { color: #2a5a2e; }   /* the Submitted line: dark green on the ticket */
 .room .tr-ticket .bx-rules { color: #8a2a3a; }
 .room .tr-ticket .bx-label { color: #8a2a3a; }
 .room .tr-ticket .bx-r { color: #8a2a3a; }

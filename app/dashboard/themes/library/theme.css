@@ -42,6 +42,7 @@
 .room .lb-book .bx-label { color: #7a5a2a; }
 .room .lb-book .bx-job p, .room .lb-book .bx-meta { color: #4a3a26; }
 .room .lb-book { --off-ink: #4a3a26; }   /* a greyed Grade and its reason, on the paper */
+.room .lb-book .bx-sent { color: #2e5a2c; }   /* the Submitted line: dark green on the paper, not the pale green made for dark rooms */
 .room .lb-book .bx-rules { color: #7a3a1a; }
 .room .lb-book .bx-r { color: #2f4a36; }
 .room .lb-book .bx-r:hover, .room .lb-book .bx-r:focus-visible { background: rgba(47,74,54,.1); color: #1d3324; }
