@@ -149,7 +149,8 @@ test("the job card says the calculator is allowed, in the classic view and the r
 
 test("a recall question can allow the calculator too", async () => {
   const st = readJSON(sys("state.json"));
-  st.recall = [{ id: "rc-kv", q: "Bytes of KV cache per word for 32 layers, 128 dims, 2 bytes?", from: "hlw-lesson-01", calculator: true }];
+  st.recall = [{ id: "rc-kv", q: "Bytes of KV cache per word for 32 layers, 128 dims, 2 bytes?", from: "hlw-lesson-01", calculator: true, added: "2026-01-01" }];
+  st.topics[0].queue[0].status = "done";        // a question is shown only once its task passed 3+ days ago
   fs.writeFileSync(sys("state.json"), JSON.stringify(st));
   const page = await openPage(browser, server.url, { view: "classic" });
   try {

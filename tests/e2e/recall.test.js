@@ -8,16 +8,20 @@ import { makeVault, freePort, startServer, stopServer, launch, openPage, closePa
 
 let v, server, browser;
 const sys = (f) => path.join(v.vault, "_system", f);
+// A question is shown only once its task passed 3+ days ago; `added` dates the pass where no graded
+// submission does (the unit tests cover the rule itself).
+const OLD = "2026-01-01";
 const QUESTIONS = [
-  { id: "rc-1", q: "In one line: what is storage strength?", from: "hlw-lesson-01" },
-  { id: "rc-2", q: "Why does rereading feel better than it works?", from: "hlw-lesson-01" },
-  { id: "rc-probe", q: "What did the probe ask you about your study habits?", from: "hlw-probe-01" },
+  { id: "rc-1", q: "In one line: what is storage strength?", from: "hlw-lesson-01", added: OLD },
+  { id: "rc-2", q: "Why does rereading feel better than it works?", from: "hlw-lesson-01", added: OLD },
+  { id: "rc-probe", q: "What did the probe ask you about your study habits?", from: "hlw-probe-01", added: OLD },
 ];
 
 before(async () => {
   v = makeVault("Tester");
   const st = readJSON(sys("state.json"));
   st.recall = QUESTIONS;
+  for (const t of st.topics[0].queue) if (t.id === "hlw-lesson-01" || t.id === "hlw-probe-01") t.status = "done";
   fs.writeFileSync(sys("state.json"), JSON.stringify(st));
   server = await startServer(v, await freePort());
   browser = await launch();
@@ -83,6 +87,7 @@ test("after three days away the card is the welcome back, from passed work only"
   const day = (n) => new Date(Date.now() - n * 864e5).toISOString().replace(/\.\d+Z$/, "Z");
   const st = readJSON(sys("state.json"));
   st.topics[0].queue[0].status = "done";
+  st.topics[0].queue.find((t) => t.id === "hlw-probe-01").status = "todo";      // the probe is not passed
   st.processed_inbox = ["old-sub"];
   fs.writeFileSync(sys("state.json"), JSON.stringify(st));
   fs.writeFileSync(sys("inbox.jsonl"), JSON.stringify({ id: "old-sub", ts: day(8), topic: st.topics[0].id, task: "hlw-lesson-01", kind: "answers", fields: { a: "b" } }) + "\n");
