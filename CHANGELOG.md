@@ -25,6 +25,9 @@ versions follow [Semantic Versioning](https://semver.org).
 - The dashboard server speaks HTTP/1.1 and keeps connections open, so a page load reuses a few connections
   instead of opening one per file. Every response says where it ends, a refused upload closes its connection,
   and an idle connection is closed after 30 seconds.
+- The Windows browser tests in CI block again. They failed about one run in three, one test each time: Chrome
+  ran out of buffer space (`ERR_NO_BUFFER_SPACE`) with one connection per file, and some browser waits gave up
+  for good if the page was mid-redraw when they checked.
 
 ## 1.4.0 - 2026-11-11
 
@@ -32,7 +35,7 @@ versions follow [Semantic Versioning](https://semver.org).
 
 - Windows is supported. `edu4self install` (and `setup`) adds a Task Scheduler task that starts the dashboard
   at logon, with no 72-hour limit and a restart after a crash; `uninstall`, `restart` and `status` use it
-  too. Unit and browser tests now run on Windows in CI (the browser job is known flaky and does not block). The
+  too. Unit and browser tests now run on Windows in CI. The
   login task itself is only unit-tested.
 - The dashboard says when it opens if Claude Code is missing or not signed in, before any lesson: a note under
   the top bar (classic page and rooms) with the one-line fix, and Grade greyed out with the reason. It checks
