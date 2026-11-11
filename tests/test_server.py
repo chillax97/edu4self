@@ -995,6 +995,64 @@ class SetupPluginTest(unittest.TestCase):
         self.assertIn("✗", self.doctor()[0])
 
 
+class DoctorLoginTest(unittest.TestCase):
+    """doctor reports the Claude Code login with the dashboard's own check (server.claude_ready). The fake plays
+    a Claude Code that's signed in, signed out, too old to say, or missing; no account or network is used."""
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="edu4self-doctor-")
+        self.env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg"), HOME=self.tmp,
+                        CLAUDE_CONFIG_DIR=os.path.join(self.tmp, "claude"), FAKE_CLAUDE_LOG=os.path.join(self.tmp, "runs.jsonl"),
+                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude.py"))
+        for k in ("FAKE_CLAUDE_SIGNED_OUT", "FAKE_CLAUDE_OLD"):
+            self.env.pop(k, None)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def doctor(self, **env):
+        r = subprocess.run([sys.executable, CLI, "doctor", "--port", str(free_port())], env=dict(self.env, **env),
+                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8")
+        login = [l.strip() for l in r.stdout.splitlines() if "signed in" in l or "login" in l.lower() and "service" not in l]
+        return login, r.stdout
+
+    def test_signed_in(self):
+        login, _ = self.doctor()
+        self.assertEqual(login, ["✓ Claude Code is signed in"])
+
+    def test_signed_out_names_the_fix_and_counts_as_a_problem(self):
+        login, out = self.doctor(FAKE_CLAUDE_SIGNED_OUT="1")
+        self.assertEqual(len(login), 1)
+        self.assertTrue(login[0].startswith("✗"), login)
+        self.assertIn("claude auth login", login[0])
+        problems = int(re.search(r"(\d+) things? to fix", out).group(1))
+        self.assertGreater(problems, int(re.search(r"(\d+) things? to fix", self.doctor()[1]).group(1)), "one more thing to fix than signed in")
+
+    def test_too_old_to_say_is_unknown_and_never_asked_auth_status(self):
+        login, _ = self.doctor(FAKE_CLAUDE_OLD="1")
+        self.assertEqual(len(login), 1)
+        self.assertTrue(login[0].startswith("–"), login)
+        self.assertIn("unknown", login[0])
+        runs = []
+        if os.path.exists(self.env["FAKE_CLAUDE_LOG"]):
+            with open(self.env["FAKE_CLAUDE_LOG"], encoding="utf-8") as fh:
+                runs = [json.loads(l)["args"] for l in fh if l.strip()]
+        self.assertNotIn(["auth", "status"], runs, "an old Claude Code would read it as a prompt")
+
+    def test_missing_claude_has_no_login_line(self):
+        login, out = self.doctor(EDU4SELF_CLAUDE=os.path.join(self.tmp, "no-such-claude"))
+        self.assertEqual(login, [])
+        self.assertIn("Claude Code not found", out)
+
+    def test_doctor_uses_the_servers_check(self):
+        cli = load_cli()
+        import server
+        from unittest import mock
+        for logged_in, mark in ((True, "✓"), (False, "✗"), (None, "–")):
+            with mock.patch.object(server, "claude_ready", return_value={"installed": True, "logged_in": logged_in}) as ready:
+                self.assertEqual(cli.login_line()[0], mark)
+                ready.assert_called_once()
+
+
 class RepoTest(unittest.TestCase):
     """Copies and version numbers that must agree across the repo."""
 

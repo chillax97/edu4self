@@ -125,7 +125,7 @@ claude plugin marketplace add chillax97/edu4self
 claude plugin install edu4self@edu4self
 ```
 
-`./edu4self doctor` tells you whether the plugin is installed and enabled.
+`./edu4self doctor` tells you whether the plugin is installed and enabled, and whether Claude Code is signed in.
 
 Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
 questions in the side panel), **✦ Grade** grades what you submitted, and **✦ Claude** opens a chat with

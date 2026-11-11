@@ -3,7 +3,8 @@
 
 It records its arguments to $FAKE_CLAUDE_LOG and keeps the installed marketplaces and plugins in the
 JSON file $FAKE_PLUGIN_STATE, printing the same --json shapes as the real CLI (Claude Code 2.1).
-FAKE_PLUGIN_FAIL=install makes `plugin install` fail the way a network error would.
+FAKE_PLUGIN_FAIL=install makes `plugin install` fail the way a network error would. The login check
+(`--help`, `auth status`) is answered by tests/fake_claude.py, with the same FAKE_CLAUDE_SIGNED_OUT switch.
 """
 import json
 import os
@@ -13,6 +14,9 @@ for _s in (sys.stdout, sys.stderr):      # the real CLI writes UTF-8; Windows wo
     _s.reconfigure(encoding="utf-8")
 
 args = sys.argv[1:]
+if args == ["--help"] or args[:2] == ["auth", "status"]:   # the login check: answered as tests/fake_claude.py does
+    import runpy
+    runpy.run_path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude.py"), run_name="__main__")
 log = os.environ.get("FAKE_CLAUDE_LOG")
 if log:
     with open(log, "a", encoding="utf-8") as fh:

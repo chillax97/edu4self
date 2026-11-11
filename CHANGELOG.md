@@ -5,6 +5,12 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Added
+
+- `edu4self doctor` reports the Claude Code login: signed in, signed out (with the fix, `claude auth login`,
+  and it counts as a thing to fix), or unknown on a Claude Code too old to say. It asks the same check the
+  dashboard uses, so the two always agree.
+
 ### Fixed
 
 - A Grade button greyed out because Claude Code is missing or signed out now looks off at a glance, in the

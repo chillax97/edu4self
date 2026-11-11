@@ -527,6 +527,18 @@ def claude_line(windows=None, which=shutil.which):
     return "✗", "Claude Code not found: https://claude.com/claude-code (the tutor that grades your work)"
 
 
+def login_line():
+    """doctor's line about the Claude Code login, from the dashboard's own check (server.claude_ready), so the two
+    never disagree. Asked only once Claude Code is found."""
+    import server
+    ok = server.claude_ready()["logged_in"]
+    if ok:
+        return "✓", "Claude Code is signed in"
+    if ok is False:
+        return "✗", "Claude Code isn't signed in, so nothing can be graded: run claude auth login"
+    return "–", "Claude Code login unknown (this version has no claude auth status; updating Claude Code adds it)"
+
+
 PLUGIN = "edu4self@edu4self"
 PLUGIN_STEPS = (("plugin", "marketplace", "add", "chillax97/edu4self"), ("plugin", "install", PLUGIN))
 
@@ -630,6 +642,11 @@ def cmd_doctor(args):
     if mark == "✗":
         bad += 1
     say(mark, line)
+    if mark == "✓":
+        mark, line = login_line()
+        if mark == "✗":
+            bad += 1
+        say(mark, line)
     claude = find_claude()
     status = plugin_status(claude) if claude else None
     if status is None:      # no claude we can ask: look for the skills on disk instead
