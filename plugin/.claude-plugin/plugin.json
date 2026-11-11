@@ -1,7 +1,7 @@
 {
   "name": "edu4self",
   "displayName": "edu4self",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "The tutor side of edu4self: write lessons and probes, grade dashboard submissions, start new topics, change dashboard settings.",
   "author": { "name": "chillax97", "url": "https://github.com/chillax97" },
   "homepage": "https://github.com/chillax97/edu4self",

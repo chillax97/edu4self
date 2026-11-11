@@ -46,7 +46,7 @@ import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
 PAGE_CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
             "font-src 'self' data:; media-src 'self' blob: https: http:; connect-src 'self'; object-src 'none'; "
             "frame-src 'none'; base-uri 'none'; form-action 'self'")
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 
 HOST = "127.0.0.1"
 MAX_BODY = 64 * 1024
