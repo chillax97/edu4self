@@ -20,6 +20,12 @@ versions follow [Semantic Versioning](https://semver.org).
 - The green "Submitted just now" line on the task card was almost invisible (about 1.2:1) on the paper cards of the
   library, tea and train rooms. Each now draws it in a dark green that suits the room (at least 4.5:1).
 
+### Changed
+
+- The dashboard server speaks HTTP/1.1 and keeps connections open, so a page load reuses a few connections
+  instead of opening one per file. Every response says where it ends, a refused upload closes its connection,
+  and an idle connection is closed after 30 seconds.
+
 ## 1.4.0 - 2026-11-11
 
 ### Added
