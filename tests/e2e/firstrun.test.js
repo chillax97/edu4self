@@ -35,13 +35,32 @@ async function firstVisit(url, { width = 1440, height = 1000, ctx } = {}) {
   await page.setViewport({ width, height });
   await page.goto(url, { waitUntil: "networkidle0" });
   await page.waitForSelector("#onboarding:not([hidden])");
+  await stageOnly(page, "the idea");
   return page;
+}
+// The first try is a stage of its own: the dashboard is neither visible nor clickable behind it, and the card is
+// opaque from the first frame (no fade from transparent). Probes a grid of points with elementFromPoint.
+async function stageOnly(page, step) {
+  const r = await page.evaluate(() => {
+    const o = document.querySelector("#onboarding"), dash = ["header.topbar", "#app", "footer", "#cl-gate"].map((q) => document.querySelector(q));
+    const hits = [];
+    for (const x of [0.03, 0.25, 0.5, 0.75, 0.97]) for (const y of [0.03, 0.3, 0.6, 0.97]) {
+      const el = document.elementFromPoint(innerWidth * x, innerHeight * y);
+      if (el && !o.contains(el) && el !== document.body && el !== document.documentElement) hits.push((el.className || el.tagName).toString().slice(0, 40));
+    }
+    return { hits, hidden: dash.every((d) => !d || getComputedStyle(d).visibility === "hidden"),
+      opacity: [getComputedStyle(o).opacity, getComputedStyle(o.querySelector(".dialog")).opacity] };
+  });
+  assert.deepEqual(r.hits, [], step + ": only the stage is under the pointer");
+  assert.ok(r.hidden, step + ": the dashboard is hidden");
+  assert.deepEqual(r.opacity, ["1", "1"], step + ": the card is opaque");
 }
 async function answer(page, text, sure = "shaky") {
   assert.match(await page.$eval(".ft-face", (e) => e.innerText), /Pulling an idea out of your head/);
   await page.click("#ob-next");   // Hide it and test me
   await page.waitForSelector('.ob-slide[data-step="1"]:not([hidden])');
   assert.equal(await page.$eval('.ob-slide[data-step="0"]', (e) => e.hidden), true, "the idea is out of sight");
+  await stageOnly(page, "the question");
   assert.equal(await page.$eval("#ob-next", (e) => e.textContent), "I don't remember");
   await page.type("#ft-answer", text);
   assert.equal(await page.$eval("#ob-next", (e) => e.textContent), "Check my answer");
@@ -50,6 +69,7 @@ async function answer(page, text, sure = "shaky") {
   await page.click(`input[name="ft-sure"][value="${sure}"]`);
   await page.click("#ob-next");
   await page.waitForSelector('.ob-slide[data-step="2"]:not([hidden])');
+  await stageOnly(page, "the check");
 }
 
 test("first try with Claude: quick check at once, the answer in the inbox, Claude's grade in the card, then the example", async () => {
@@ -59,8 +79,8 @@ test("first try with Claude: quick check at once, the answer in the inbox, Claud
   assert.match(await page.$eval("#ft-verdict", (e) => e.textContent), /All three key points/);
   assert.equal((await page.$$(".ft-keys .is-hit")).length, 3);
   await page.waitForSelector("#ft-grade-go");
-  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /quick check.*can be fooled.*only Claude can keep it as proof/s);
-  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /uses a little of your Claude plan/, "the cost is on the button");
+  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /quick check.*can be fooled.*real grade comes from Claude.*Only Claude can keep it as proof/s);
+  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /uses a little of your Claude plan/, "the cost is next to the button");
   const saved = inbox(v).filter((e) => e.task === "first-try");
   assert.equal(saved.length, 1);
   assert.equal(saved[0].kind, "answers");
@@ -70,13 +90,14 @@ test("first try with Claude: quick check at once, the answer in the inbox, Claud
 
   await page.click("#ft-grade-go");
   await page.waitForSelector(".ft-g-badge", { timeout: 15000 });
-  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /Graded by Claude.*Graded by the fake tutor/s);
+  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /Graded by Claude, and kept in your record.*First try graded by the fake tutor.*Not proof yet/s);
   const run = runs().at(-1);
-  assert.equal(run.args[run.args.indexOf("-p") + 1], "check my inbox", "the same grading run as ✦ Grade");
+  assert.match(run.args[run.args.indexOf("-p") + 1], /^Grade only my first try/, "the grade-only run, not the full check my inbox");
   assert.ok(run.args.includes("--disallowedTools") && run.args[run.args.indexOf("--disallowedTools") + 1].includes("WebFetch"), "fenced like grading");
 
   await page.click("#ob-next");   // Try the example lesson
   await page.waitForSelector("#onboarding", { hidden: true });
+  assert.equal(await page.$eval("#app", (e) => getComputedStyle(e).visibility), "visible", "the dashboard appears after the pick");
   assert.match(await page.$eval(".bx-job h2", (e) => e.textContent), /Retrieval beats rereading/);
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForSelector("#app > :not(#loading)");

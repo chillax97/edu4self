@@ -43,7 +43,11 @@ versions follow [Semantic Versioning](https://semver.org).
   quick check on the spot (it looks for three key points and says it can be fooled), and, one click and
   opt-in, Claude's real grade of the same answer in the card. Without Claude the check still runs and the card
   says what's missing. It ends with a pick: your own topic (straight into New topic) or the example lesson.
-  Shown once; existing users never see it. "Replay the intro" in Help shows it again.
+  Shown once; existing users never see it. "Replay the intro" in Help shows it again. It's a stage of its own:
+  the dashboard stays hidden until the pick, and the card is readable from the first frame (it used to fade in
+  over the busy page).
+- The page's Claude runs have a new kind, `first`: a grade-only run for the first try (fenced like grading, no
+  planning or new lessons), so the first grade lands faster and costs less than a full "check my inbox".
 
 ## 1.4.0 - 2026-11-11
 

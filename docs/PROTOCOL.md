@@ -43,7 +43,10 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    `detail` to the learner. One answer right after reading shows understanding, not memory, so it is not
    `evidence` yet; to ask it again in a few days, add the task to the topic's queue as done
    (`{id: "first-try", kind: "lesson", status: "done", label: "First try", title: …}`) and a `recall`
-   question from it. Keep this grade fast: don't write new lessons for it.
+   question from it. The card starts its own run for it ("Grade only my first try", `kind: "first"`, fenced
+   like grading): grade that one entry, write the history entry, `processed_inbox`, the coach note and
+   `updated`, run the check, and stop. No learning record, no PLAN.md change, no new lessons; other pending
+   entries wait for the next "check my inbox".
    A `recall` entry is the dashboard's warm-up: `fields` maps each question to what the learner
    typed from memory, `recall` lists the question ids (section 3), and `comeback: true` marks the
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught.
