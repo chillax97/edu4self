@@ -117,10 +117,12 @@ def _order(items, seed):
 
 
 def batches(items, size):
-    """Runs of up to size answers; a new run starts where the set changes."""
+    """Runs of up to size answers; a new run starts where the set changes, or where a question would repeat.
+    A real inbox rarely holds two answers to one question, and a grader that sees two compares them."""
     out = []
     for it in items:
-        if not out or len(out[-1]) == size or out[-1][-1].get("source") != it.get("source"):
+        if (not out or len(out[-1]) == size or out[-1][-1].get("source") != it.get("source")
+                or any(o["qid"] == it["qid"] for o in out[-1])):
             out.append([])
         out[-1].append(it)
     return out

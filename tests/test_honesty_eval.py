@@ -163,8 +163,15 @@ class TestOrder(unittest.TestCase):
         self.assertEqual(len(set(first)), 8)               # one answer per question before any repeats
 
     def test_batches_never_mix_sets(self):
-        items = [{"id": str(i), "source": "made-up" if i < 13 else "saf"} for i in range(25)]
+        items = [{"id": str(i), "qid": str(i), "source": "made-up" if i < 13 else "saf"} for i in range(25)]
         self.assertEqual([len(b) for b in run.batches(items, 10)], [10, 3, 10, 2])
+
+    def test_a_batch_never_holds_two_answers_to_one_question(self):
+        items = [{"id": str(i), "qid": "q%d" % (i % 3), "source": "made-up"} for i in range(7)]
+        got = run.batches(items, 10)
+        self.assertEqual([len(b) for b in got], [3, 3, 1])
+        for b in got:
+            self.assertEqual(len({i["qid"] for i in b}), len(b))
 
     def test_confidence_is_fixed_per_case(self):
         self.assertEqual(run.confidence_for("bs01"), run.confidence_for("bs01"))
@@ -211,15 +218,16 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         os.environ["FAKE_CLAUDE_PARTIAL_IF"] = "RecursionError"
         items = [i for i in run.load_items("made-up") if i["id"] in ("rc02", "rc04", "rc07", "sl02", "br07")]
         out, results, runs = self.go(run.order(items), 3)
-        self.assertEqual(len(runs), 2)
+        self.assertEqual(len(runs), 3)          # three answers to the recursion question: three runs
         got = {r["id"]: r["verdict"] for r in results}
         self.assertEqual(got, {"rc02": "pass", "rc04": "partial", "rc07": "fail", "sl02": "fail", "br07": "fail"})
-        self.assertEqual(sum(r["cost_usd"] for r in runs), 0.02)
+        self.assertAlmostEqual(sum(r["cost_usd"] for r in runs), 0.03)
         # the same command the Grade button runs: "check my inbox", no shell, no web
         calls = run.read_jsonl(os.environ["FAKE_CLAUDE_LOG"])
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
         for c in calls:
             args = c["args"]
+            self.assertTrue(args[args.index("--plugin-dir") + 1].endswith("plugin"), "the engine's own plugin")
             self.assertEqual(args[args.index("-p") + 1], "check my inbox")
             deny = args[args.index("--disallowedTools") + 1].split(",")
             self.assertIn("Bash", deny)
@@ -228,7 +236,7 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
             self.assertNotIn(ENGINE.replace("\\", "/").lstrip("/") + "/", allow + "/")   # never the repo with the labels
         with open(os.path.join(out, "results.jsonl"), encoding="utf-8") as fh:
             self.assertEqual(len(fh.readlines()), 5)
-        self.assertEqual(len(run.read_jsonl(os.path.join(out, "runs.jsonl"))), 2)
+        self.assertEqual(len(run.read_jsonl(os.path.join(out, "runs.jsonl"))), 3)
 
     def test_the_grader_cannot_see_labels(self):
         items = run.order(run.load_items("made-up"))[:10]
@@ -250,13 +258,15 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
     def test_code_answers_leave_a_work_record(self):
         items = [i for i in run.load_items("made-up") if i["id"] in ("sl02", "sl07")]
         out, results, _ = self.go(items, 5)
-        ex = os.path.join(out, "batch-01", "vault", "cs-basics", "exercises")
-        task = {r["id"]: r["task"] for r in results}
-        traces = os.listdir(os.path.join(ex, task["sl02"], "trace"))
+        by = {r["id"]: r for r in results}
+
+        def ex(i):
+            return os.path.join(out, "batch-%02d" % by[i]["batch"], "vault", "cs-basics", "exercises", by[i]["task"])
+        traces = os.listdir(os.path.join(ex("sl02"), "trace"))
         self.assertEqual(len(traces), 1)
-        with open(os.path.join(ex, task["sl02"], "trace", traces[0]), encoding="utf-8") as fh:
+        with open(os.path.join(ex("sl02"), "trace", traces[0]), encoding="utf-8") as fh:
             self.assertEqual(json.load(fh)["exit"], 0)          # the hard-coded answer passes the thin checker
-        self.assertFalse(os.path.isdir(os.path.join(ex, task["sl07"], "trace")))   # prose: no run, starter file kept
+        self.assertFalse(os.path.isdir(os.path.join(ex("sl07"), "trace")))   # prose: no run, starter file kept
 
 
 if __name__ == "__main__":

@@ -79,10 +79,9 @@ the grade command, the model).
 ## Known limits
 
 - One run per answer, so no flip rate yet (how often a re-grade changes the verdict).
-- Answers are graded in batches, as a real inbox is: the grader sees up to 10 answers at once, and in the
-  made-up set two of them may answer the same question. That can shift grades either way.
-- The run uses your own Claude Code (its model and your user-level settings), so a number holds for that
-  setup on that day.
-- The grader follows the edu4self plugin installed in your Claude Code (its `check-inbox` skill and its copy
-  of PROTOCOL.md), not this checkout's `docs/`. Note the plugin version with every result, and update the
-  plugin before measuring a protocol change.
+- Answers are graded in batches, as a real inbox is: the grader sees up to 10 answers at once, never two
+  answers to the same question (an early run showed the grader comparing them).
+- The run uses your own Claude Code login and its default model, so a number holds for that model on that day.
+- Like every grade, it follows this engine's own plugin (`plugin/`, loaded with `--plugin-dir`), not the
+  version installed in Claude Code, and no user-level settings or hooks load. So a result belongs to the
+  engine commit it ran on: note the commit with every result.
