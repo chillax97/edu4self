@@ -633,6 +633,42 @@ def print_plugin_steps():
         print("       claude %s" % " ".join(step))
 
 
+RELEASES_URL = "https://api.github.com/repos/chillax97/edu4self/releases/latest"
+PLUGIN_UPDATE_STEPS = (("plugin", "marketplace", "update", "edu4self"), ("plugin", "update", PLUGIN))
+
+
+def server_version():
+    import server
+    return server.VERSION
+
+
+def version_tuple(v):
+    try:
+        return tuple(int(x) for x in v.strip().lstrip("v").split("."))
+    except ValueError:
+        return None
+
+
+def latest_release(timeout=2):
+    """The tag of the newest GitHub release, or None offline or on any trouble. One GET to api.github.com;
+    nothing about you or your vault is sent. EDU4SELF_NO_UPDATE_CHECK=1 turns it off."""
+    if os.environ.get("EDU4SELF_NO_UPDATE_CHECK"):
+        return None
+    try:
+        req = urllib.request.Request(RELEASES_URL, headers={"User-Agent": "edu4self-doctor", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.load(r).get("tag_name") or None
+    except Exception:
+        return None
+
+
+def newer_release():
+    """The newest release tag when it is newer than the running version, else None."""
+    tag = latest_release()
+    have, got = version_tuple(server_version()), version_tuple(tag or "")
+    return tag if have and got and got > have else None
+
+
 def cmd_doctor(args):
     vault, port = resolve(args)
     bad = 0
@@ -660,6 +696,10 @@ def cmd_doctor(args):
     else:
         bad += 1
         say("✗", "nothing answers on port %d: ./edu4self serve, or ./edu4self install" % port)
+    newer = newer_release()
+    if newer:
+        say("↑", "edu4self %s is out (this is %s). To update:  cd %s && git pull && ./edu4self restart" % (newer[1:] if newer[:1] == "v" else newer, server_version(), shell_quote(ENGINE)))
+        say(" ", "then update the tutor skills too, they are a separate copy:  %s" % " && ".join("claude " + " ".join(c) for c in PLUGIN_UPDATE_STEPS))
     say("✓" if service_installed() else "–", "login service %s" % ("installed" if service_installed() else "not installed (optional: ./edu4self install)"))
     mark, line = claude_line()
     if mark == "✗":

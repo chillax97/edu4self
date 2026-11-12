@@ -1019,7 +1019,8 @@ class SetupPluginTest(unittest.TestCase):
         self.state = os.path.join(self.tmp, "plugins.json")
         self.env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg"), HOME=self.tmp,
                         CLAUDE_CONFIG_DIR=os.path.join(self.tmp, "claude"), FAKE_CLAUDE_LOG=self.log, FAKE_PLUGIN_STATE=self.state,
-                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude_plugin.py"))
+                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude_plugin.py"),
+                        EDU4SELF_NO_UPDATE_CHECK="1")
         self.env.pop("FAKE_PLUGIN_FAIL", None)
         self.runs = 0
 
@@ -1125,7 +1126,8 @@ class DoctorLoginTest(unittest.TestCase):
         self.tmp = tempfile.mkdtemp(prefix="edu4self-doctor-")
         self.env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(self.tmp, "cfg"), HOME=self.tmp,
                         CLAUDE_CONFIG_DIR=os.path.join(self.tmp, "claude"), FAKE_CLAUDE_LOG=os.path.join(self.tmp, "runs.jsonl"),
-                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude.py"))
+                        EDU4SELF_CLAUDE=os.path.join(ENGINE, "tests", "fake_claude.py"),
+                        EDU4SELF_NO_UPDATE_CHECK="1")
         for k in ("FAKE_CLAUDE_SIGNED_OUT", "FAKE_CLAUDE_OLD"):
             self.env.pop(k, None)
 

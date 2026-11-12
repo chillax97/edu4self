@@ -103,5 +103,72 @@ class SetupTwiceTest(Cmd):
         self.assertIn("isn't empty", r.stderr)
 
 
+class FakeResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def release(tag):
+    return FakeResponse(json.dumps({"tag_name": tag}).encode())
+
+
+class UpdateHintTest(unittest.TestCase):
+    def setUp(self):
+        self.had = os.environ.pop("EDU4SELF_NO_UPDATE_CHECK", None)
+
+    def tearDown(self):
+        if self.had is not None:
+            os.environ["EDU4SELF_NO_UPDATE_CHECK"] = self.had
+
+    def test_newer_release_is_found_and_same_or_older_is_not(self):
+        with mock.patch.object(cli.urllib.request, "urlopen", return_value=release("v99.0.0")) as call:
+            self.assertEqual(cli.newer_release(), "v99.0.0")
+            req = call.call_args[0][0]
+            self.assertEqual(req.full_url, "https://api.github.com/repos/chillax97/edu4self/releases/latest")
+            self.assertLessEqual(call.call_args[1]["timeout"], 3, "short timeout")
+        with mock.patch.object(cli.urllib.request, "urlopen", return_value=release("v" + server.VERSION)):
+            self.assertIsNone(cli.newer_release())
+        with mock.patch.object(cli.urllib.request, "urlopen", return_value=release("v0.0.1")):
+            self.assertIsNone(cli.newer_release())
+
+    def test_offline_or_garbage_is_silent(self):
+        with mock.patch.object(cli.urllib.request, "urlopen", side_effect=OSError("offline")):
+            self.assertIsNone(cli.newer_release())
+        with mock.patch.object(cli.urllib.request, "urlopen", return_value=FakeResponse(b"<html>")):
+            self.assertIsNone(cli.newer_release())
+        with mock.patch.object(cli.urllib.request, "urlopen", return_value=release("nightly")):
+            self.assertIsNone(cli.newer_release())
+
+    def test_the_opt_out_makes_no_request(self):
+        with mock.patch.dict(os.environ, {"EDU4SELF_NO_UPDATE_CHECK": "1"}), mock.patch.object(cli.urllib.request, "urlopen") as call:
+            self.assertIsNone(cli.latest_release())
+            call.assert_not_called()
+
+    def doctor(self, newer):
+        out = io.StringIO()
+        with mock.patch.object(cli, "newer_release", return_value=newer), mock.patch.object(cli, "find_claude", return_value=None), \
+                mock.patch.object(cli, "lesson_skill_found", return_value=True), mock.patch.object(cli, "health", return_value=None), \
+                mock.patch.object(cli, "resolve", return_value=(None, 4747)), contextlib.redirect_stdout(out):
+            rc = cli.cmd_doctor(mock.Mock())
+        return rc, out.getvalue()
+
+    def test_doctor_names_the_update_commands_including_the_skills(self):
+        _, text = self.doctor("v99.0.0")
+        self.assertIn("edu4self 99.0.0 is out", text)
+        self.assertIn("git pull", text)
+        self.assertIn("./edu4self restart", text)
+        self.assertIn("claude plugin marketplace update edu4self && claude plugin update edu4self@edu4self", text)
+
+    def test_doctor_says_nothing_when_up_to_date_and_it_is_not_a_problem(self):
+        rc, text = self.doctor(None)
+        self.assertNotIn("is out", text)
+        _, with_update = self.doctor("v99.0.0")
+        self.assertEqual(with_update.count("to fix"), text.count("to fix"))
+        self.assertEqual([l for l in with_update.splitlines() if "to fix" in l], [l for l in text.splitlines() if "to fix" in l])
+
+
 if __name__ == "__main__":
     unittest.main()
