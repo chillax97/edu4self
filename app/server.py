@@ -1055,6 +1055,9 @@ def engine_rule_path():
     return p.lstrip("/")
 
 
+# What the Grade button asks for. evals/grading/run.py sends the same words through claude_args, so the
+# honesty test grades by exactly this path.
+GRADE_PROMPT = "check my inbox"
 # Runs that read what the learner (or a lesson from someone else) wrote get no web tools, so nothing can leave.
 # "first" is the welcome card's grade of the first try: grading only, see FIRST_PROMPT.
 FENCED = ("grade", "first", "gift")
@@ -1122,7 +1125,7 @@ def claude_start(body):
         if RUN["busy"]:
             return 409, {"error": "Claude is busy with the last request"}
         if kind == "grade":
-            prompt, resume = "check my inbox", None
+            prompt, resume = GRADE_PROMPT, None
             claude_event("you", "Grade my inbox")
         elif kind == "first":
             if not any(e.get("task") == "first-try" for e in pending_entries(read_state_safe())):
