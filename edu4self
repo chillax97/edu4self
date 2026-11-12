@@ -16,6 +16,7 @@
 The vault and port are remembered in ~/.config/edu4self/settings.json after init.
 """
 import argparse
+import errno
 import json
 import os
 import platform
@@ -237,7 +238,10 @@ def cmd_serve(args):
     vault, port = resolve(args)
     need_vault(vault)
     import server
-    httpd = server.make_server(vault, port)
+    try:
+        httpd = server.make_server(vault, port)
+    except OSError as exc:
+        sys.exit(port_taken_message(port, exc))
     url = "http://127.0.0.1:%d/" % port
     print("edu4self %s on %s (vault %s). Ctrl-C stops it." % (server.VERSION, url, vault))
     if args.open:
@@ -247,6 +251,25 @@ def cmd_serve(args):
     except KeyboardInterrupt:
         pass
     return 0
+
+
+def port_taken_message(port, exc=None):
+    why = " (%s)" % exc.strerror if exc is not None and getattr(exc, "strerror", None) and not is_in_use(exc) else ""
+    return ("Port %d is already in use%s: another edu4self or another program has it.\n"
+            "Pick a free one with --port, for example:  ./edu4self serve --port %d\n"
+            "(./edu4self status shows whether it is edu4self.)" % (port, why, port + 1))
+
+
+def is_in_use(exc):
+    return getattr(exc, "errno", None) in (errno.EADDRINUSE, 10048, 10013)
+
+
+def port_busy(port):
+    """True when something already listens on this port on this machine."""
+    import socket
+    with socket.socket() as s:
+        s.settimeout(1)
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 def health(port, timeout=1.5):
@@ -760,10 +783,19 @@ def cmd_mail(args):
 
 def cmd_setup(args):
     print("edu4self setup. Press Enter to accept the suggestion in brackets.\n")
+    want_port = args.port or int(read_settings().get("port") or DEFAULT_PORT)
+    if port_busy(want_port) and not health(want_port):      # ours answering is fine (a re-run); anything else is in the way
+        sys.exit(port_taken_message(want_port).replace("./edu4self serve --port", "./edu4self setup --port"))
     path = args.vault or ask("Where should your learning vault go?", "~/learn")
-    name = args.name if args.name is not None else ask("What should the dashboard call you?", os.environ.get("USER", "").capitalize() or "friend")
+    existing = os.path.abspath(os.path.expanduser(path))
+    reuse = os.path.isfile(os.path.join(existing, "_system", "state.json"))
+    if reuse:
+        print("\n%s already holds a vault." % existing)
+        if not ask("Use it and carry on with the rest of setup? (y/n)", "y").lower().startswith("y"):
+            sys.exit("Pick another folder:  ./edu4self setup --vault <new folder>")
+    name = args.name if args.name is not None or reuse else ask("What should the dashboard call you?", os.environ.get("USER", "").capitalize() or "friend")
     gifts = args.gifts
-    if gifts is None and sys.stdin.isatty():
+    if gifts is None and sys.stdin.isatty() and not reuse:
         print("\nWhen you win a week or finish a die, Claude can make you a small gift from what you proved.")
         print("Each gift is one short Claude run on your own account, so it uses a little of your plan.")
         gifts = "on" if ask("Turn gifts on? (y/n)", "n").lower().startswith("y") else "off"
@@ -772,8 +804,13 @@ def cmd_setup(args):
     if plugin and sys.stdin.isatty():
         print("\nClaude needs the edu4self plugin: it holds the tutor's skills (writing lessons, grading your work).")
         plugin = ask("Install the tutor plugin now? (y/n)", "y").lower().startswith("y")
-    ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example, gifts=gifts)
-    vault, port = cmd_init(ns)
+    if reuse:
+        vault, port = existing, want_port
+        write_settings(vault=vault, port=port)
+        print("Using the vault at %s (its files are left as they are)." % vault)
+    else:
+        ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example, gifts=gifts)
+        vault, port = cmd_init(ns)
     rc = 0
     if not args.no_service:
         rc = cmd_install(argparse.Namespace(vault=vault, port=port))
