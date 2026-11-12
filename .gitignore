@@ -6,3 +6,5 @@ node_modules
 # a vault made inside the repo by accident
 /learn/
 /vault/
+# honesty-test runs (evals/grading/run.py)
+/evals/grading/out/
