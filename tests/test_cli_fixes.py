@@ -40,6 +40,9 @@ class Cmd(unittest.TestCase):
         self.held.bind(("127.0.0.1", 0))
         self.held.listen(1)
         self.port = self.held.getsockname()[1]
+        with socket.socket() as probe:      # a port nothing holds (port + 1 can be taken on a busy CI machine)
+            probe.bind(("127.0.0.1", 0))
+            self.free = probe.getsockname()[1]
 
     def tearDown(self):
         self.held.close()
@@ -51,7 +54,7 @@ class Cmd(unittest.TestCase):
 
     def make_vault(self, name="vault"):
         vault = os.path.join(self.tmp, name)
-        r = self.run_cli("init", vault, "--name", "Kim", "--port", str(self.port + 1))
+        r = self.run_cli("init", vault, "--name", "Kim", "--port", str(self.free))
         self.assertEqual(r.returncode, 0, r.stderr)
         return vault
 
@@ -82,7 +85,7 @@ class SetupTwiceTest(Cmd):
             fh.write("keep me")
         state = os.path.join(vault, "_system", "state.json")
         before = read(state)
-        port = str(self.port + 1)
+        port = str(self.free)
         r = self.run_cli("setup", "--vault", vault, "--name", "Other", "--port", port, "--no-service", "--no-open", "--no-plugin")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertNotIn("Pick a new folder", r.stdout + r.stderr)
@@ -98,7 +101,7 @@ class SetupTwiceTest(Cmd):
         os.makedirs(folder)
         with open(os.path.join(folder, "a.txt"), "w"):
             pass
-        r = self.run_cli("setup", "--vault", folder, "--name", "Kim", "--port", str(self.port + 1), "--no-service", "--no-open", "--no-plugin")
+        r = self.run_cli("setup", "--vault", folder, "--name", "Kim", "--port", str(self.free), "--no-service", "--no-open", "--no-plugin")
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("isn't empty", r.stderr)
 
