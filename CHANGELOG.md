@@ -14,6 +14,9 @@ versions follow [Semantic Versioning](https://semver.org).
 - `serve` on a taken port prints one plain line (which port, and `--port` to pick another) instead of a traceback, and
   `setup` checks the port before it makes anything. `setup` on a folder that already holds a vault now uses it and
   carries on, instead of stopping with "Pick a new folder".
+- No dashboard text is smaller than 11 px any more (it went down to 7.5 px in the week strip and the streak board).
+- The README images went from 10.0 MB to 4.6 MB (screenshots resized to 1600 px wide and palette-packed, the tour gif at
+  5 fps with 64 colours); nothing was removed.
 - README opens with a 5-line quick start; install shows `git clone --depth 1` (a third of the download).
 
 ### Fixed
