@@ -36,7 +36,7 @@ Use neutral stand-ins (Kim, Sam, Spanish, Rust, `~/learn`).
    length, minutes a day, days a week); the room (`bar`, `library`, `space`, `train` or `tea`, each a
    place with its own layout and characters, or the `classic` view, calm and plain); whether the dashboard should start at login. Offer a sensible default
    for each so they can just say yes. Done when every wish is either answered or defaulted out loud.
-2. **Install.** From this repo:
+2. **Install.** Clone it shallow (`git clone --depth 1 https://github.com/chillax97/edu4self.git`, a third of the size), then from the repo:
 
        ./edu4self setup --vault ~/learn --name "<name>"          # add --no-service to skip start-at-login
 

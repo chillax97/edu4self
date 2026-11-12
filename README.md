@@ -9,6 +9,14 @@ your focused time into something you can see grow. Nothing leaves your machine.
 
 ![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
 
+## Quick start
+
+1. Install [Claude Code](https://claude.com/claude-code) and sign in. Python 3.9+ and git too.
+2. Easiest: open Claude Code and paste `Clone https://github.com/chillax97/edu4self (git clone --depth 1), read its AGENTS.md, and set it up for me.`
+3. Or do it yourself: `git clone --depth 1 https://github.com/chillax97/edu4self.git && cd edu4self`
+4. Then `./edu4self setup` (makes your vault, starts the dashboard at login, installs the tutor skills, opens it).
+5. Check anything with `./edu4self doctor`. More below: [rooms](#make-it-your-room), [full setup](#set-it-up-yourself).
+
 ## What you need
 
 - **Claude Code**, signed in with a Claude plan that includes it. Claude is the tutor, so nothing works without it.
@@ -48,7 +56,7 @@ Lesson 01 everywhere, and the room can't run code or reach the internet.
 Open Claude Code (or any coding agent) and paste:
 
 ```text
-Clone https://github.com/chillax97/edu4self, read its AGENTS.md, and set it up for me.
+Clone https://github.com/chillax97/edu4self (git clone --depth 1), read its AGENTS.md, and set it up for me.
 ```
 
 Then say what you want in your own words. The agent asks what it's missing, installs everything,
@@ -110,7 +118,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 You need [Claude Code](https://claude.com/claude-code), Python 3.9+ and git (see [What you need](#what-you-need)).
 
 ```sh
-git clone https://github.com/chillax97/edu4self.git
+git clone --depth 1 https://github.com/chillax97/edu4self.git
 cd edu4self
 ./edu4self setup
 ```
@@ -181,8 +189,19 @@ the dashboard when you log on; `uninstall` removes it. You can also see it in th
 | `./edu4self mail setup` | a mail when you've been away, and the Sunday recap, from your own account |
 | `./edu4self mcp` | your progress for any AI tool that speaks MCP ([how](docs/MCP.md)) |
 
-Update with `git pull` and `./edu4self restart`. The code and your data live in different folders,
-so updating never touches your vault.
+## Updating
+
+The code and your data live in different folders, so updating never touches your vault. Two parts update:
+
+```sh
+cd edu4self && git pull && ./edu4self restart                                    # the dashboard and the engine
+claude plugin marketplace update edu4self && claude plugin update edu4self@edu4self   # the tutor skills (a separate copy)
+```
+
+Restart Claude Code afterwards so it loads the new skills. `./edu4self doctor` looks up the latest release
+on GitHub and prints these two lines when you are behind. That lookup is one request to `api.github.com`
+asking for the newest release number; nothing about you or your vault is sent. It gives up after 2 seconds,
+says nothing when you are offline, and `EDU4SELF_NO_UPDATE_CHECK=1` turns it off.
 
 ## What's where
 
@@ -218,7 +237,7 @@ Obsidian" in Settings), and works with git if you want history.
 ## Privacy
 
 The server binds to `127.0.0.1` only and refuses requests from other sites. The page loads nothing from
-the internet (fonts are bundled), with one exception you choose: if you pick a radio station for the
+the internet (`./edu4self doctor` makes one request to `api.github.com` for the newest release number; see [Updating](#updating)) (fonts are bundled), with one exception you choose: if you pick a radio station for the
 jukebox, the page connects to that station while it plays. Your submissions, blocks, settings and music stay in your vault. Claude
 reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms. If you connect
 any AI tool over MCP (Claude included), it sees your progress and sends it to its own model under its

@@ -5,6 +5,17 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Changed
+
+- `edu4self doctor` looks up the newest GitHub release (one request to api.github.com, 2 s timeout, silent offline,
+  `EDU4SELF_NO_UPDATE_CHECK=1` turns it off; nothing about you is sent) and, when you are behind, prints the update
+  commands: `git pull && ./edu4self restart`, and the two `claude plugin` commands for the tutor skills. README and
+  CONTRIBUTING gained Updating and Releasing sections.
+- `serve` on a taken port prints one plain line (which port, and `--port` to pick another) instead of a traceback, and
+  `setup` checks the port before it makes anything. `setup` on a folder that already holds a vault now uses it and
+  carries on, instead of stopping with "Pick a new folder".
+- README opens with a 5-line quick start; install shows `git clone --depth 1` (a third of the download).
+
 ### Fixed
 
 - The "From memory" warm-up no longer asks a question the moment Claude writes it. A recall question is

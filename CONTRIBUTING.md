@@ -6,7 +6,9 @@ Thanks for wanting to help. edu4self is deliberately small. Good contributions k
 
 - **No new runtime dependencies.** Python standard library on the server, plain JavaScript and CSS on
   the page, no build step. Development-only tools (the browser tests) are fine.
-- **Local-first.** Nothing may call the network at runtime or load third-party assets.
+- **Local-first.** Nothing may call the network at runtime or load third-party assets. The one exception is
+  `./edu4self doctor` asking `api.github.com` for the newest release number (no data about the user is sent,
+  2 s timeout, silent offline, off with `EDU4SELF_NO_UPDATE_CHECK=1`).
 - **One writer per file.** `state.json` belongs to the tutor, the logs to the server, `config.json` to
   Settings. New data gets a clear owner.
 - **Proof stays proof.** Nothing may let time spent, clicks or self-reports count as evidence.
@@ -22,7 +24,7 @@ Thanks for wanting to help. edu4self is deliberately small. Good contributions k
 ## Setup
 
 ```sh
-git clone https://github.com/chillax97/edu4self.git && cd edu4self
+git clone --depth 1 https://github.com/chillax97/edu4self.git && cd edu4self   # drop --depth 1 for the full history
 ./edu4self init /tmp/edu4self-dev --name Dev --port 4800
 ./edu4self serve --vault /tmp/edu4self-dev --port 4800 --open
 ```
@@ -45,6 +47,19 @@ While working, run only the changed test file; run the full suite before a push.
 If you change `docs/PROTOCOL.md`, copy it to `plugin/skills/check-inbox/PROTOCOL.md` (a test checks they
 match). If you bump the version, change it in `app/server.py`, `plugin/.claude-plugin/plugin.json` and
 `CHANGELOG.md` together (also checked).
+
+## Releasing
+
+1. Move the `## Unreleased` entries of `CHANGELOG.md` under a new `## X.Y.Z` heading with the date.
+2. Set the same version in `app/server.py` (`VERSION`) and `plugin/.claude-plugin/plugin.json` (a test checks all three).
+3. Run both test suites, then merge to `main` and wait for CI to pass on all jobs (the macOS jobs run for tags).
+4. Tag `vX.Y.Z` and push the tag, then `gh release create vX.Y.Z --notes-file <the changelog section>`.
+   `doctor` tells users about the newest *release*, so the release is what makes the update hint appear.
+
+## Updating (for users)
+
+`git pull && ./edu4self restart`, then `claude plugin marketplace update edu4self && claude plugin update edu4self@edu4self`
+for the tutor skills. The README's [Updating](README.md#updating) section is the user-facing version; keep both in step.
 
 ## Style
 
