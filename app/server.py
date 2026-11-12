@@ -1092,6 +1092,12 @@ def claude_args(prompt, resume, kind="chat"):
             "--permission-mode", "acceptEdits", "--allowedTools", ",".join(tools),
             "--disallowedTools", ",".join(deny), "--setting-sources", "user,project", "--strict-mcp-config",
             "--append-system-prompt", PANEL_NOTE]
+    if kind in FENCED:
+        # A grade follows this engine's own tutor rules, whatever plugin version is installed, and no personal
+        # settings or hooks from ~/.claude can steer it: same answer, same rules, on every machine.
+        i = args.index("--setting-sources")
+        args[i + 1] = "project"
+        args += ["--plugin-dir", os.path.join(ENGINE, "plugin")]
     if resume:
         args += ["--resume", resume]
     return args

@@ -148,6 +148,8 @@ agent that grades it. Two walls:
   - there is no shell (the server runs the check);
   - grading has no web tools, so nothing read while grading can be sent out;
   - vault MCP servers are ignored.
+  - grading runs (grade, first try, gift) load this engine's own `plugin/` with `--plugin-dir` and skip
+    user-level settings, so the tutor rules match the engine and no personal hooks steer a grade.
 
   This was tested by asking a real Claude, with these exact flags, to write outside the vault, edit
   `CLAUDE.md`, create `.claude/settings.json` and `.mcp.json`, run shell commands, read a file next to

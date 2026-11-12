@@ -7,6 +7,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Changed
 
+- A grade follows this engine's own tutor plugin (`--plugin-dir`), not the version installed in Claude Code, and no
+  personal settings or hooks from `~/.claude` load into it. Chat runs are unchanged.
 - README says what grading costs: plan usage on Pro or Max, a per-run bill with an API key (one first-try grade measured $0.28).
 - `edu4self doctor` looks up the newest GitHub release (one request to api.github.com, 2 s timeout, silent offline,
   `EDU4SELF_NO_UPDATE_CHECK=1` turns it off; nothing about you is sent) and, when you are behind, prints the update
