@@ -23,6 +23,9 @@ your focused time into something you can see grow. Nothing leaves your machine.
 - **macOS, Linux or Windows.** All three can start the dashboard for you at login (launchd, systemd, Task Scheduler).
   Windows is newer: the tests run on Windows in CI, but the login task has only been checked by unit tests so far
   ([details](#windows)).
+- **What it costs:** edu4self is free. Grading runs Claude Code, so it uses your Claude usage. On a Pro or Max plan
+  that counts against your plan's limits, with no extra bill. With an API key each run is billed: one measured first-try
+  grade cost $0.28; grading a full inbox does more work and costs more.
 - **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python; on Windows install it from python.org.
 
 [![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
