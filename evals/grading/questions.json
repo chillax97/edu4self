@@ -1,0 +1,111 @@
+[
+ {
+  "id": "binsearch",
+  "title": "Binary search",
+  "lesson": [
+   "Binary search finds a value in a sorted list by looking at the middle element first. If the middle is the value, you are done. If the value is smaller, it can only be in the left half, because everything to the right of the middle is at least as big. If it is bigger, it can only be in the right half. Each comparison throws away half of what is left.",
+   "That is why the list must be sorted: the rule \"smaller means left\" is only true when the order is guaranteed. On an unsorted list, the value could be on either side, and throwing a half away can throw the answer away.",
+   "Halving is also why it is fast. Starting from n items, after k comparisons about n / 2^k are left, so it takes about log2(n) comparisons: about 20 for a million items, about 30 for a billion. A plain scan from the start takes up to n."
+  ],
+  "hint": "Ask what the middle element tells you about each half of the list.",
+  "question": "Why does binary search only work on a sorted list, and roughly how many comparisons does it need for n items?",
+  "reference": "Order lets one comparison with the middle rule out a whole half (everything on one side is bigger or smaller); without order the target could be in the discarded half. Each step halves the range, so about log2(n) comparisons (about 20 for a million)."
+ },
+ {
+  "id": "hashtable",
+  "title": "Hash tables",
+  "lesson": [
+   "A hash table stores key-value pairs in an array of buckets. To find a key, it runs the key through a hash function, which turns the key into a number, and uses that number to pick a bucket. It goes straight to that bucket instead of searching, so a lookup does about the same work whether the table holds ten items or ten million.",
+   "Two different keys can land in the same bucket: a collision. The table then keeps a short list in that bucket (or probes the next free slot) and compares keys one by one there.",
+   "Collisions are cheap while buckets stay short. They get expensive when many keys pile into the same few buckets: when the hash function spreads keys badly, or when the table is too full. In the worst case every key lands in one bucket and a lookup becomes a scan of all n items. That is why tables grow (resize and rehash) once they pass a load factor, the ratio of items to buckets."
+  ],
+  "hint": "Think about what the hash function lets you skip, and what happens when two keys want the same bucket.",
+  "question": "Why is looking up a key in a hash table usually constant time, and when does it get slow?",
+  "reference": "The hash function computes the bucket index directly from the key, so there is no search: work does not grow with n. It gets slow when many keys collide in the same buckets (a poor hash function or a table that is too full, high load factor); in the worst case a lookup scans all n keys. Resizing keeps buckets short."
+ },
+ {
+  "id": "spacing",
+  "title": "Spacing your practice",
+  "lesson": [
+   "Spacing means spreading the same total study time over several sessions with gaps, instead of one long block. For memory that has to last weeks or months, spaced study wins clearly over cramming the same hours.",
+   "The reason is that some forgetting between sessions is useful. When you come back after a gap, recalling the material takes effort, and that effortful retrieval is what strengthens the memory for the long run. Right after cramming, the material is easy to bring to mind. That ease feels like learning, but it is short-term accessibility, and it fades quickly.",
+   "The best gap grows with how long you want to remember: for a test next week, a day or so between sessions; for something you need next year, weeks between sessions."
+  ],
+  "hint": "Ask what a gap does to how easy the next session feels, and whether easy is good.",
+  "question": "Why does spreading study sessions out beat cramming the same number of hours, if you want to remember for a long time?",
+  "reference": "After a gap some forgetting has happened, so retrieving takes effort, and effortful retrieval strengthens long-term memory. Cramming keeps the material easy to recall right away, which feels like learning but fades. Gaps should grow with how long you need to remember."
+ },
+ {
+  "id": "recursion",
+  "title": "Recursion and the call stack",
+  "lesson": [
+   "Every time a function is called, the program pushes a stack frame onto the call stack: the function's local variables and where to return to. When the function returns, its frame is popped off.",
+   "A recursive function calls itself. Each call is a new call with its own frame, so ten nested calls means ten frames on the stack at once. The base case is the input where the function returns without calling itself again. It is what eventually lets the frames be popped, one by one, back to the first call.",
+   "Without a base case (or with one the input never reaches), no call ever returns. Frames keep being pushed and none are popped, so the stack grows until it hits its size limit and the program crashes with a stack overflow. Python stops earlier, at its recursion limit (about 1000 frames by default), and raises RecursionError. Unlike an infinite loop, which can spin forever in constant memory, runaway recursion uses more memory with every call, so it always ends in a crash."
+  ],
+  "hint": "Each call has to be remembered somewhere until it returns.",
+  "question": "What happens on the call stack when a recursive function has no base case, and why does the program crash instead of running forever?",
+  "reference": "Each call pushes a new frame; with no base case no call returns, so no frame is popped. The stack grows with every call until it exceeds its limit: stack overflow (RecursionError in Python). It crashes rather than looping forever because each call uses more memory, unlike a loop that runs in constant space."
+ },
+ {
+  "id": "cache",
+  "title": "CPU caches and memory access",
+  "lesson": [
+   "Reading main memory (RAM) takes on the order of 100 nanoseconds. A CPU can do hundreds of operations in that time, so it keeps small, fast caches close to the cores. A read from the nearest cache takes about a nanosecond.",
+   "The cache does not fetch single bytes. When the CPU reads one address that is not in the cache (a miss), it loads the whole cache line around it, typically 64 bytes. The hardware also notices when you walk through memory in order and starts fetching the next lines before you ask (prefetching).",
+   "So the access pattern decides the speed. A loop over an array in order uses the rest of each 64-byte line it already loaded and benefits from prefetching: one slow trip to RAM serves many elements. This is called spatial locality. A loop that jumps to random addresses lands on a new line almost every time, so nearly every access is a miss and pays the full trip to RAM, even though it executes the same number of instructions."
+  ],
+  "hint": "What does the cache bring in when it misses, and does the next access use it?",
+  "question": "Why does a loop that walks through an array in order run much faster than one that reads the same number of elements at random addresses?",
+  "reference": "On a miss the cache loads a whole line (about 64 bytes) and the hardware prefetches the next lines for sequential access, so in-order access reuses data already loaded (spatial locality) and rarely waits on RAM. Random access hits a new line nearly every time, so almost every read is a miss and pays the full trip to main memory (about 100x slower than cache)."
+ },
+ {
+  "id": "rebase",
+  "title": "Git: rebase and merge",
+  "lesson": [
+   "Say you branched off main, made three commits, and meanwhile main moved on. There are two ways to bring your work up to date.",
+   "git merge main creates a new merge commit with two parents: the tip of your branch and the tip of main. Nothing that existed is changed; history keeps both lines and the point where they joined.",
+   "git rebase main takes your three commits and replays them one by one on top of the new tip of main. The changes are the same, but the commits are new commits with new hashes, because their parent changed. The result is a straight line, as if you had started from the new main.",
+   "That rewriting is harmless while the commits are only on your machine. It becomes a problem when others already have the old commits, for example on a shared branch someone else pulled. Their copies still point to the old hashes, your rebased branch has to be force-pushed, and now the two histories disagree: their next pull tries to combine the old and new versions of the same changes, causing duplicates and confusing conflicts. The usual rule: do not rebase commits that other people already have."
+  ],
+  "hint": "Look at what happens to the commit hashes in each case.",
+  "question": "What does git rebase do differently from git merge, and why is rebasing a branch other people already pulled a problem?",
+  "reference": "Merge adds a merge commit joining both histories and changes no existing commit. Rebase replays your commits on top of the new base, creating new commits with new hashes (linear history). If others already have the old commits, rebasing rewrites history they depend on: it needs a force-push and their copies diverge, giving duplicate commits and conflicts."
+ },
+ {
+  "id": "second",
+  "title": "Second largest",
+  "code": true,
+  "lesson": [
+   "Write second_largest(nums) in solution.py. It takes a list of integers and returns the second-largest distinct value: the largest value that is strictly smaller than the maximum. Repeated values count once, so second_largest([5, 5, 3]) is 3, not 5.",
+   "If the list has fewer than two distinct values (it is empty, or every value is the same), return None.",
+   "Examples: [3, 1, 2] gives 2; [10, 4, 7, 9] gives 9; [5, 5, 3] gives 3; [4, 4] gives None; [] gives None.",
+   "Run python3 check.py to check your solution. It checks a few cases, not all of them; a pass means those cases work."
+  ],
+  "hint": "Keep track of two values as you walk the list: the biggest so far and the best one below it.",
+  "question": "Paste your solution.py: second_largest(nums) returns the second-largest distinct value, or None.",
+  "reference": "Correct for duplicates ([5, 5, 3] -> 3), all-equal lists and empty lists (None), and any order; for example by taking the distinct values (set) and returning the second biggest, or a one-pass scan that skips values equal to the maximum.",
+  "files": {
+   "check.py": "# edu4self: save this run for your tutor (see _system/edu_trace.py). It never stops the checker.\ntry:\n    import os as _os, sys as _sys\n    _d = _os.path.dirname(_os.path.abspath(__file__))\n    while not _os.path.isfile(_os.path.join(_d, \"_system\", \"edu_trace.py\")) and _os.path.dirname(_d) != _d:\n        _d = _os.path.dirname(_d)\n    _sys.path.insert(0, _os.path.join(_d, \"_system\"))\n    import edu_trace\n    edu_trace.start(__file__, [\"solution.py\"])\nexcept Exception:\n    pass\n\nfrom solution import second_largest\n\nCASES = [([3, 1, 2], 2), ([10, 4, 7, 9], 9), ([1], None)]\nok = True\nfor nums, want in CASES:\n    got = second_largest(list(nums))\n    print(\"%s second_largest(%r) = %r, want %r\" % (\"ok  \" if got == want else \"FAIL\", nums, got, want))\n    ok = ok and got == want\nprint(\"all checks passed\" if ok else \"some checks failed\")\nraise SystemExit(0 if ok else 1)\n",
+   "solution.py": "def second_largest(nums):\n    # your code here\n    return None\n"
+  }
+ },
+ {
+  "id": "brackets",
+  "title": "Balanced brackets",
+  "code": true,
+  "lesson": [
+   "Write is_balanced(s) in solution.py. s contains only the characters ( ) [ ] { }. Return True if every opening bracket is closed by the same kind of bracket, in the right order, and False otherwise.",
+   "Order matters, not just the counts: \"([)]\" has one of each, but the ( is closed by ] first, so it is False. \"([])\" is True. \"\" (empty) is True. \"((\" is False. \"())\" is False.",
+   "The usual way is a stack: push each opening bracket; on a closing bracket, the top of the stack must be its partner, so pop it; at the end the stack must be empty.",
+   "Run python3 check.py to check your solution. It checks a few cases, not all of them; a pass means those cases work."
+  ],
+  "hint": "When you see a closing bracket, which opening bracket must it match?",
+  "question": "Paste your solution.py: is_balanced(s) for strings of ( ) [ ] { }.",
+  "reference": "Uses a stack (or equivalent) so that each closing bracket must match the most recent unclosed opening bracket, rejects a closer with an empty stack, and requires the stack to be empty at the end; correct on interleaved cases like \"([)]\" (False).",
+  "files": {
+   "check.py": "# edu4self: save this run for your tutor (see _system/edu_trace.py). It never stops the checker.\ntry:\n    import os as _os, sys as _sys\n    _d = _os.path.dirname(_os.path.abspath(__file__))\n    while not _os.path.isfile(_os.path.join(_d, \"_system\", \"edu_trace.py\")) and _os.path.dirname(_d) != _d:\n        _d = _os.path.dirname(_d)\n    _sys.path.insert(0, _os.path.join(_d, \"_system\"))\n    import edu_trace\n    edu_trace.start(__file__, [\"solution.py\"])\nexcept Exception:\n    pass\n\nfrom solution import is_balanced\n\nCASES = [(\"()\", True), (\"([])\", True), (\"(]\", False), (\"((\", False)]\nok = True\nfor s, want in CASES:\n    got = is_balanced(s)\n    print(\"%s is_balanced(%r) = %r, want %r\" % (\"ok  \" if got == want else \"FAIL\", s, got, want))\n    ok = ok and got == want\nprint(\"all checks passed\" if ok else \"some checks failed\")\nraise SystemExit(0 if ok else 1)\n",
+   "solution.py": "def is_balanced(s):\n    # your code here\n    return False\n"
+  }
+ }
+]
