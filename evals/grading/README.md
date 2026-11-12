@@ -83,3 +83,6 @@ the grade command, the model).
   made-up set two of them may answer the same question. That can shift grades either way.
 - The run uses your own Claude Code (its model and your user-level settings), so a number holds for that
   setup on that day.
+- The grader follows the edu4self plugin installed in your Claude Code (its `check-inbox` skill and its copy
+  of PROTOCOL.md), not this checkout's `docs/`. Note the plugin version with every result, and update the
+  plugin before measuring a protocol change.
