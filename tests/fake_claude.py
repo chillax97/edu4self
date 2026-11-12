@@ -73,6 +73,21 @@ elif "check my inbox" in prompt:
         for line in fh:
             if line.strip():
                 ids.append(json.loads(line)["id"])
+    # FAKE_CLAUDE_PASS_IF (for the honesty test's runner): also write a history entry per answer, a pass when its
+    # text holds that marker, "Partly right" when it holds FAKE_CLAUDE_PARTIAL_IF, else "Not yet"
+    marker = os.environ.get("FAKE_CLAUDE_PASS_IF")
+    if marker:
+        part = os.environ.get("FAKE_CLAUDE_PARTIAL_IF") or "\0"
+        with open(os.path.join("_system", "inbox.jsonl"), encoding="utf-8") as fh:
+            entries = [json.loads(l) for l in fh if l.strip()]
+        for e in entries:
+            if e["id"] in state.get("processed_inbox", []) or e.get("kind") == "withdraw":
+                continue
+            text = json.dumps(e.get("fields"))
+            topic = next(t for t in state["topics"] if t["id"] == e.get("topic"))
+            topic["history"].append({"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
+                                     "title": "Passed." if marker in text else "Partly right." if part in text else "Not yet.",
+                                     "detail": "Graded by the fake tutor.", "evidence": marker in text})
     state["processed_inbox"] = sorted(set(state.get("processed_inbox", []) + ids))
     state["coach"]["headline"] = "Graded by the fake tutor."
     with open(path, "w", encoding="utf-8") as fh:
