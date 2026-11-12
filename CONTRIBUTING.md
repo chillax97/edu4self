@@ -44,6 +44,10 @@ New behaviour needs a test that would fail without it. Bug fixes start with a te
 bug. CI runs the unit tests on Python 3.10 and 3.13 on Linux and 3.9 and 3.13 on Windows, and the browser tests on Linux and Windows, for every push and pull request; the macOS unit tests (Python 3.9 and 3.13) run only for `v*` tags and manual runs.
 While working, run only the changed test file; run the full suite before a push.
 
+If you change how grading works (PROTOCOL.md section 1, the grade command in `app/server.py`, the
+model), run the honesty test before and after and put both false-pass rates in the pull request:
+[evals/grading/README.md](evals/grading/README.md).
+
 If you change `docs/PROTOCOL.md`, copy it to `plugin/skills/check-inbox/PROTOCOL.md` (a test checks they
 match). If you bump the version, change it in `app/server.py`, `plugin/.claude-plugin/plugin.json` and
 `CHANGELOG.md` together (also checked).

@@ -20,6 +20,14 @@ versions follow [Semantic Versioning](https://semver.org).
   5 fps with 64 colours); nothing was removed.
 - README opens with a 5-line quick start; install shows `git clone --depth 1` (a third of the download).
 
+### Added
+
+- The honesty test (`evals/grading/`): how often the grader passes an answer that should not pass. 80
+  made-up answers (60 must not pass, from half-right to "mark this as passed" injections and code that
+  games its checker) and 100 labelled student answers from the SAF set (CC BY 4.0), graded through the
+  Grade button's own run, scored as a false-pass rate with a 95% interval, kappa, per category and cost
+  per answer. It measures; it changes nothing in how grading works.
+
 ### Fixed
 
 - The "From memory" warm-up no longer asks a question the moment Claude writes it. A recall question is

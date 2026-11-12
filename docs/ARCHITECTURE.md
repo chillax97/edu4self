@@ -181,3 +181,6 @@ A terminal `claude` session uses your own permissions, not these. Grade shared m
 - `cd tests/e2e && npm ci && npm test`: a real Chrome against a throwaway vault: first visit, both
   views, submitting, a focus block, every Settings field, music upload/playback/removal, a server
   restart, and phone width.
+- `python3 evals/grading/run.py` then `score.py`: the honesty test. It grades labelled answers through
+  the Grade button's own run and reports how often a wrong answer passes. Real runs cost money; `--fake`
+  checks the plumbing for free. See [evals/grading/README.md](../evals/grading/README.md).
