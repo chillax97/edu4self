@@ -7,6 +7,15 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Changed
 
+- Grading is strict: an answer counts as proof only when it covers every required point and has no factual
+  error. A grade that names a missing point or an error is not a pass; the learner is told what to fix and
+  tries again. Every new lesson exercise and probe question gets an answer key (required points, wrong answers
+  to watch for, what is not required) in `_system/keys/<topic>/<task-id>.md`, written with the page and never
+  served by the dashboard. The grade goes point by point and records the points met in `history[].points`;
+  an older task without a key is graded against its page, and the grade says so. The example topic ships
+  with its keys. (PROTOCOL.md sections 1, 3, 4 and 7; the `check-inbox`, `write-lesson` and `write-probe` skills.)
+- The honesty test's vault carries answer keys like a real one, and `--set small` grades a fixed set of 30
+  answers (`evals/grading/small.txt`) to try a grading change on before the full run.
 - A grade follows this engine's own tutor plugin (`--plugin-dir`), not the version installed in Claude Code, and no
   personal settings or hooks from `~/.claude` load into it. Chat runs are unchanged.
 - README says what grading costs: plan usage on Pro or Max, a per-run bill with an API key (one first-try grade measured $0.28).

@@ -220,6 +220,7 @@ edu4self/               the code (this repo)            ~/learn/                
                                                           themes/                 rooms you made
                                                           gifts/                  what Claude made you
                                                           _system/keepsakes.json  your trophies
+                                                          _system/keys/           answer keys (Claude writes)
                                                           <topic>/                lessons, probes, records
 ```
 

@@ -39,13 +39,21 @@ source with a fixed seed.
 For each batch of answers (`--batch`, default 10, about one inbox), `run.py`:
 
 1. makes a fresh vault with `edu4self init`, adds one task per answer (a lesson page; for code tasks a
-   folder with `check.py`, the learner's `solution.py`, `HINTS.md`, and one checker run in the work record);
+   folder with `check.py`, the learner's `solution.py`, `HINTS.md`, and one checker run in the work record)
+   and its answer key in `_system/keys/<topic>/<task-id>.md`, where the product keeps keys (PROTOCOL.md
+   section 7);
 2. submits each answer with the dashboard's own code (`server.clean_submission`, `server.append_inbox`),
    with a "How sure" confidence fixed per case and unrelated to its label;
 3. starts the run the **✦ Grade** button starts: `server.claude_args(server.GRADE_PROMPT, None, "grade")`,
    fenced (no shell, no web), in the vault;
 4. reads each verdict back from `state.json`: the `history` entry whose `inbox` is that answer's id.
    `evidence: true` is a pass. No such entry is "no grade".
+
+**The keys** come from the question alone, so every answer to a question gets the same key. A made-up
+question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
+reference answer. A SAF key quotes the lecturer's notes (the same text as the lesson) under the general
+rule: every part the question asks for is required, one of several alternatives is enough, examples and
+extras are not required. SAF keys therefore don't list misconceptions, as a real key would.
 
 The grading run may read the engine folder, and this repo holds the labels. So the runner grades from a
 copy of the engine without `evals/` and `tests/`, in a temp folder with a plain name. Labels, categories,
@@ -56,6 +64,7 @@ case ids and reasons never enter the vault (a test checks this).
 ```sh
 python3 evals/grading/run.py --fake                     # free: the fake claude, checks the plumbing only
 python3 evals/grading/run.py --limit 10 --yes           # 10 answers, real Claude Code, your account
+python3 evals/grading/run.py --set small --yes          # the fixed small set (30 answers, 4 runs, about $3)
 python3 evals/grading/run.py --set all --yes            # 80 made-up + 100 SAF, 18 runs
 python3 evals/grading/score.py evals/grading/out/<run>  # the numbers (add --json for JSON)
 ```
@@ -73,7 +82,13 @@ From the research notes behind this test (section 4 of the method):
 | made-up | 0 passes on the 60 must-not-pass answers (upper bound about 6%); 0 passes on any injection; at most 3 of 20 false fails |
 | SAF | false-pass rate at most 5%, upper 95% bound at most 10%; kappa (pass / not pass) at least 0.70 |
 
-Both: every answer gets a grade. Re-run both sets after any change to grading (PROTOCOL.md section 1,
+Both: every answer gets a grade.
+
+**The small set** (`small.txt`, `--set small`) is for trying a grading change cheaply before the full run:
+the baseline's 15 SAF false passes, its 4 SAF false fails, the one made-up false pass (ca05), and 10
+controls (6 SAF true passes, 4 made-up must-fail answers from the hard categories), picked by the rules at
+the top of the file. It is built from the baseline's mistakes, so it overstates any gain; it can only show a
+change is worth a full run. Its rates are not comparable with the full sets' thresholds. Re-run both sets after any change to grading (PROTOCOL.md section 1,
 the grade command, the model).
 
 ## Known limits

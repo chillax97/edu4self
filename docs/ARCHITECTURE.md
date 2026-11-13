@@ -39,6 +39,7 @@ _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
 _system/keepsakes.json trophies won, with a copy of each one's drawing (server only)
 _system/reminders.json which away mails went out and which weeks were recapped (server only)
+_system/keys/          answer keys, <topic>/<task-id>.md, written with each lesson or probe (tutor only, never served)
 recaps/                the Sunday recaps, one markdown file a week
 gifts/                 pages Claude made when a week or a die was won
 _system/music/         one audio file
