@@ -92,6 +92,11 @@ for t in s.get("topics", []):
             err("history record missing: %s" % h["record"])
         if "inbox" in h and not isinstance(h["inbox"], str):   # the inbox entry this grades (for "How sure are you?")
             err("history %r: inbox must be the id of the inbox entry it grades" % h.get("title"))
+        if "points" in h:   # the grade against the answer key (PROTOCOL section 7): point ids met and missed, false claims
+            pts = h["points"]
+            if (not isinstance(pts, dict) or set(pts) - {"met", "missed", "wrong"}
+                    or not all(isinstance(v, list) and all(isinstance(x, str) for x in v) for v in pts.values())):
+                err("history %r: points must be {met: [ids], missed: [ids], wrong: [text]}" % h.get("title"))
     for m in t.get("milestones", []):
         if m.get("status") not in ("active", "locked", "done"):
             err("milestone %s bad status" % m.get("id"))
@@ -141,6 +146,15 @@ for r in recall:
         err("recall %s: added must be a date like 2026-11-11, got %r" % (rid, r["added"]))
     if r.get("from") not in ids:
         err("recall %s: from must be the id of the task it tests, got %r" % (rid, r.get("from")))
+
+# Answer keys (PROTOCOL section 7): _system/keys/<topic path>/<task-id>.md. A key whose task is gone is a note.
+_keys = os.path.join(ROOT, "_system", "keys")
+if os.path.isdir(_keys):
+    for _base, _dirs, _files in os.walk(_keys):
+        for _f in sorted(_files):
+            if _f.endswith(".md") and _f[:-3] not in ids:
+                notes.append("answer key for a task that isn't in the queue: %s"
+                             % os.path.relpath(os.path.join(_base, _f), ROOT).replace(os.sep, "/"))
 
 for link in s.get("linked_topics", []):
     if not os.path.isdir(link.get("root", "")):

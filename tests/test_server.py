@@ -103,6 +103,7 @@ class ServerTest(unittest.TestCase):
 
     def test_private_and_traversal_paths_are_404(self):
         for p in ("/vault/_system/state.json", "/vault/_system/config.json", "/vault/../etc/passwd",
+                  "/vault/_system/keys/how-learning-works/hlw-lesson-01.md",       # answer keys stay off the page
                   "/vault/.obsidian/app.json", "/fonts/../server.py", "/../app/server.py"):
             self.assertEqual(self.req("GET", p)[0], 404, p)
 
@@ -600,6 +601,37 @@ class ValidatorTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("inbox must be the id", r.stdout)
 
+    def test_history_may_record_the_points_of_the_answer_key(self):
+        h = self.state["topics"][0]["history"][0]
+        h["points"] = {"met": ["1a", "2a"], "missed": ["1b"], "wrong": ["says rereading builds storage strength"]}
+        self.assertEqual(self.check(self.state).returncode, 0)
+        h["points"] = {"met": ["1a"]}                        # any part may be left out
+        self.assertEqual(self.check(self.state).returncode, 0)
+        for bad in (["1a"], {"met": "1a"}, {"met": [1]}, {"hit": ["1a"]}):
+            h["points"] = bad
+            r = self.check(self.state)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("points", r.stdout)
+
+    def test_answer_keys_ship_with_the_example_and_a_stray_key_is_a_note(self):
+        keys = os.path.join(self.vault, "_system", "keys", "how-learning-works")
+        for task in ("hlw-lesson-01", "hlw-probe-01"):
+            with open(os.path.join(keys, task + ".md"), encoding="utf-8") as fh:
+                text = fh.read()
+            self.assertIn("Required", text)
+            self.assertIn("Not required", text)
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("answer key", r.stdout)
+        with open(os.path.join(keys, "no-such-task.md"), "w", encoding="utf-8") as fh:
+            fh.write("# Answer key: no-such-task\n")
+        r = self.check()
+        self.assertEqual(r.returncode, 0, r.stdout)             # a note, never an error
+        self.assertIn("answer key for a task that isn't in the queue", r.stdout)
+        links = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), self.vault], stdout=subprocess.PIPE,
+                               encoding="utf-8")
+        self.assertEqual(links.returncode, 0, links.stdout)
+
     def test_a_task_may_allow_the_calculator(self):
         t = self.state["topics"][0]["queue"][0]
         t["calculator"] = True
@@ -976,6 +1008,7 @@ class CliTest(unittest.TestCase):
     def test_no_example(self):
         vault, env = make_vault(self.tmp, "--no-example")
         self.assertFalse(os.path.exists(os.path.join(vault, "how-learning-works")))
+        self.assertFalse(os.path.exists(os.path.join(vault, "_system", "keys", "how-learning-works")), "nor its answer keys")
         self.assertEqual(read_json(os.path.join(vault, "_system", "state.json"))["topics"], [])
         self.assertEqual(subprocess.run([sys.executable, CLI, "check"], env=env, stdout=subprocess.PIPE).returncode, 0)
 

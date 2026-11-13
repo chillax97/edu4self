@@ -98,8 +98,9 @@ def cmd_init(args):
 
     def skip(src, names):
         out = [n for n in names if n.endswith(".tmpl") or n in (".DS_Store", "__pycache__")]
-        if args.no_example and os.path.abspath(src) == os.path.abspath(TEMPLATE):
-            out.append(EXAMPLE_TOPIC)
+        if args.no_example and os.path.abspath(src) in (os.path.abspath(TEMPLATE),
+                                                         os.path.abspath(os.path.join(TEMPLATE, "_system", "keys"))):
+            out.append(EXAMPLE_TOPIC)              # the topic folder, and its answer keys
         return out
     shutil.copytree(TEMPLATE, vault, ignore=skip, dirs_exist_ok=True)
 
