@@ -44,7 +44,7 @@ except (OSError, ValueError, AttributeError):
 # A grade against an answer key (PROTOCOL sections 1, 3 and 7) carries a checklist: `points` maps each point id
 # of the key to true (the answer states it) or false, and `errors` lists each wrong claim. The pass is decided
 # here, not by the grader: evidence: true on an answer whose task has a key needs every point true, no errors.
-POINT_ID = re.compile(r"^\d+[a-z]+$")
+POINT_ID = re.compile(r"^\d+[a-z]*$")
 _inbox = {}
 try:
     with open(os.path.join(ROOT, "_system", "inbox.jsonl"), encoding="utf-8") as _fh:

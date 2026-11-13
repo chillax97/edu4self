@@ -155,7 +155,7 @@ pending submission, across all topics, becomes **Up next**.
   inbox?: "<inbox entry id>", points?: {"<point id>": true | false}, errors?: [text]}`. `inbox` links a
   grade to the submission it grades; with `evidence` it counts as a pass for "How sure vs how it went".
   `points` and `errors` are the checklist against the answer key (section 1 and 7): every point id of
-  the key (`1a`, `2b`) with whether the answer states it, and each wrong claim in a few words (`[]` if
+  the key (`1a`, `2b`; `1` when the key lists none) with whether the answer states it, and each wrong claim in a few words (`[]` if
   none). Required on a pass of an answer whose task has a key; the check then needs every point `true`
   and no errors. Leave them out when the task has no key.
 - `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from,

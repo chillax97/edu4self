@@ -606,6 +606,8 @@ class ValidatorTest(unittest.TestCase):
         h["points"] = {"1a": True, "2a": False}
         h["errors"] = ["says rereading builds storage strength"]
         self.assertEqual(self.check(self.state).returncode, 0)
+        h["points"] = {"1": True, "2": False}          # a key that lists no point ids: one per question
+        self.assertEqual(self.check(self.state).returncode, 0)
         for bad in (["1a"], {"met": ["1a"]}, {"1a": "yes"}, {"1a": 1}, {}):
             h["points"], h["errors"] = bad, []
             r = self.check(self.state)
