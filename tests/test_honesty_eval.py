@@ -91,6 +91,26 @@ class TestCases(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(EVAL, "saf", "LICENSE.md")))
 
 
+class TestSmallSet(unittest.TestCase):
+    def test_the_small_set_is_fixed_and_whole(self):
+        items = run.load_items("small")
+        self.assertEqual(len(items), 30)
+        self.assertEqual(len({i["id"] for i in items}), 30)
+        src = Counter(i["source"] for i in items)
+        self.assertEqual(src, {"saf": 25, "made-up": 5})
+        made = {i["id"]: i for i in items if i["source"] == "made-up"}
+        self.assertIn("ca05", made)
+        self.assertEqual({i["category"] for k, i in made.items() if k != "ca05"},
+                         {"injection", "hint-copied", "checker-gaming", "half-right"})
+        self.assertTrue(all(i["gold"] != "pass" for i in made.values()))
+        self.assertEqual(Counter(i["gold"] == "pass" for i in items if i["source"] == "saf"), {False: 15, True: 10})
+
+    def test_the_cli_takes_the_small_set(self):
+        with self.assertRaises(SystemExit) as cm:      # parses and loads the set, then stops before any run
+            run.main(["--set", "small", "--fake", "--batch", "0"])
+        self.assertEqual(str(cm.exception), "nothing to grade")
+
+
 class TestScorer(unittest.TestCase):
     def test_wilson(self):
         lo, hi = score.wilson(0, 30)
@@ -254,6 +274,35 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         for word in ("gold", "honesty", "checker-gaming", "confident-empty"):
             self.assertNotIn(word, text.lower())
         self.assertTrue(all(r["verdict"] == "missing" for r in results))   # the plain fake writes no history
+        # the answer keys are in the vault, one per task, where the product keeps them, and hold no label either
+        keys = os.path.join(vault, "_system", "keys")
+        for r in results:
+            path = os.path.join(keys, "cs-basics", r["task"] + ".md")
+            self.assertTrue(os.path.isfile(path), path)
+            with open(path, encoding="utf-8") as fh:
+                key = fh.read()
+            self.assertIn("Required", key)
+            self.assertIn("Not required", key)
+            it = next(i for i in items if i["id"] == r["id"])
+            self.assertNotIn(it["answer"].strip()[:60], key, "a key never quotes an answer")
+
+    def test_a_key_comes_from_the_question_alone(self):
+        """Every answer to one question gets the same key, so a key can't carry anything about a case."""
+        for name in ("made-up", "saf"):
+            by_q = {}
+            for it in run.load_items(name):
+                text = run.key_text("t-1", "p.html", it["q"])
+                by_q.setdefault(it["qid"], set()).add(text)
+                self.assertNotIn('"%s"' % it["id"], text)
+                self.assertNotIn(it["reason"], text)
+                # label words (plain-English category names like "correct" may appear in a key's own words)
+                for word in ("gold", "honesty", "partial", "saf-") + tuple(c for c in CATEGORIES if "-" in c):
+                    self.assertNotIn(word, text.lower(), (it["id"], word))
+            self.assertTrue(all(len(v) == 1 for v in by_q.values()), name)
+        q = {x["id"]: x for x in run.load_json(run.QUESTIONS)}["cache"]
+        text = run.key_text("cache-1", "cs-basics/lessons/0001-cache.html", q)
+        self.assertIn("- 1a. ", text)
+        self.assertIn("- 1c. ", text)
 
     def test_code_answers_leave_a_work_record(self):
         items = [i for i in run.load_items("made-up") if i["id"] in ("sl02", "sl07")]

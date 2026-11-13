@@ -38,6 +38,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.dirname(os.path.dirname(HERE))
 FAKE = os.path.join(ENGINE, "tests", "fake_claude.py")
 SETS = {"made-up": os.path.join(HERE, "cases.jsonl"), "saf": os.path.join(HERE, "saf", "sample.jsonl")}
+# Named subsets of both sets: a file of case ids, one per line (# starts a comment). See the file for why each id is in.
+SUBSETS = {"small": os.path.join(HERE, "small.txt")}
 QUESTIONS = os.path.join(HERE, "questions.json")
 # Left out of the engine copy the grader runs from: the labels, the tests and docs media.
 NOT_COPIED = ("evals", "tests", ".git", ".github", "node_modules", "images", "video", "__pycache__")
@@ -70,8 +72,21 @@ def read_jsonl(path):
         return [json.loads(l) for l in fh if l.strip()]
 
 
+def subset_ids(name):
+    with open(SUBSETS[name], encoding="utf-8") as fh:
+        return [l.split("#", 1)[0].strip() for l in fh if l.split("#", 1)[0].strip()]
+
+
 def load_items(which):
-    """[item] for the chosen set(s), each with `source`. Made-up cases get their question from questions.json."""
+    """[item] for the chosen set(s), each with `source`. Made-up cases get their question from questions.json.
+    A named subset (SUBSETS) is those ids from both sets."""
+    if which in SUBSETS:
+        want = subset_ids(which)
+        by_id = {it["id"]: it for it in load_items("all")}
+        missing = [i for i in want if i not in by_id]
+        if missing:
+            sys.exit("%s names unknown case ids: %s" % (SUBSETS[which], ", ".join(missing)))
+        return [by_id[i] for i in want]
     questions = {q["id"]: q for q in load_json(QUESTIONS)}
     items = []
     for name in (["made-up", "saf"] if which == "all" else [which]):
@@ -85,7 +100,7 @@ def load_items(which):
             else:                 # SAF: the lesson the learner read is the reference answer, as lecture notes
                 it["q"] = {"id": it["qid"], "title": it.get("title") or "Networks question",
                            "lesson": ["Notes from the lecture on this question:"] + it["reference"].split("\n"),
-                           "question": it["question"], "hint": None}
+                           "question": it["question"], "hint": None, "reference": it["reference"]}
             items.append(it)
     return items
 
@@ -162,6 +177,29 @@ def server_from(engine):
 
 # ---------------------------------------------------------------- the vault
 
+def key_text(task_id, page, q):
+    """The task's answer key (PROTOCOL.md section 7), built from the question alone, never from a case: the same
+    for every answer to that question. Made-up questions carry a written key in questions.json; a SAF key is the
+    lecturer's notes (the lesson text), as written, under the general rule."""
+    out = ["# Answer key: %s" % task_id, "", "For %s." % page, "", "## 1. %s" % " ".join(q["question"].split()), ""]
+    k = q.get("key")
+    if k:
+        out.append("Required (each one must be in the answer, in any words):")
+        out += ["- 1%s. %s" % ("abcdefghijklmnopqrstuvwxyz"[i], p) for i, p in enumerate(k["required"])]
+        wrong, extra = k["wrong"], k["not_required"]
+    else:
+        out += ["Required (each one must be in the answer, in any words): every part the question asks for, as the",
+                "lecturer's notes below answer it. Where the notes say one of several is enough, one is enough.", "",
+                "The lecturer's notes, as written:", ""]
+        out += ["> " + line.rstrip() if line.strip() else ">" for line in q["reference"].strip().splitlines()]
+        wrong = ["Anything that contradicts the notes."]
+        extra = ["Details and examples in the notes that the question doesn't ask for, and the other alternatives "
+                 "where the notes say one is enough."]
+    out += ["", "Wrong answers to watch for (stated as fact, each is an error):"] + ["- " + w for w in wrong]
+    out += ["", "Not required (never fail an answer for leaving these out):"] + ["- " + x for x in extra]
+    return "\n".join(out) + "\n"
+
+
 def lesson_html(n, q):
     paras = "\n".join("<p>%s</p>" % html.escape(p) for p in q["lesson"] if p.strip())
     hint = ("<div class=\"note\"><strong>Stuck?</strong> %s</div>\n" % html.escape(q["hint"])) if q.get("hint") else ""
@@ -202,6 +240,8 @@ def build_vault(engine, vault, batch, env):
             write(os.path.join(root, "GLOSSARY.md"), "# Glossary\n")
             write(os.path.join(root, "Dashboard.md"), "# %s\n" % title)
             os.makedirs(os.path.join(root, "learning-records"), exist_ok=True)
+            # a topic's shared lesson parts, as the first lesson of a real topic leaves them (a redo links them)
+            shutil.copytree(os.path.join(engine, "template", "how-learning-works", "assets"), os.path.join(root, "assets"))
         q = it["q"]
         key = (tid_topic, q["id"])
         if key not in lesson_no:
@@ -210,6 +250,8 @@ def build_vault(engine, vault, batch, env):
                   lesson_html(lesson_no[key], q))
         n = lesson_no[key]
         task_id = "%s-%d" % (q["id"], sum(1 for t in topic["queue"] if t["id"].startswith(q["id"] + "-")) + 1)
+        page = "%s/lessons/%04d-%s.html" % (tid_topic, n, q["id"])
+        write(os.path.join(vault, "_system", "keys", tid_topic, task_id + ".md"), key_text(task_id, page, q))
         task = {"id": task_id, "kind": "lesson", "status": "todo", "label": "Lesson %02d" % n, "title": q["title"],
                 "why": "One idea, checked from memory.",
                 "href": "/vault/%s/lessons/%04d-%s.html" % (tid_topic, n, q["id"]), "effort": "10 min · 1 exercise",
@@ -350,7 +392,7 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
                 results.append({"id": item_id, "source": it["source"], "qid": it["qid"], "category": it["category"],
                                 "gold": it["gold"], "verdict": v, "batch": b, "inbox": entry_id, "task": task_id,
                                 "confidence": confidence_for(item_id), "task_status": task_status(state, topic, task_id),
-                                "history": [{k: h.get(k) for k in ("title", "detail", "evidence")} for h in hist],
+                                "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points")} for h in hist],
                                 "cost_share_usd": share})
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
             with open(os.path.join(bdir, "inbox-map.json"), "w", encoding="utf-8") as fh:
@@ -377,7 +419,8 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("--set", choices=["made-up", "saf", "all"], default="made-up", help="which cases (default made-up)")
+    p.add_argument("--set", choices=["made-up", "saf", "all"] + sorted(SUBSETS), default="made-up",
+                   help="which cases (default made-up; small: the fixed set in small.txt)")
     p.add_argument("--limit", type=int, help="grade only the first N cases of the fixed order")
     p.add_argument("--batch", type=int, default=10, help="answers per Claude run (default 10, a typical inbox)")
     p.add_argument("--fake", action="store_true", help="use the repo's fake claude (tests; free, verdicts mean nothing)")

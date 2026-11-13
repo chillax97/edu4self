@@ -9,7 +9,20 @@
   ],
   "hint": "Ask what the middle element tells you about each half of the list.",
   "question": "Why does binary search only work on a sorted list, and roughly how many comparisons does it need for n items?",
-  "reference": "Order lets one comparison with the middle rule out a whole half (everything on one side is bigger or smaller); without order the target could be in the discarded half. Each step halves the range, so about log2(n) comparisons (about 20 for a million)."
+  "reference": "Order lets one comparison with the middle rule out a whole half (everything on one side is bigger or smaller); without order the target could be in the discarded half. Each step halves the range, so about log2(n) comparisons (about 20 for a million).",
+  "key": {
+   "required": [
+    "Comparing the target with the middle tells which half it must be in, because the list is in order, so the other half can be dropped.",
+    "Without order the target could be in the half that is dropped: one comparison says nothing about either side.",
+    "About log2(n) comparisons (log n is fine), because each comparison halves what is left."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "Worked numbers (about 20 for a million), the comparison with a plain scan, the base of the logarithm when halving is given."
+   ]
+  }
  },
  {
   "id": "hashtable",
@@ -21,7 +34,19 @@
   ],
   "hint": "Think about what the hash function lets you skip, and what happens when two keys want the same bucket.",
   "question": "Why is looking up a key in a hash table usually constant time, and when does it get slow?",
-  "reference": "The hash function computes the bucket index directly from the key, so there is no search: work does not grow with n. It gets slow when many keys collide in the same buckets (a poor hash function or a table that is too full, high load factor); in the worst case a lookup scans all n keys. Resizing keeps buckets short."
+  "reference": "The hash function computes the bucket index directly from the key, so there is no search: work does not grow with n. It gets slow when many keys collide in the same buckets (a poor hash function or a table that is too full, high load factor); in the worst case a lookup scans all n keys. Resizing keeps buckets short.",
+  "key": {
+   "required": [
+    "The hash function turns the key into the bucket's index directly, so a lookup goes straight to one bucket instead of searching: the work does not grow with the number of items.",
+    "It gets slow when many keys land in the same buckets (collisions pile up), because the hash function spreads keys badly or the table is too full (high load factor)."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "The worst case of scanning all n keys, resizing and rehashing, the names chaining and probing, the term load factor when the idea is there."
+   ]
+  }
  },
  {
   "id": "spacing",
@@ -33,7 +58,19 @@
   ],
   "hint": "Ask what a gap does to how easy the next session feels, and whether easy is good.",
   "question": "Why does spreading study sessions out beat cramming the same number of hours, if you want to remember for a long time?",
-  "reference": "After a gap some forgetting has happened, so retrieving takes effort, and effortful retrieval strengthens long-term memory. Cramming keeps the material easy to recall right away, which feels like learning but fades. Gaps should grow with how long you need to remember."
+  "reference": "After a gap some forgetting has happened, so retrieving takes effort, and effortful retrieval strengthens long-term memory. Cramming keeps the material easy to recall right away, which feels like learning but fades. Gaps should grow with how long you need to remember.",
+  "key": {
+   "required": [
+    "After a gap some forgetting has happened, so recalling the material takes effort.",
+    "That effortful retrieval is what strengthens long-term memory; cramming keeps the material easy to recall right away, which feels like learning but fades."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "How long the gaps should be, the research behind it, the terms retrieval and storage strength."
+   ]
+  }
  },
  {
   "id": "recursion",
@@ -45,7 +82,20 @@
   ],
   "hint": "Each call has to be remembered somewhere until it returns.",
   "question": "What happens on the call stack when a recursive function has no base case, and why does the program crash instead of running forever?",
-  "reference": "Each call pushes a new frame; with no base case no call returns, so no frame is popped. The stack grows with every call until it exceeds its limit: stack overflow (RecursionError in Python). It crashes rather than looping forever because each call uses more memory, unlike a loop that runs in constant space."
+  "reference": "Each call pushes a new frame; with no base case no call returns, so no frame is popped. The stack grows with every call until it exceeds its limit: stack overflow (RecursionError in Python). It crashes rather than looping forever because each call uses more memory, unlike a loop that runs in constant space.",
+  "key": {
+   "required": [
+    "Each call pushes a new frame (its local variables and where to return) onto the call stack.",
+    "With no base case no call ever returns, so no frame is popped and the stack keeps growing.",
+    "The stack has a size limit, so it overflows and the program crashes (stack overflow; RecursionError in Python): it can't run forever because every call takes more memory."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "Python's default limit of about 1000, the exception's exact name, the comparison with an infinite loop."
+   ]
+  }
  },
  {
   "id": "cache",
@@ -57,7 +107,20 @@
   ],
   "hint": "What does the cache bring in when it misses, and does the next access use it?",
   "question": "Why does a loop that walks through an array in order run much faster than one that reads the same number of elements at random addresses?",
-  "reference": "On a miss the cache loads a whole line (about 64 bytes) and the hardware prefetches the next lines for sequential access, so in-order access reuses data already loaded (spatial locality) and rarely waits on RAM. Random access hits a new line nearly every time, so almost every read is a miss and pays the full trip to main memory (about 100x slower than cache)."
+  "reference": "On a miss the cache loads a whole line (about 64 bytes) and the hardware prefetches the next lines for sequential access, so in-order access reuses data already loaded (spatial locality) and rarely waits on RAM. Random access hits a new line nearly every time, so almost every read is a miss and pays the full trip to main memory (about 100x slower than cache).",
+  "key": {
+   "required": [
+    "On a miss the cache loads a whole line (about 64 bytes) around the address, not a single value.",
+    "Walking in order uses the rest of each line already loaded, so most reads are hits and one trip to main memory serves many elements.",
+    "Random addresses land on a new line almost every time, so nearly every read is a miss and waits for main memory, which is far slower than the cache."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "Prefetching, the term spatial locality, exact sizes and latencies."
+   ]
+  }
  },
  {
   "id": "rebase",
@@ -70,7 +133,20 @@
   ],
   "hint": "Look at what happens to the commit hashes in each case.",
   "question": "What does git rebase do differently from git merge, and why is rebasing a branch other people already pulled a problem?",
-  "reference": "Merge adds a merge commit joining both histories and changes no existing commit. Rebase replays your commits on top of the new base, creating new commits with new hashes (linear history). If others already have the old commits, rebasing rewrites history they depend on: it needs a force-push and their copies diverge, giving duplicate commits and conflicts."
+  "reference": "Merge adds a merge commit joining both histories and changes no existing commit. Rebase replays your commits on top of the new base, creating new commits with new hashes (linear history). If others already have the old commits, rebasing rewrites history they depend on: it needs a force-push and their copies diverge, giving duplicate commits and conflicts.",
+  "key": {
+   "required": [
+    "Merge joins the two histories with a new merge commit and changes no existing commit.",
+    "Rebase replays your commits on top of the new base as new commits with new hashes (a straight history).",
+    "Others who already have the old commits now hold a history that no longer matches the rewritten one, so combining the two gives duplicate changes and conflicts."
+   ],
+   "wrong": [
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "That the rebased branch needs a force-push, the rule of thumb in so many words, exact commands, interactive rebase."
+   ]
+  }
  },
  {
   "id": "second",
@@ -88,6 +164,20 @@
   "files": {
    "check.py": "# edu4self: save this run for your tutor (see _system/edu_trace.py). It never stops the checker.\ntry:\n    import os as _os, sys as _sys\n    _d = _os.path.dirname(_os.path.abspath(__file__))\n    while not _os.path.isfile(_os.path.join(_d, \"_system\", \"edu_trace.py\")) and _os.path.dirname(_d) != _d:\n        _d = _os.path.dirname(_d)\n    _sys.path.insert(0, _os.path.join(_d, \"_system\"))\n    import edu_trace\n    edu_trace.start(__file__, [\"solution.py\"])\nexcept Exception:\n    pass\n\nfrom solution import second_largest\n\nCASES = [([3, 1, 2], 2), ([10, 4, 7, 9], 9), ([1], None)]\nok = True\nfor nums, want in CASES:\n    got = second_largest(list(nums))\n    print(\"%s second_largest(%r) = %r, want %r\" % (\"ok  \" if got == want else \"FAIL\", nums, got, want))\n    ok = ok and got == want\nprint(\"all checks passed\" if ok else \"some checks failed\")\nraise SystemExit(0 if ok else 1)\n",
    "solution.py": "def second_largest(nums):\n    # your code here\n    return None\n"
+  },
+  "key": {
+   "required": [
+    "Returns the largest value strictly smaller than the maximum: repeats of the maximum are skipped ([5, 5, 3] gives 3).",
+    "Returns None when there are fewer than two distinct values: an empty list, one element, or all values equal.",
+    "Correct for any order of the input and for negative numbers, not only for the cases check.py tries."
+   ],
+   "wrong": [
+    "Code that passes check.py's few cases without the general rule (special cases, or ignoring repeats).",
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "A particular method (set, sort or one pass), speed, comments."
+   ]
   }
  },
  {
@@ -106,6 +196,21 @@
   "files": {
    "check.py": "# edu4self: save this run for your tutor (see _system/edu_trace.py). It never stops the checker.\ntry:\n    import os as _os, sys as _sys\n    _d = _os.path.dirname(_os.path.abspath(__file__))\n    while not _os.path.isfile(_os.path.join(_d, \"_system\", \"edu_trace.py\")) and _os.path.dirname(_d) != _d:\n        _d = _os.path.dirname(_d)\n    _sys.path.insert(0, _os.path.join(_d, \"_system\"))\n    import edu_trace\n    edu_trace.start(__file__, [\"solution.py\"])\nexcept Exception:\n    pass\n\nfrom solution import is_balanced\n\nCASES = [(\"()\", True), (\"([])\", True), (\"(]\", False), (\"((\", False)]\nok = True\nfor s, want in CASES:\n    got = is_balanced(s)\n    print(\"%s is_balanced(%r) = %r, want %r\" % (\"ok  \" if got == want else \"FAIL\", s, got, want))\n    ok = ok and got == want\nprint(\"all checks passed\" if ok else \"some checks failed\")\nraise SystemExit(0 if ok else 1)\n",
    "solution.py": "def is_balanced(s):\n    # your code here\n    return False\n"
+  },
+  "key": {
+   "required": [
+    "Each closing bracket must match the most recent unclosed opening bracket of the same kind (a stack or equivalent), so order matters: \"([)]\" is False.",
+    "A closing bracket with nothing open makes it False (\")(\", \"())\").",
+    "Anything still open at the end makes it False (\"((\"); the empty string is True."
+   ],
+   "wrong": [
+    "Comparing how many of each bracket there are: it ignores order.",
+    "Code that passes check.py's few cases without the general rule.",
+    "Anything that contradicts a required point."
+   ],
+   "not_required": [
+    "The word stack, speed, comments."
+   ]
   }
  }
 ]
