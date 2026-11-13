@@ -294,8 +294,10 @@ def submit(engine, vault, batch, tasks):
     return ids
 
 
-def check(engine, vault, env):
-    r = subprocess.run([sys.executable, os.path.join(engine, "edu4self"), "check", "--vault", vault], stdout=subprocess.PIPE,
+def check(engine, vault, env, overrule=False):
+    """`edu4self check`; after a grade with --overrule, as the dashboard runs it, so the verdicts are the product's."""
+    r = subprocess.run([sys.executable, os.path.join(engine, "edu4self"), "check", "--vault", vault]
+                       + (["--overrule"] if overrule else []), stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, text=True, env=env)
     return r.returncode == 0, r.stdout
 
@@ -389,7 +391,8 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
             bdir = os.path.join(out, "batch-%02d" % b)
             os.makedirs(bdir, exist_ok=True)
             summary = grade(engine, vault, os.path.join(bdir, "stream.jsonl"), timeout)
-            summary["check_ok"], _ = check(engine, vault, env)
+            summary["check_ok"], text = check(engine, vault, env, overrule=True)
+            summary["overruled"] = text.count("OVERRULED: ")
             summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch])
             runs.append(summary)
             state = load_json(os.path.join(vault, "_system", "state.json"))
