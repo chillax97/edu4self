@@ -41,6 +41,73 @@ try:
 except (OSError, ValueError, AttributeError):
     pass
 
+# A grade against an answer key (PROTOCOL sections 1, 3 and 7) carries a checklist: `points` maps each point id
+# of the key to true (the answer states it) or false, and `errors` lists each wrong claim. The pass is decided
+# here, not by the grader: evidence: true on an answer whose task has a key needs every point true, no errors.
+POINT_ID = re.compile(r"^\d+[a-z]+$")
+_inbox = {}
+try:
+    with open(os.path.join(ROOT, "_system", "inbox.jsonl"), encoding="utf-8") as _fh:
+        for _line in _fh:
+            try:
+                _e = json.loads(_line)
+            except ValueError:
+                continue
+            if isinstance(_e, dict) and isinstance(_e.get("id"), str):
+                _inbox[_e["id"]] = _e
+except OSError:
+    pass
+_paths = {t.get("id"): t.get("path") for t in s.get("topics", []) if isinstance(t, dict)}
+
+
+def key_points(topic, h):
+    """The point ids of the answer key for the task this grade is for, or None when the task has no key."""
+    e = _inbox.get(h.get("inbox")) if isinstance(h.get("inbox"), str) else None
+    if not e or not isinstance(e.get("task"), str) or not re.match(r"^[A-Za-z0-9._-]{1,80}$", e["task"]):
+        return None
+    path = _paths.get(e.get("topic")) or topic.get("path") or ""
+    try:
+        with open(os.path.join(ROOT, "_system", "keys", path, e["task"] + ".md"), encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+    return re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", text)
+
+
+def check_grade(topic, h):
+    name = h.get("title")
+    pts, errs = h.get("points"), h.get("errors")
+    if "points" in h and (not isinstance(pts, dict) or not pts or not all(
+            isinstance(k, str) and POINT_ID.match(k) and isinstance(v, bool) for k, v in pts.items())):
+        err('history %r: points must map each point id of the answer key to true or false, e.g. {"1a": true, "1b": false}'
+            % name)
+        pts = None
+    if "errors" in h and (not isinstance(errs, list) or not all(isinstance(x, str) for x in errs)):
+        err("history %r: errors must be a list of the answer's wrong claims, in a few words each ([] if none)" % name)
+        errs = None
+    want = key_points(topic, h)
+    if want is None:
+        return
+    if isinstance(pts, dict) and want:
+        missing = [p for p in want if p not in pts]
+        extra = sorted(p for p in pts if p not in want)
+        if missing or extra:
+            err("history %r: the checklist must name every point of the answer key (%s)%s%s"
+                % (name, ", ".join(want), "; missing " + ", ".join(missing) if missing else "",
+                   "; not in the key: " + ", ".join(extra) if extra else ""))
+    if h.get("evidence") is True:
+        if "points" not in h or "errors" not in h:
+            err("history %r: a pass on an answer with an answer key needs its checklist: points (each key point true "
+                "or false) and errors ([] if none)" % name)
+        elif isinstance(pts, dict) and isinstance(errs, list):
+            missed = sorted(p for p, v in pts.items() if v is False)
+            if missed or errs:
+                err("history %r: evidence is true, but the checklist %s. A pass needs every point met and no errors: "
+                    "set evidence to false" % (name, " and ".join(
+                        x for x in ("misses " + ", ".join(missed) if missed else "",
+                                    "lists errors (%s)" % "; ".join(errs) if errs else "") if x)))
+
+
 ids = set()
 for t in s.get("topics", []):
     tid = t.get("id", "?")
@@ -92,11 +159,7 @@ for t in s.get("topics", []):
             err("history record missing: %s" % h["record"])
         if "inbox" in h and not isinstance(h["inbox"], str):   # the inbox entry this grades (for "How sure are you?")
             err("history %r: inbox must be the id of the inbox entry it grades" % h.get("title"))
-        if "points" in h:   # the grade against the answer key (PROTOCOL section 7): point ids met and missed, false claims
-            pts = h["points"]
-            if (not isinstance(pts, dict) or set(pts) - {"met", "missed", "wrong"}
-                    or not all(isinstance(v, list) and all(isinstance(x, str) for x in v) for v in pts.values())):
-                err("history %r: points must be {met: [ids], missed: [ids], wrong: [text]}" % h.get("title"))
+        check_grade(t, h)
     for m in t.get("milestones", []):
         if m.get("status") not in ("active", "locked", "done"):
             err("milestone %s bad status" % m.get("id"))

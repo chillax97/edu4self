@@ -601,17 +601,84 @@ class ValidatorTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("inbox must be the id", r.stdout)
 
-    def test_history_may_record_the_points_of_the_answer_key(self):
+    def test_history_may_record_a_checklist(self):
         h = self.state["topics"][0]["history"][0]
-        h["points"] = {"met": ["1a", "2a"], "missed": ["1b"], "wrong": ["says rereading builds storage strength"]}
+        h["points"] = {"1a": True, "2a": False}
+        h["errors"] = ["says rereading builds storage strength"]
         self.assertEqual(self.check(self.state).returncode, 0)
-        h["points"] = {"met": ["1a"]}                        # any part may be left out
-        self.assertEqual(self.check(self.state).returncode, 0)
-        for bad in (["1a"], {"met": "1a"}, {"met": [1]}, {"hit": ["1a"]}):
-            h["points"] = bad
+        for bad in (["1a"], {"met": ["1a"]}, {"1a": "yes"}, {"1a": 1}, {}):
+            h["points"], h["errors"] = bad, []
             r = self.check(self.state)
             self.assertEqual(r.returncode, 1, bad)
             self.assertIn("points", r.stdout)
+        h["points"] = {"1a": True}
+        for bad in ("none", [1], {"x": "y"}):
+            h["errors"] = bad
+            r = self.check(self.state)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("errors must be a list", r.stdout)
+
+    def keyed_grade(self, **fields):
+        """A graded answer to the example's lesson (which ships with an answer key: points 1a to 3b)."""
+        entry = {"id": "ab12cd34ef", "ts": "2026-01-02T10:00:00", "topic": "how-learning-works", "task": "hlw-lesson-01",
+                 "kind": "answers", "fields": {"q": "a"}}
+        inbox = os.path.join(self.vault, "_system", "inbox.jsonl")
+        with open(inbox, encoding="utf-8") as fh:
+            seen = entry["id"] in fh.read()
+        if not seen:
+            with open(inbox, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry) + "\n")
+        hist = self.state["topics"][0]["history"]
+        hist[:] = [x for x in hist if x.get("inbox") != entry["id"]]      # one grade per call: the last one
+        h = {"date": "2026-01-02", "kind": "lesson", "title": "Lesson 01", "detail": "d", "inbox": entry["id"]}
+        h.update(fields)
+        hist.append(h)
+        return self.check(self.state)
+
+    def test_a_pass_on_a_keyed_answer_needs_a_full_checklist(self):
+        all_met = {"1a": True, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True}
+        r = self.keyed_grade(evidence=True, points=all_met, errors=[])
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_a_keyed_pass_without_a_checklist_fails_the_check(self):
+        r = self.keyed_grade(evidence=True)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("'Lesson 01'", r.stdout)
+        self.assertIn("checklist", r.stdout)
+        r = self.keyed_grade(evidence=True, points={"1a": True, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True})   # no errors list
+        self.assertEqual(r.returncode, 1, r.stdout)
+
+    def test_a_keyed_pass_with_a_missed_point_fails_the_check(self):
+        r = self.keyed_grade(evidence=True, points={"1a": True, "1b": False, "2a": True, "2b": True, "3a": True, "3b": True}, errors=[])
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("1b", r.stdout)
+
+    def test_a_keyed_pass_with_an_error_fails_the_check(self):
+        r = self.keyed_grade(evidence=True, points={"1a": True, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True},
+                             errors=["says rereading builds storage strength"])
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("rereading", r.stdout)
+
+    def test_a_keyed_checklist_names_every_point_of_the_key(self):
+        r = self.keyed_grade(evidence=True, points={"1a": True, "1b": True}, errors=[])     # 2a to 3b left out
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("2a", r.stdout)
+        r = self.keyed_grade(evidence=False, points={"1a": True, "9z": False}, errors=[])
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("9z", r.stdout)
+
+    def test_a_keyed_answer_that_is_not_a_pass_may_skip_the_checklist(self):
+        self.assertEqual(self.keyed_grade(evidence=False).returncode, 0)
+        r = self.keyed_grade(evidence=False, points={"1a": True, "1b": False, "2a": True, "2b": True, "3a": True, "3b": True}, errors=["x"])
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_a_pass_without_a_key_validates_as_before(self):
+        self.state["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Old", "detail": "d",
+                                                   "evidence": True, "inbox": "0000000000"})      # no such inbox entry
+        self.assertEqual(self.check(self.state).returncode, 0)
+        os.remove(os.path.join(self.vault, "_system", "keys", "how-learning-works", "hlw-lesson-01.md"))
+        r = self.keyed_grade(evidence=True)                                                  # the task has no key
+        self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_answer_keys_ship_with_the_example_and_a_stray_key_is_a_note(self):
         keys = os.path.join(self.vault, "_system", "keys", "how-learning-works")
