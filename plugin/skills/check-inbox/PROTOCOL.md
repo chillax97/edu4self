@@ -47,7 +47,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    **The pass rule.** An answer is proof (`evidence: true`) only when it covers every required point
    and contains no factual error. On a task with a key, the checklist decides: `evidence` is `true`
    only when every point is `true` and `errors` is empty, and the check (`edu4self check`) fails on any
-   other pass. Never adjust the checklist to fit the grade you had in mind. If your feedback names a missing required point or an error, it is
+   other pass. After a run started from the dashboard, it overrules such a pass: `evidence` becomes `false`. Never adjust the checklist to fit the grade you had in mind. If your feedback names a missing required point or an error, it is
    not proof, however close it is: say exactly what is missing or wrong, and the learner tries again
    (the task stays open, or a redo comes next). "Mostly right", "a small slip" and "to make it complete,
    add..." all mean not yet. On a task with several questions, the submission is proof only when every

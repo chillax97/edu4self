@@ -50,7 +50,9 @@ For each batch of answers (`--batch`, default 10, about one inbox), `run.py`:
    `evidence: true` is a pass. No such entry is "no grade". Each result also keeps the grade's checklist
    (`points`, `errors`) and `checklist`: the verdict the checklist allows (`pass` when every point is true
    and there are no errors), for comparing with `evidence`. A fenced run has no shell, so the grader can't
-   run the check itself; `runs.jsonl` says whether the check passed after each run (`check_ok`).
+   run the check itself. After each run the runner does what the dashboard does: `edu4self check --overrule`,
+   which turns a pass the checklist doesn't allow into not passed. `runs.jsonl` records whether the check
+   passed (`check_ok`) and how many passes it overruled (`overruled`).
 
 **The keys** come from the question alone, so every answer to a question gets the same key. A made-up
 question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
