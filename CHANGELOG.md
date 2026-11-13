@@ -11,8 +11,10 @@ versions follow [Semantic Versioning](https://semver.org).
   error. A grade that names a missing point or an error is not a pass; the learner is told what to fix and
   tries again. Every new lesson exercise and probe question gets an answer key (required points, wrong answers
   to watch for, what is not required) in `_system/keys/<topic>/<task-id>.md`, written with the page and never
-  served by the dashboard. The grade goes point by point and records the points met in `history[].points`;
-  an older task without a key is graded against its page, and the grade says so. The example topic ships
+  served by the dashboard. The grade goes point by point and records a checklist: `history[].points` (each
+  key point, true or false) and `history[].errors` (wrong claims). The checklist decides the pass, not the
+  grader's overall impression: `edu4self check` fails a pass with a missed point or an error on it.
+  An older task without a key is graded against its page, and the grade says so. The example topic ships
   with its keys. (PROTOCOL.md sections 1, 3, 4 and 7; the `check-inbox`, `write-lesson` and `write-probe` skills.)
 - The honesty test's vault carries answer keys like a real one, and `--set small` grades a fixed set of 30
   answers (`evals/grading/small.txt`) to try a grading change on before the full run.

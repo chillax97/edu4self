@@ -47,7 +47,10 @@ For each batch of answers (`--batch`, default 10, about one inbox), `run.py`:
 3. starts the run the **✦ Grade** button starts: `server.claude_args(server.GRADE_PROMPT, None, "grade")`,
    fenced (no shell, no web), in the vault;
 4. reads each verdict back from `state.json`: the `history` entry whose `inbox` is that answer's id.
-   `evidence: true` is a pass. No such entry is "no grade".
+   `evidence: true` is a pass. No such entry is "no grade". Each result also keeps the grade's checklist
+   (`points`, `errors`) and `checklist`: the verdict the checklist allows (`pass` when every point is true
+   and there are no errors), for comparing with `evidence`. A fenced run has no shell, so the grader can't
+   run the check itself; `runs.jsonl` says whether the check passed after each run (`check_ok`).
 
 **The keys** come from the question alone, so every answer to a question gets the same key. A made-up
 question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
