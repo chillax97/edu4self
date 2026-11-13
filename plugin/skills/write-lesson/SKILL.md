@@ -49,21 +49,27 @@ answers from the dashboard. Reading it is not proof; the graded answers are. Wri
    - **Redo** of a missed lesson: a new short page that re-teaches the gap the grade found, opening
      with a one-screen refresher of the original idea (no exercise answers in it), then new exercises
      on the same skill.
-5. **Keep the cheat sheet.** Add what's worth keeping to `<topic>/reference/NNNN-<slug>.html` and link
+5. **Write the answer key** at `_system/keys/<topic path>/<task-id>.md`, in the format of PROTOCOL.md
+   section 7, now, before any answer exists. One section per exercise: the required points (each one a
+   claim you can check yes or no in an answer, and only what the question asks for), the wrong answers to
+   watch for (the misconceptions the page warns about), and what is not required (examples, extras,
+   other correct routes). For a checker exercise, what the code must do in full, including what
+   `check.py` doesn't test. Never link the key from the page or put its points in a hint.
+6. **Keep the cheat sheet.** Add what's worth keeping to `<topic>/reference/NNNN-<slug>.html` and link
    it both ways.
-6. **Put it on the dashboard.** Add the task to the topic's `queue` in `_system/state.json`
+7. **Put it on the dashboard.** Add the task to the topic's `queue` in `_system/state.json`
    (PROTOCOL.md section 3): `id` like `<topic>-lesson-05`, `kind: "lesson"`, `label`, `title`, a
    one-line `why`, `href: "/vault/<topic>/lessons/<file>"`, `effort` (minutes and exercises) and
    `submit: {type: "answers", intro: "Close the lesson first and answer from memory. Short is fine.",
    fields: [...]}` with one field per exercise, numbered as in the page. Add `exercise` for a checker
    folder, `calculator: true` only when the rules allow one. It is `todo` if it's the learner's next
    unit, otherwise `locked` with an `unlock` line.
-7. **Plan and check.** Update `PLAN.md` (PROTOCOL.md section 5): the unit in its slot, a recall check a
+8. **Plan and check.** Update `PLAN.md` (PROTOCOL.md section 5): the unit in its slot, a recall check a
    few units later, a line under Changes. Set `updated`, then run the check command from the vault's
    `CLAUDE.md`. (From the dashboard panel there is no shell: the server runs the check after you
    reply.)
 
-**Done when** the page opens from its task link, every exercise has a matching `submit` field, the
-check exits 0, and `PLAN.md` shows two units fully written: the learner's current one and the next.
+**Done when** the page opens from its task link, every exercise has a matching `submit` field and a
+section in the answer key, the check exits 0, and `PLAN.md` shows two units fully written: the learner's current one and the next.
 Tell the learner what the lesson is for in one line and give its link,
 `http://127.0.0.1:<port>/#submit=<task-id>`.

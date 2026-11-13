@@ -26,17 +26,23 @@ checkpoint on one passed lesson, a few units after it. Write it for: $ARGUMENTS
    - a last line: submit the answers from the dashboard, then press Grade.
    Words stay plain. A probe is a measurement, so it wears no room jokes; the room's look comes from
    the dashboard.
-4. **Put it on the dashboard.** Add the task to the topic's `queue` in `_system/state.json`
+4. **Write the answer key** at `_system/keys/<topic path>/<task-id>.md`, in the format of PROTOCOL.md
+   section 7, before any answer exists: per question, the required points (each checkable yes or no),
+   the wrong answers that would show the atom is missing, and what is not required. A question with no
+   right answer (habits, goals) says so and lists what a complete answer contains. On a recall check,
+   key the lesson's core idea, not its exercises' wording. Never link the key from the page.
+5. **Put it on the dashboard.** Add the task to the topic's `queue` in `_system/state.json`
    (PROTOCOL.md section 3): `kind: "probe"` or `"checkpoint"`, `label` (`Probe 02`, `Checkpoint M1`,
    `Recall check`), `title`, `why` (what it decides), `href: "/vault/<topic>/probes/<file>"`,
    `effort`, `rules` (one line, the same as the page), and `submit: {type: "answers", intro, fields}`
    with one field per question, numbered as in the page. `calculator: true` only when the rules allow
    one and the question isn't testing mental arithmetic. A recall check stays `locked` with an
    `unlock` line until its slot in the plan comes up.
-5. **Plan and check.** Slot it in `PLAN.md` (PROTOCOL.md section 5: a recall check goes a few units
+6. **Plan and check.** Slot it in `PLAN.md` (PROTOCOL.md section 5: a recall check goes a few units
    after its lesson, never right after), add a line under Changes, set `updated`, and run the check
    command from the vault's `CLAUDE.md`.
 
-**Done when** every question tests exactly one atom, every question has a matching `submit` field,
+**Done when** every question tests exactly one atom, every question has a matching `submit` field
+and a section in the answer key,
 the check exits 0, and the learner has its link, `http://127.0.0.1:<port>/#submit=<task-id>`, with one
 line on why doing it unaided matters.
