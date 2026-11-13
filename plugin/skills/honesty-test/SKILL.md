@@ -18,6 +18,8 @@ or trying to talk the grader into a pass) marked as passed, which turns into fak
    - `made-up`: 80 answers on 8 questions, including injection, copied hints and checker tricks (about $7, 15 min);
    - `saf`: 100 real student answers with expert labels (CC BY 4.0) (about $9, 15 min);
    - `all`: both (about $16, 30 min); `--limit N` grades only the first N of the fixed order.
+   - `small`: 30 fixed answers, mostly the first baseline's mistakes, to try a grading change before a full run
+     (about $3, 10 min). It overstates any gain; only a full run counts.
    Offer the free plumbing check first: `python3 <engine>/evals/grading/run.py --fake` (no Claude, its
    verdicts mean nothing). Start a real run only after the learner says yes to the named set and price.
 
