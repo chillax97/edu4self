@@ -233,6 +233,14 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         results, runs = run.run(items, batch, out, fake=True, log=lambda *a: None)
         return out, results, runs
 
+    def test_checklist_verdict(self):
+        cv = run.checklist_verdict
+        self.assertIsNone(cv([{"evidence": True}]))
+        self.assertEqual(cv([{"points": {"1a": True, "1b": True}, "errors": []}]), "pass")
+        self.assertEqual(cv([{"points": {"1a": True, "1b": False}, "errors": []}]), "not")
+        self.assertEqual(cv([{"points": {"1a": True}, "errors": ["wrong claim"]}]), "not")
+        self.assertEqual(cv([{"points": {"1a": True}}]), "not")         # no errors list: not shown to be clean
+
     def test_grades_through_the_grade_runs_command(self):
         os.environ["FAKE_CLAUDE_PASS_IF"] = "frames never pop"       # in rc02's answer only
         os.environ["FAKE_CLAUDE_PARTIAL_IF"] = "RecursionError"
@@ -241,6 +249,11 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         self.assertEqual(len(runs), 3)          # three answers to the recursion question: three runs
         got = {r["id"]: r["verdict"] for r in results}
         self.assertEqual(got, {"rc02": "pass", "rc04": "partial", "rc07": "fail", "sl02": "fail", "br07": "fail"})
+        # every grade carries the checklist against the key, and the check accepts it
+        self.assertEqual({r["id"]: r["checklist"] for r in results},
+                         {"rc02": "pass", "rc04": "not", "rc07": "not", "sl02": "not", "br07": "not"})
+        self.assertTrue(all(r["check_ok"] for r in runs), runs)
+        self.assertTrue(all(isinstance(r["history"][0]["points"], dict) and r["history"][0]["errors"] == [] for r in results))
         self.assertAlmostEqual(sum(r["cost_usd"] for r in runs), 0.03)
         # the same command the Grade button runs: "check my inbox", no shell, no web
         calls = run.read_jsonl(os.environ["FAKE_CLAUDE_LOG"])

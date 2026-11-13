@@ -349,6 +349,15 @@ def verdict(state, entry_id):
     return ("partial" if PARTIAL_WORDS.search(text) else "fail"), hist
 
 
+def checklist_verdict(hist):
+    """What the checklist allows, whatever `evidence` says: pass when a grade's points are all true and its errors
+    empty, not when any point is false or an error is listed, None when no grade carries a checklist."""
+    lists = [h for h in hist if isinstance(h.get("points"), dict) and h["points"]]
+    if not lists:
+        return None
+    return "pass" if any(all(v is True for v in h["points"].values()) and h.get("errors") == [] for h in lists) else "not"
+
+
 def task_status(state, topic, task_id):
     for t in state.get("topics", []):
         if t.get("id") == topic:
@@ -392,7 +401,9 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
                 results.append({"id": item_id, "source": it["source"], "qid": it["qid"], "category": it["category"],
                                 "gold": it["gold"], "verdict": v, "batch": b, "inbox": entry_id, "task": task_id,
                                 "confidence": confidence_for(item_id), "task_status": task_status(state, topic, task_id),
-                                "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points")} for h in hist],
+                                "checklist": checklist_verdict(hist),
+                                "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors")}
+                                            for h in hist],
                                 "cost_share_usd": share})
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
             with open(os.path.join(bdir, "inbox-map.json"), "w", encoding="utf-8") as fh:

@@ -8,6 +8,7 @@ It also answers the login check (see below).
 """
 import json
 import os
+import re
 import sys
 import time
 
@@ -85,9 +86,16 @@ elif "check my inbox" in prompt:
                 continue
             text = json.dumps(e.get("fields"))
             topic = next(t for t in state["topics"] if t["id"] == e.get("topic"))
-            topic["history"].append({"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
-                                     "title": "Passed." if marker in text else "Partly right." if part in text else "Not yet.",
-                                     "detail": "Graded by the fake tutor.", "evidence": marker in text})
+            h = {"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
+                 "title": "Passed." if marker in text else "Partly right." if part in text else "Not yet.",
+                 "detail": "Graded by the fake tutor.", "evidence": marker in text}
+            key = os.path.join("_system", "keys", topic["path"], "%s.md" % e.get("task"))
+            if os.path.isfile(key):   # the checklist (PROTOCOL section 3): all met on a pass, the first point missed otherwise
+                with open(key, encoding="utf-8") as fh:
+                    pts = re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", fh.read()) or ["1a"]
+                h["points"] = {p: marker in text or i > 0 for i, p in enumerate(pts)}
+                h["errors"] = []
+            topic["history"].append(h)
     state["processed_inbox"] = sorted(set(state.get("processed_inbox", []) + ids))
     state["coach"]["headline"] = "Graded by the fake tutor."
     with open(path, "w", encoding="utf-8") as fh:
