@@ -674,6 +674,53 @@ class ValidatorTest(unittest.TestCase):
         r = self.keyed_grade(evidence=False, points={"1a": True, "1b": False, "2a": True, "2b": True, "3a": True, "3b": True}, errors=["x"])
         self.assertEqual(r.returncode, 0, r.stdout)
 
+    def overrule(self):
+        return subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), self.vault, "--overrule"],
+                              stdout=subprocess.PIPE, encoding="utf-8")
+
+    def test_overrule_turns_a_pass_the_checklist_does_not_allow_into_not_passed(self):
+        task = next(q for q in self.state["topics"][0]["queue"] if q["id"] == "hlw-lesson-01")
+        task["status"] = "done"
+        self.keyed_grade(evidence=True, points={"1a": True, "1b": False, "2a": True, "2b": True, "3a": True, "3b": True},
+                         errors=["says rereading builds storage strength"])
+        r = self.overrule()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("OVERRULED: not passed, Lesson 01: point 1b missed, error: says rereading", r.stdout)
+        with open(self.state_path, encoding="utf-8") as fh:
+            st = json.load(fh)
+        h = [x for x in st["topics"][0]["history"] if x.get("inbox") == "ab12cd34ef"][0]
+        self.assertIs(h["evidence"], False)
+        self.assertIn("(Not passed by the check: point 1b missed", h["detail"])
+        self.assertEqual(next(q for q in st["topics"][0]["queue"] if q["id"] == "hlw-lesson-01")["status"], "todo")
+        self.assertNotIn("OVERRULED", self.overrule().stdout)       # once only: the second run finds nothing to undo
+
+    def test_overrule_undoes_a_keyed_pass_with_no_checklist(self):
+        self.keyed_grade(evidence=True)
+        r = self.overrule()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("no checklist", r.stdout)
+
+    def test_overrule_leaves_allowed_and_unkeyed_passes_alone(self):
+        self.state["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Old", "detail": "d",
+                                                   "evidence": True, "inbox": "0000000000"})      # no key
+        all_met = {"1a": True, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True}
+        self.keyed_grade(evidence=True, points=all_met, errors=[])
+        with open(self.state_path, encoding="utf-8") as fh:
+            before = fh.read()
+        r = self.overrule()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("OVERRULED", r.stdout)
+        with open(self.state_path, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), before)                    # nothing rewritten
+
+    def test_check_without_overrule_never_writes(self):
+        self.keyed_grade(evidence=True, points={"1a": False, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True}, errors=[])
+        with open(self.state_path, encoding="utf-8") as fh:
+            before = fh.read()
+        self.assertEqual(self.check().returncode, 1)
+        with open(self.state_path, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), before)
+
     def test_a_pass_without_a_key_validates_as_before(self):
         self.state["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Old", "detail": "d",
                                                    "evidence": True, "inbox": "0000000000"})      # no such inbox entry
@@ -791,6 +838,27 @@ class ClaudeTest(unittest.TestCase):
         self.assertNotIn("WebFetch", allowed)      # grading: nothing it reads can leave
         self.assertIn("WebFetch", denied)
         self.assertIn("--strict-mcp-config", args)
+
+    def test_grade_run_overrules_a_pass_the_checklist_does_not_allow(self):
+        os.environ.update(FAKE_CLAUDE_PASS_IF="all-points-here", FAKE_CLAUDE_LENIENT="1")
+        try:
+            sub = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "half of it"},
+                   "confidence": "solid"}
+            code, d, _ = self.req("POST", "/api/inbox", sub)
+            self.assertEqual(code, 201, d)
+            self.assertEqual(self.req("POST", "/api/claude", {"kind": "grade"})[0], 202)
+            d = self.wait_idle()
+        finally:
+            for k in ("FAKE_CLAUDE_PASS_IF", "FAKE_CLAUDE_LENIENT"):
+                os.environ.pop(k, None)
+        texts = [e["text"] for e in d["events"] if e["kind"] == "check"]
+        self.assertTrue(any(t.startswith("Not passed: Not yet.: point 1a missed") for t in texts), texts)
+        self.assertEqual(texts[-1], "Check OK", texts)
+        with open(os.path.join(self.vault, "_system", "state.json"), encoding="utf-8") as fh:
+            st = json.load(fh)
+        h = [x for t in st["topics"] for x in t["history"] if x.get("detail", "").startswith("Graded by the fake tutor.")][-1]
+        self.assertIs(h["evidence"], False)
+        self.assertIn("Not passed by the check: point 1a missed", h["detail"])
 
     def test_first_try_grade_is_grade_only_and_fenced(self):
         # nothing to grade yet: refused, nothing runs

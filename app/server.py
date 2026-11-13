@@ -1198,10 +1198,15 @@ def claude_watch(proc, kind):
             LOGIN["at"] = 0.0              # a failed run may mean the login ran out: ask again on the next poll
             why = (result or {}).get("result") or err.strip().splitlines()[-1:] or ["exited with %d" % code]
             claude_event("error", "Claude stopped with a problem: %s" % (why if isinstance(why, str) else why[0]))
-    check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT],
+    # --overrule: a pass the answer key's checklist doesn't allow is turned into not passed before the check,
+    # because a run started here has no shell and can't run the check itself (PROTOCOL section 3)
+    check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT, "--overrule"],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     with CLAUDE_LOCK:
         lines = [l for l in check.stdout.strip().splitlines() if l.strip()]
+        for l in lines:
+            if l.startswith("OVERRULED: "):
+                claude_event("check", "Not passed: " + l[len("OVERRULED: not passed, "):])
         claude_event("check", ("Check OK" if check.returncode == 0 else "Check FAILED: " + " / ".join(lines[-3:])))
         RUN.update(proc=None, busy=False)
     maybe_gift()   # a gift that waited for Claude to be free

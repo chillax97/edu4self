@@ -75,7 +75,8 @@ elif "check my inbox" in prompt:
             if line.strip():
                 ids.append(json.loads(line)["id"])
     # FAKE_CLAUDE_PASS_IF (for the honesty test's runner): also write a history entry per answer, a pass when its
-    # text holds that marker, "Partly right" when it holds FAKE_CLAUDE_PARTIAL_IF, else "Not yet"
+    # text holds that marker, "Partly right" when it holds FAKE_CLAUDE_PARTIAL_IF, else "Not yet".
+    # FAKE_CLAUDE_LENIENT=1 plays the grader we guard against: it passes every answer, whatever its checklist says.
     marker = os.environ.get("FAKE_CLAUDE_PASS_IF")
     if marker:
         part = os.environ.get("FAKE_CLAUDE_PARTIAL_IF") or "\0"
@@ -88,7 +89,7 @@ elif "check my inbox" in prompt:
             topic = next(t for t in state["topics"] if t["id"] == e.get("topic"))
             h = {"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
                  "title": "Passed." if marker in text else "Partly right." if part in text else "Not yet.",
-                 "detail": "Graded by the fake tutor.", "evidence": marker in text}
+                 "detail": "Graded by the fake tutor.", "evidence": marker in text or bool(os.environ.get("FAKE_CLAUDE_LENIENT"))}
             key = os.path.join("_system", "keys", topic["path"], "%s.md" % e.get("task"))
             if os.path.isfile(key):   # the checklist (PROTOCOL section 3): all met on a pass, the first point missed otherwise
                 with open(key, encoding="utf-8") as fh:

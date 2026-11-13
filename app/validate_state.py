@@ -2,6 +2,8 @@
 """Validate a vault's _system/state.json before the dashboard reads it. Exit 0 = valid.
 
 Run after every edit to state.json:  edu4self check   (or: python3 validate_state.py VAULT)
+With --overrule (the dashboard runs this after each Claude run): a pass the answer key's checklist doesn't allow
+is set to not passed in state.json, with the reason added to its detail, before the check runs.
 """
 import json, os, re, sys
 
@@ -10,7 +12,9 @@ if os.name == "nt":      # a pipe or file on Windows defaults to the legacy code
         if _s is not None and hasattr(_s, "reconfigure"):
             _s.reconfigure(encoding="utf-8", errors="replace")
 
-ARG = os.path.abspath(os.path.expanduser(sys.argv[1] if len(sys.argv) > 1 else os.environ.get("EDU4SELF_VAULT", ".")))
+OVERRULE = "--overrule" in sys.argv[1:]
+_args = [a for a in sys.argv[1:] if a != "--overrule"]
+ARG = os.path.abspath(os.path.expanduser(_args[0] if _args else os.environ.get("EDU4SELF_VAULT", ".")))
 # accept the vault folder or the state.json file itself
 ROOT = os.path.dirname(os.path.dirname(ARG)) if ARG.endswith(".json") else ARG
 PATH = ARG if ARG.endswith(".json") else os.path.join(ROOT, "_system", "state.json")
@@ -106,6 +110,46 @@ def check_grade(topic, h):
                     "set evidence to false" % (name, " and ".join(
                         x for x in ("misses " + ", ".join(missed) if missed else "",
                                     "lists errors (%s)" % "; ".join(errs) if errs else "") if x)))
+
+
+def checklist_blocks(h, want):
+    """Why the checklist doesn't allow this pass, in a few words, or None when it does."""
+    pts, errs = h.get("points"), h.get("errors")
+    if not isinstance(pts, dict) or not isinstance(errs, list):
+        return "no checklist"
+    missed = sorted(p for p, v in pts.items() if v is False) + [p for p in (want or []) if p not in pts]
+    reasons = ["point%s %s missed" % ("s" if len(missed) > 1 else "", ", ".join(missed))] if missed else []
+    if errs:
+        reasons.append("error%s: %s" % ("s" if len(errs) > 1 else "", "; ".join(str(x) for x in errs)))
+    return ", ".join(reasons) or None
+
+
+if OVERRULE:
+    # The checklist decides the pass, not the grader (PROTOCOL section 3): undo a pass it doesn't allow.
+    overruled = []
+    for t in s.get("topics", []):
+        for h in t.get("history", []) if isinstance(t, dict) else []:
+            if not isinstance(h, dict) or h.get("evidence") is not True:
+                continue
+            want = key_points(t, h)
+            why = checklist_blocks(h, want) if want is not None else None
+            if not why:
+                continue
+            h["evidence"] = False
+            h["detail"] = ("%s (Not passed by the check: %s.)" % (h.get("detail") or "", why)).strip()
+            e = _inbox.get(h.get("inbox")) or {}
+            for task in t.get("queue", []):
+                if task.get("id") == e.get("task") and task.get("status") == "done":
+                    task["status"] = "todo"
+            overruled.append("%s: %s" % (h.get("title"), why))
+    if overruled:
+        tmp = PATH + ".overrule.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(s, fh, indent=1, ensure_ascii=False)
+            fh.write("\n")
+        os.replace(tmp, PATH)
+        for o in overruled:
+            print("OVERRULED: not passed, " + o)
 
 
 ids = set()

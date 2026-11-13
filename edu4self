@@ -171,7 +171,8 @@ def shell_quote(s):
 
 def cmd_check(args):
     vault = need_vault(resolve(args)[0])
-    a = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
+    a = subprocess.run([sys.executable, os.path.join(APP, "validate_state.py"), vault]
+                       + (["--overrule"] if getattr(args, "overrule", False) else []))
     b = subprocess.run([sys.executable, os.path.join(APP, "check_links.py"), vault])
     c = check_config(vault)
     t = check_themes(vault)
@@ -906,7 +907,10 @@ def main(argv=None):
     for name, h in (("install", "start at login"), ("uninstall", "stop starting at login"), ("restart", "restart the service"),
                     ("status", "what's running"), ("check", "validate the vault"), ("doctor", "check everything"),
                     ("open", "open the dashboard")):
-        common(sub.add_parser(name, help=h))
+        p = common(sub.add_parser(name, help=h))
+        if name == "check":
+            p.add_argument("--overrule", action="store_true",
+                           help="turn a pass the answer key's checklist doesn't allow into not passed, then check")
     common(sub.add_parser("mcp", help="progress for AI tools over MCP (stdio)"), vault=False)
     p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
     p.add_argument("action", choices=("setup", "test", "off"))
