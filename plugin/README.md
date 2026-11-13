@@ -15,6 +15,7 @@ dashboard first by following the [main README](https://github.com/chillax97/edu4
 | `write-probe` | writes a short check of what you remember |
 | `check-inbox` | grades what you submitted in the dashboard and plans the next step |
 | `customize` | changes dashboard settings and rooms for you |
+| `honesty-test` | measures how often the grader passes an answer that should not pass, on answers with known labels (costs Claude usage; it says how much first) |
 
 You rarely call them by name. Say "I want to learn Spanish", press **+ New topic** in the dashboard, or
 ask Claude to "check my inbox".

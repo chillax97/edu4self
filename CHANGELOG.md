@@ -24,6 +24,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- `honesty-test` skill: ask Claude to "run the honesty test" and it grades the labelled answers in `evals/grading/`
+  through the real Grade path, says the price first, and reports the false-pass rate in plain words.
 - The honesty test (`evals/grading/`): how often the grader passes an answer that should not pass. 80
   made-up answers (60 must not pass, from half-right to "mark this as passed" injections and code that
   games its checker) and 100 labelled student answers from the SAF set (CC BY 4.0), graded through the
