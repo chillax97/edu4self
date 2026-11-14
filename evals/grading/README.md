@@ -84,9 +84,10 @@ graded again and its row replaced, so each id appears once; the money its failed
 before its result rows, so a crash never hides money spent. A torn last line is dropped; a damaged line in the
 middle is an error with its line number, and the file is not touched.
 
-The first run writes `meta.json` (set, seed, batch size, a hash of the case list, the engine commit for the record).
-`--resume` refuses with a plain message if the set, seed, batch size or case list differ (so does a different
-`--limit`). Resume is a flag, not automatic, so a second run into a used folder without `--resume` stops instead
+The first run writes `meta.json` (set, seed, batch size, a hash of the case list, a hash of the grading inputs, the engine commit for the record).
+`--resume` refuses with a plain message if the set, seed, batch size, case list or grading inputs differ (so does a
+different `--limit`). The grading inputs are every file under `plugin/`, the prompt the Grade button sends, and the
+code in `run.py` that writes the keys and lessons; changing any of them mid-run would mix two graders. Resume is a flag, not automatic, so a second run into a used folder without `--resume` stops instead
 of mixing two runs (for example one made before and one after a grading change).
 
 Without `--fake` or `--yes` it only says how many Claude runs it would start. Every real run prints its

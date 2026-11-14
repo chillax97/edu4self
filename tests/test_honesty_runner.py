@@ -145,6 +145,24 @@ class RunnerSaves(unittest.TestCase):
         self.assertIn("set", str(c.exception))
         self.assertEqual(len(self.ids_on_disk()), 3)
 
+    def test_resume_is_refused_when_the_grading_inputs_changed(self):
+        self.go(items=self.items[:3])
+        with mock.patch.object(run, "grading_hash", return_value="changed"):
+            with self.assertRaises(SystemExit) as c:
+                self.go(items=self.items[:3], resume=True)
+        self.assertIn("grading", str(c.exception))
+        self.assertEqual(len(self.ids_on_disk()), 3)
+
+    def test_the_grading_hash_follows_the_plugin_files(self):
+        before = run.grading_hash()
+        self.assertEqual(before, run.grading_hash())
+        copy = os.path.join(self.tmp, "eng")
+        shutil.copytree(run.ENGINE, copy, ignore=shutil.ignore_patterns(*run.NOT_COPIED))
+        self.assertEqual(run.grading_hash(copy), before)
+        with open(os.path.join(copy, "plugin", "skills", "check-inbox", "PROTOCOL.md"), "a", encoding="utf-8") as fh:
+            fh.write("\nnew rule\n")
+        self.assertNotEqual(run.grading_hash(copy), before)
+
     def test_resume_with_a_different_case_list_is_refused(self):
         self.go(items=self.items[:3], meta={"set": "made-up"})
         with self.assertRaises(SystemExit) as c:

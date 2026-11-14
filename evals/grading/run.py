@@ -405,6 +405,26 @@ def read_done(path):
     return rows
 
 
+def grading_hash(engine=ENGINE):
+    """A hash of everything that steers the grade: every file under plugin/ (the skills and PROTOCOL.md the run
+    loads), the prompt the Grade button sends, and the code here that writes the answer keys and lessons the
+    grader reads. A change to any of them mid-run would mix two graders in one result."""
+    import inspect
+    h = hashlib.sha256()
+    pdir = os.path.join(engine, "plugin")
+    for root, dirs, files in os.walk(pdir):
+        dirs[:] = sorted(d for d in dirs if d != "__pycache__")
+        for f in sorted(files):
+            path = os.path.join(root, f)
+            h.update(os.path.relpath(path, pdir).encode("utf-8") + b"\0")
+            with open(path, "rb") as fh:
+                h.update(fh.read() + b"\0")
+    h.update(server_from(engine).GRADE_PROMPT.encode("utf-8") + b"\0")
+    for fn in (key_text, lesson_html):
+        h.update(inspect.getsource(fn).encode("utf-8") + b"\0")
+    return h.hexdigest()[:16]
+
+
 def _engine_commit():
     try:
         r = subprocess.run(["git", "-C", ENGINE, "rev-parse", "--short", "HEAD"], stdout=subprocess.PIPE,
@@ -427,11 +447,12 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     mpath = os.path.join(out, "meta.json")
     now = {"set": (meta or {}).get("set"), "seed": (meta or {}).get("seed"), "batch": batch_size,
            "cases": hashlib.sha256("\n".join(it["id"] for it in items).encode("utf-8")).hexdigest()[:16],
-           "n_cases": len(items)}
+           "n_cases": len(items), "grading": grading_hash()}
     if resume and os.path.isfile(mpath):
         saved = load_json(mpath)
         diff = ["%s (saved %s, now %s)" % (k, saved.get(k), now[k])
-                for k in ("set", "seed", "batch", "cases") if saved.get(k) != now[k]]
+                for k in ("set", "seed", "batch", "cases", "grading")
+                if k in saved and saved.get(k) != now[k]]
         if diff:
             raise SystemExit("cannot resume into %s: it was started with different settings: %s. "
                              "Use the same options, or a new --out." % (out, "; ".join(diff)))
