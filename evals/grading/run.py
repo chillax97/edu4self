@@ -440,6 +440,8 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
             summary["check_ok"], text = check(engine, vault, env, overrule=True)
             summary["overruled"] = text.count("OVERRULED: ")
             summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch])
+            append_jsonl(upath, summary)       # the cost row first: a crash below never hides money spent
+            runs.append(summary)
             state = load_json(os.path.join(vault, "_system", "state.json"))
             share = summary["cost_usd"] / len(batch) if isinstance(summary["cost_usd"], (int, float)) else None
             for entry_id, item_id in ids.items():
@@ -455,8 +457,6 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
                        "cost_share_usd": share}
                 append_jsonl(rpath, row)       # saved now, not at the end
                 results.append(row)
-            append_jsonl(upath, summary)
-            runs.append(summary)
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
             with open(os.path.join(bdir, "inbox-map.json"), "w", encoding="utf-8") as fh:
                 json.dump(ids, fh, indent=1)
