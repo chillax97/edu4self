@@ -100,20 +100,23 @@ export async function launch() {
 // Pin the page clock to `hour`:30 today (local time); it keeps ticking from there. Some of the bar's lines depend on
 // the time of day (the volition voice, "Willpower"/"Grit", speaks only 5-9 and after 21), so a test that expects
 // one must not depend on when it runs. Call before the first goto. Only the page clock moves, not the server's.
-export async function pinClock(page, hour) {
-  await page.evaluateOnNewDocument((h) => {
-    const Real = Date, t = new Real(); t.setHours(h, 30, 0, 0);
+// A third argument "YYYY-MM-DD" pins the day as well (local time), for a test that depends on the weekday.
+export async function pinClock(page, hour, ymd) {
+  await page.evaluateOnNewDocument((h, day) => {
+    const Real = Date, t = new Real();
+    if (day) { const [y, m, d] = day.split("-").map(Number); t.setFullYear(y, m - 1, d); }
+    t.setHours(h, 30, 0, 0);
     const off = t.getTime() - Real.now();
     class FDate extends Real {
       constructor(...a) { if (a.length) super(...a); else super(Real.now() + off); }
       static now() { return Real.now() + off; }
     }
     window.Date = FDate;
-  }, hour);
+  }, hour, ymd);
 }
 
 // A page that records console errors and uncaught exceptions.
-export async function openPage(browser, url, { width = 1440, height = 1000, view, block = false, hour } = {}) {
+export async function openPage(browser, url, { width = 1440, height = 1000, view, block = false, hour, date } = {}) {
   const page = await browser.newPage();
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(String(e)));
@@ -125,7 +128,7 @@ export async function openPage(browser, url, { width = 1440, height = 1000, view
   // the machine's own motion setting must not decide what a test sees (Windows CI runners ask for reduced
   // motion, which stops every animation, the neon blink included); E2E_MOTION=reduce runs a file the other way
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: process.env.E2E_MOTION || "no-preference" }]);
-  if (hour !== undefined) await pinClock(page, hour);
+  if (hour !== undefined) await pinClock(page, hour, date);
   await page.evaluateOnNewDocument((v, blk) => {
     localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1");
     if (v) localStorage.setItem("edu.view.v1", v);
