@@ -11,6 +11,10 @@ versions follow [Semantic Versioning](https://semver.org).
   (`{"A": [1, 2]}`, region code: level before and after) and `edu4self check --overrule` restores each "before"
   unless a later grade has moved the level, which it leaves alone and says so. A grade without `levels` (an older
   one) changes no level. (PROTOCOL.md sections 3 and 4 and the data format; the `check-inbox` skill.)
+- The honesty test no longer loses a paid run to a crash or Ctrl-C: each answer's result is saved as soon as its
+  batch is graded, and `run.py --out <folder> --resume` grades only the answers not yet saved or saved without a
+  grade. A `meta.json` in the folder (set, seed, batch size, case list, a hash of the grading inputs) makes a
+  resume with different settings, or after the plugin or grading prompt changed, refuse.
 
 ## 1.5.0 - 2026-11-14
 
