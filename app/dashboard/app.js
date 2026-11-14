@@ -1759,6 +1759,43 @@
     return shortDate(new Date(h.date + "T12:00:00")) + ": " + h.title + ". " + tail;
   }
 
+  // The streak rule, in one place (the bartender's "N days in a row" and the chalk board both use it).
+  // byDay: {"YYYY-MM-DD": truthy} for every day with a finished block. A day with a block counts. A rest day
+  // (Settings: streak.rest_days) with no block neither breaks the run nor adds to it. Today counts once you study;
+  // until then it is skipped, so the run counts back from yesterday. Returns the run now, the best run, and
+  // the run that ends at the latest day with a block.
+  var WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  function isRestDay(d) {
+    var r = (cfg().streak && cfg().streak.rest_days) || [];
+    return r.indexOf(WEEKDAYS[d.getDay()]) >= 0;
+  }
+  function streakOf(byDay) {
+    var keys = Object.keys(byDay).sort(), today = dayKey(new Date());
+    if (!keys.length) return { now: 0, best: 0, last: 0 };
+    var now = 0, d = new Date();
+    for (var guard = 0; guard < 4000 && dayKey(d) >= keys[0]; guard++) {   // never past the first block
+      var k = dayKey(d);
+      if (byDay[k]) now++;
+      else if (k !== today && !isRestDay(d)) break;
+      d.setDate(d.getDate() - 1);
+    }
+    var best = 0, last = 0, run = 0, prev = null;
+    keys.forEach(function (k) {
+      var joined = false;
+      if (prev) {   // joined when every day between the two is a rest day (none between: the next day)
+        joined = true;
+        for (var g = new Date(prev.getTime()); ; ) {
+          g.setDate(g.getDate() + 1);
+          if (dayKey(g) >= k) break;
+          if (!isRestDay(g)) { joined = false; break; }
+        }
+      }
+      run = joined ? run + 1 : 1;
+      best = Math.max(best, run); last = run; prev = new Date(k + "T12:00:00");
+    });
+    return { now: now, best: best, last: last };
+  }
+
   // What your blocks say about tonight: per-day minutes, streak, record, last stop, time on the hero task
   function blockStats(hero) {
     var byDay = {}, today = dayKey(new Date()), total = 0, types = {}, heroMins = 0, lastEnd = 0, first = null;
@@ -1771,9 +1808,7 @@
       lastEnd = Math.max(lastEnd, end.getTime());
       if (!first || b.started < first) first = b.started;
     });
-    var streak = 0, d = new Date();
-    if (!byDay[today]) d.setDate(d.getDate() - 1);
-    while (byDay[dayKey(d)]) { streak++; d.setDate(d.getDate() - 1); }
+    var streak = streakOf(byDay).now;
     var best = 0;
     Object.keys(byDay).forEach(function (k) { if (k !== today) best = Math.max(best, byDay[k]); });
     return { todayMins: byDay[today] || 0, best: best, streak: streak, total: total, types: types, heroMins: heroMins, lastEnd: lastEnd, first: first };
@@ -2315,19 +2350,11 @@
 
   // ------------------------------------------------ the streak: days in a row with at least one finished block
   // Today counts once you study; until then it counts back from yesterday, so it never looks broken by day.
+  // Rest days are handled by streakOf (above blockStats).
   function streakRuns() {
-    var byDay = {}, today = dayKey(new Date());
+    var byDay = {};
     allBlocks().forEach(function (b) { byDay[dayKey(new Date(b.ts || b.started))] = 1; });
-    var n = 0, d = new Date();
-    if (!byDay[today]) d.setDate(d.getDate() - 1);
-    while (byDay[dayKey(d)]) { n++; d.setDate(d.getDate() - 1); }
-    var best = 0, last = 0, run = 0, prev = null;
-    Object.keys(byDay).sort().forEach(function (k) {
-      var day = new Date(k + "T12:00:00");
-      run = prev && Math.round((day - prev) / 864e5) === 1 ? run + 1 : 1;
-      best = Math.max(best, run); last = run; prev = day;
-    });
-    return { now: n, best: best, last: last };
+    return streakOf(byDay);
   }
 
   // The chalk board: only the current group of five is drawn, plus one small finished group, so it reads
@@ -3195,6 +3222,11 @@
         fieldRow("Days a week", '<input type="number" id="set-week" min="1" max="7" value="' + c.goals.week_days + '">') +
       "</div>" +
 
+      '<div class="set-field" id="set-rest"><span class="field-label">Rest days</span><div class="set-seg" role="group" aria-label="Rest days">' +
+        [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["thu", "Thu"], ["fri", "Fri"], ["sat", "Sat"], ["sun", "Sun"]].map(function (o) {
+          return '<label><input type="checkbox" name="set-rest" value="' + o[0] + '"' + (((c.streak || {}).rest_days || []).indexOf(o[0]) >= 0 ? " checked" : "") + "> " + o[1] + "</label>";
+        }).join("") + '</div><small class="set-hint">Days you rest. Resting never breaks your streak of days in a row, and adds nothing to it. A block finished on a rest day still counts as a normal day. None ticked: every day counts.</small></div>' +
+
       '<label class="set-check"><input type="checkbox" id="set-gifts"' + (c.gifts === true ? " checked" : "") + "> Gifts: when you win a week or finish a die, Claude makes you something from what you proved (one short run on your Claude account)</label>" +
 
       '<h3 id="set-reminders">Reminders</h3>' +
@@ -3288,6 +3320,7 @@
     c.reminders = { mail: $("#set-rem-mail").checked };
     c.goals.day_minutes = Math.round(Number($("#set-day").value));
     c.goals.week_days = Math.round(Number($("#set-week").value));
+    c.streak = { rest_days: [].map.call(document.querySelectorAll('input[name="set-rest"]:checked'), function (i) { return i.value; }) };
     c.blocks.presets = [].map.call(document.querySelectorAll("[data-preset]"), function (i) { return Math.round(Number(i.value)); }).filter(function (v) { return v > 0; });
     document.querySelectorAll(".set-kind").forEach(function (row) {
       var k = c.blocks.kinds[Number(row.dataset.kind)];
