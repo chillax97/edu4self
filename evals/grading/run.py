@@ -387,11 +387,15 @@ def read_done(path):
         return rows
     with open(path, "rb") as fh:
         data = fh.read()
-    for line in data.splitlines(keepends=True):
+    lines = data.splitlines(keepends=True)
+    for n, line in enumerate(lines, 1):
         try:
             if line.strip():
                 rows.append(json.loads(line))
         except ValueError:
+            if any(l.strip() for l in lines[n:]):      # not the last line: the file is damaged, never cut it
+                raise SystemExit("%s: line %d is not valid JSON and lines follow it; fix or remove it by hand"
+                                 % (path, n))
             break
         good += len(line)
     if good < len(data):
