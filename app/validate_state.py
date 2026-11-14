@@ -3,7 +3,8 @@
 
 Run after every edit to state.json:  edu4self check   (or: python3 validate_state.py VAULT)
 With --overrule (the dashboard runs this after each Claude run): a pass the answer key's checklist doesn't allow
-is set to not passed in state.json, with the reason added to its detail, before the check runs.
+is set to not passed in state.json, with the reason added to its detail, before the check runs. The region levels
+that pass raised (history[].levels) go back to their value before it, unless a later grade has moved them.
 """
 import json, os, re, sys
 
@@ -78,8 +79,22 @@ def key_points(topic, h):
     return re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", text)
 
 
+def check_levels(topic, h):
+    """history[].levels: {region code: [level before, level after]} for each region this grade moved."""
+    lv = h.get("levels")
+    codes = {r.get("code") for r in topic.get("regions", []) if isinstance(r, dict)}
+    ok = isinstance(lv, dict) and lv and all(
+        k in codes and isinstance(v, list) and len(v) == 2
+        and all(type(x) is int and 0 <= x <= 4 for x in v) for k, v in lv.items())
+    if not ok:
+        err('history %r: levels must map region codes of this topic to [level before, level after] (0 to 4 each), '
+            'e.g. {"A": [1, 2]}' % h.get("title"))
+
+
 def check_grade(topic, h):
     name = h.get("title")
+    if "levels" in h:
+        check_levels(topic, h)
     pts, errs = h.get("points"), h.get("errors")
     if "points" in h and (not isinstance(pts, dict) or not pts or not all(
             isinstance(k, str) and POINT_ID.match(k) and isinstance(v, bool) for k, v in pts.items())):
@@ -136,6 +151,18 @@ if OVERRULE:
             if not why:
                 continue
             h["evidence"] = False
+            lv = h.get("levels")
+            if isinstance(lv, dict):       # undo the raise this pass made, unless a later grade has moved the level since
+                regions = {r.get("code"): r for r in t.get("regions", []) if isinstance(r, dict)}
+                for code, pair in sorted(lv.items()):
+                    r = regions.get(code)
+                    if r is None or not isinstance(pair, list) or len(pair) != 2 or pair[0] == pair[1]:
+                        continue
+                    if r.get("level") == pair[1]:
+                        r["level"] = pair[0]
+                        why += ", level %s back to %s" % (code, pair[0])
+                    else:
+                        why += ", level %s left at %s (it moved on since this pass)" % (code, r.get("level"))
             h["detail"] = ("%s (Not passed by the check: %s.)" % (h.get("detail") or "", why)).strip()
             e = _inbox.get(h.get("inbox")) or {}
             for task in t.get("queue", []):
