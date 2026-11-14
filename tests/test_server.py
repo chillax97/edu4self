@@ -713,6 +713,64 @@ class ValidatorTest(unittest.TestCase):
         with open(self.state_path, encoding="utf-8") as fh:
             self.assertEqual(fh.read(), before)                    # nothing rewritten
 
+    BAD_POINTS = {"1a": True, "1b": False, "2a": True, "2b": True, "3a": True, "3b": True}
+    ALL_MET = {"1a": True, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True}
+
+    def region_level(self, code="A"):
+        with open(self.state_path, encoding="utf-8") as fh:
+            st = json.load(fh)
+        return next(r["level"] for r in st["topics"][0]["regions"] if r["code"] == code)
+
+    def set_region(self, level, code="A"):
+        next(r for r in self.state["topics"][0]["regions"] if r["code"] == code)["level"] = level
+
+    def test_overrule_puts_back_the_level_the_overruled_pass_raised(self):
+        self.set_region(2)
+        self.keyed_grade(evidence=True, points=self.BAD_POINTS, errors=[], levels={"A": [1, 2]})
+        r = self.overrule()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertEqual(self.region_level(), 1)
+        self.assertIn("level A back to 1", r.stdout)
+        with open(self.state_path, encoding="utf-8") as fh:
+            h = [x for x in json.load(fh)["topics"][0]["history"] if x.get("inbox") == "ab12cd34ef"][0]
+        self.assertIs(h["evidence"], False)
+        self.assertIn("level A back to 1", h["detail"])
+
+    def test_overrule_leaves_a_level_a_later_pass_moved(self):
+        self.set_region(3)                                  # raised again since: 2 is no longer the current level
+        self.keyed_grade(evidence=True, points=self.BAD_POINTS, errors=[], levels={"A": [1, 2]})
+        r = self.overrule()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertEqual(self.region_level(), 3)
+        self.assertIn("level A left at 3", r.stdout)
+        with open(self.state_path, encoding="utf-8") as fh:
+            h = [x for x in json.load(fh)["topics"][0]["history"] if x.get("inbox") == "ab12cd34ef"][0]
+        self.assertIn("level A left at 3", h["detail"])
+
+    def test_overrule_keeps_the_level_an_allowed_pass_raised(self):
+        self.set_region(2)
+        self.keyed_grade(evidence=True, points=self.ALL_MET, errors=[], levels={"A": [1, 2]})
+        r = self.overrule()
+        self.assertNotIn("OVERRULED", r.stdout)
+        self.assertEqual(self.region_level(), 2)
+
+    def test_overrule_leaves_levels_alone_on_an_old_pass_without_levels(self):
+        self.set_region(2)
+        self.keyed_grade(evidence=True, points=self.BAD_POINTS, errors=[])
+        r = self.overrule()
+        self.assertIn("OVERRULED", r.stdout)
+        self.assertEqual(self.region_level(), 2)
+
+    def test_levels_must_name_the_topics_regions_with_levels_0_to_4(self):
+        h = self.state["topics"][0]["history"][0]
+        h["levels"] = {"A": [1, 2]}
+        self.assertEqual(self.check(self.state).returncode, 0)
+        for bad in ({"Z": [1, 2]}, {"A": [1]}, {"A": [1, 5]}, {"A": ["1", 2]}, {"A": [True, 2]}, {}, [["A", 1, 2]]):
+            h["levels"] = bad
+            r = self.check(self.state)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("levels", r.stdout)
+
     def test_check_without_overrule_never_writes(self):
         self.keyed_grade(evidence=True, points={"1a": False, "1b": True, "2a": True, "2b": True, "3a": True, "3b": True}, errors=[])
         with open(self.state_path, encoding="utf-8") as fh:
