@@ -2,8 +2,7 @@
  "net01": {
   "required": [
    "Recommends one procedure from the sensible ones: Token Ring, p-persistent CSMA, non-persistent CSMA, CSMA/CD or TDMA with reservation (any one of these is enough).",
-   "First reason: a property of the chosen procedure that fits this scenario (high channel load, tight budget, 20 systems, expandable), stated with what makes it an advantage, e.g. scalability, extendability, cost, throughput under load, low hardware needs. A bare property name without its link to the scenario does not count.",
-   "Second reason: a different advantage, also tied to the scenario and to the chosen procedure.",
+   "One advantage of the chosen procedure that fits this scenario (high channel load, tight budget, 20 systems, expandable), stated with what makes it an advantage, e.g. scalability, extendability, cost, throughput under load, low hardware needs.",
    "One weakness of the chosen procedure that is really true of it (e.g. waiting time, overhead, complexity, hardware needs, constraints), with what makes it a weakness."
   ],
   "wrong": [
@@ -12,6 +11,7 @@
   ],
   "not_required": [
    "Which of the sensible procedures is picked, and which particular properties from the lecture's list are used.",
+   "A second reason: the question asks for two, but the lecturer's reference credits one advantage, so a second is not required.",
    "Numbers about the 20 systems."
   ]
  },
