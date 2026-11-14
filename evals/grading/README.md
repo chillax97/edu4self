@@ -56,9 +56,12 @@ For each batch of answers (`--batch`, default 10, about one inbox), `run.py`:
 
 **The keys** come from the question alone, so every answer to a question gets the same key. A made-up
 question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
-reference answer. A SAF key quotes the lecturer's notes (the same text as the lesson) under the general
-rule: every part the question asks for is required, one of several alternatives is enough, examples and
-extras are not required. SAF keys therefore don't list misconceptions, as a real key would.
+reference answer. A SAF question the small set uses has a point-listed key in `saf/keys.json`, written from the
+question and the lecturer's reference alone: required points (a reason or mechanism the reference gives is its
+own point, so a right claim with no explanation misses it), wrong answers, and what is not required. Any other
+SAF question's key quotes the lecturer's notes (the same text as the lesson) under the general rule: every part
+the question asks for is required, one of several alternatives is enough, examples and extras are not required,
+and it lists no misconceptions.
 
 The grading run may read the engine folder, and this repo holds the labels. So the runner grades from a
 copy of the engine without `evals/` and `tests/`, in a temp folder with a plain name. Labels, categories,

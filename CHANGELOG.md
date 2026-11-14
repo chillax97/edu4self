@@ -11,6 +11,11 @@ versions follow [Semantic Versioning](https://semver.org).
   keeps a rest from breaking the streak. A rest day with no block is skipped, one with a block counts as a
   normal day. The chalk board (current run, best) and the bartender's "days in a row" lines use one rule.
   See [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md).
+- The honesty test's SAF questions in the small set now have point-listed answer keys (`evals/grading/saf/keys.json`):
+  required points (with the lecturer's reason or mechanism as its own point), wrong answers, and what is not required,
+  written from the question and the reference answer alone. `run.py` uses one when a question has it and keeps the
+  lecturer's notes as the key otherwise. The keys are part of the grading-inputs hash, so a run made before this
+  cannot be resumed and a new run is needed.
 
 ## 1.5.1 - 2026-11-14
 
