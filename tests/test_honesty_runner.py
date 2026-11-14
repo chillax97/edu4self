@@ -196,7 +196,7 @@ class EngineCopy(unittest.TestCase):
         subprocess.run(git + ["init", "-q"], check=True)
         subprocess.run(git + ["add", "app", "plugin", "evals", ".gitignore"], check=True)
         dest = run.copy_engine(os.path.join(tmp, "copy"), src=repo)
-        copied = sorted(os.path.relpath(os.path.join(r, f), dest) for r, _, fs in os.walk(dest) for f in fs)
+        copied = sorted(os.path.relpath(os.path.join(r, f), dest).replace(os.sep, "/") for r, _, fs in os.walk(dest) for f in fs)
         self.assertEqual(copied, [".gitignore", "app/server.py", "plugin/a.md"])   # no evals, ignored or untracked
 
 
