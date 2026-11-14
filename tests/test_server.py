@@ -225,6 +225,20 @@ class ServerTest(unittest.TestCase):
                 names(bad)
             self.assertIn(msg, str(cm.exception))
 
+    def test_rest_days_default_to_none_and_are_validated(self):
+        self.assertEqual(server.clean_config({})["streak"], {"rest_days": []}, "off unless chosen")
+        self.assertEqual(server.clean_config({"streak": {"rest_days": ["sun", "SAT", " sat "]}})["streak"],
+                         {"rest_days": ["sat", "sun"]}, "lowercased, deduplicated, in week order")
+        self.assertEqual(len(server.clean_config({"streak": {"rest_days": list(server.WEEKDAYS[:6])}})["streak"]["rest_days"]), 6)
+        for bad, msg in (("sat", "list"), (["saturday"], "mon, tue"), ([6], "mon, tue"), ([None], "mon, tue"),
+                         (list(server.WEEKDAYS), "at least one")):
+            with self.assertRaises(ValueError, msg=bad) as cm:
+                server.clean_config({"streak": {"rest_days": bad}})
+            self.assertIn(msg, str(cm.exception))
+        code, d, _ = self.req("POST", "/api/config", {"config": {"streak": {"rest_days": ["funday"]}}})
+        self.assertEqual(code, 400)
+        self.assertIn("rest days", d["error"])
+
     def test_room_sounds_are_off_until_turned_on(self):
         self.assertIs(server.clean_config({})["room_sounds"], False)
         self.assertIs(server.clean_config({"room_sounds": True})["room_sounds"], True)
@@ -235,6 +249,7 @@ class ServerTest(unittest.TestCase):
                  "reminders": {"notify": True, "mail": False}, "goals": {"day_minutes": 45, "week_days": 6},
                  "blocks": {"presets": [15, 40], "kinds": [{"id": "maths", "label": "Maths", "color": "amber", "minutes": 30}]},
                  "water": {"every": 30}, "obsidian": {"enabled": True, "vault": "notes"},
+                 "streak": {"rest_days": ["sat", "sun"]},
                  "bar": {"names": [["Ada's", "open late"], ["The Night Shift", ["line one", "line two"]]], "voices": {}, "gags": False, "lines": []},
                  "music": {"source": "scape", "scape": "rain", "stream": {"url": "", "name": ""}, "file": "",
                            "title": "", "subtitle": "", "autoplay": True}}
