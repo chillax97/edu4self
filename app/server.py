@@ -109,6 +109,7 @@ DEFAULT_CONFIG = {
             {"id": "play", "label": "Play", "color": "checkpoint"},
         ],
     },
+    "streak": {"rest_days": []},    # weekdays ("mon".."sun") that neither break nor add to the streak; a block there still counts
     "water": {"every": 15},         # minutes between glasses during a block: 15, 30 or 0 (off)
     "obsidian": {"enabled": False, "vault": ""},
     "bar": {
@@ -127,6 +128,7 @@ DEFAULT_CONFIG = {
     "music": {"source": "scape", "scape": "night", "stream": {"url": "", "name": ""},
               "files": [], "file": "", "title": "", "subtitle": "", "autoplay": False},
 }
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 MUSIC_SOURCES = ("scape", "radio", "file")
 SCAPES = ("night", "rain", "noise")
 VOICE_IDS = {"bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia",
@@ -190,6 +192,20 @@ def _int(v, lo, hi, what):
     return v
 
 
+def _rest_days(v):
+    if not isinstance(v, list):
+        raise ValueError("rest days must be a list of weekdays: %s" % ", ".join(WEEKDAYS))
+    days = set()
+    for d in v:
+        d = d.strip().lower() if isinstance(d, str) else d
+        if d not in WEEKDAYS:
+            raise ValueError("rest days are weekdays written %s" % ", ".join(WEEKDAYS))
+        days.add(d)
+    if len(days) == len(WEEKDAYS):
+        raise ValueError("rest days: leave at least one day that counts")
+    return [d for d in WEEKDAYS if d in days]
+
+
 def clean_config(body):
     """Validate a full config object. Raises ValueError with a message a person can act on."""
     if not isinstance(body, dict):
@@ -206,6 +222,7 @@ def clean_config(body):
         "goals": {"day_minutes": _int(c["goals"].get("day_minutes"), 10, 960, "daily goal"),
                   "week_days": _int(c["goals"].get("week_days"), 1, 7, "weekly goal")},
         "water": {"every": c["water"].get("every") if c["water"].get("every") in (0, 15, 30) else 15},
+        "streak": {"rest_days": _rest_days(c["streak"].get("rest_days", []) if isinstance(c["streak"], dict) else None)},
     }
     b = c["blocks"]
     presets = b.get("presets")
