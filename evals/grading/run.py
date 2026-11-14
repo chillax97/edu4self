@@ -54,6 +54,7 @@ CONFIDENCE = ("guessed", "shaky", "solid")
 # non-pass is split into partial / fail by these words in the entry's title and detail: a heuristic,
 # used only for the 3-class kappa. The false-pass rate never depends on it. "Not yet" is the product's
 # word for any non-pass, so it is not a partial word.
+GRADED = ("pass", "partial", "fail")     # verdicts that came from a grade; missing / ungraded are tried again on resume
 PARTIAL_WORDS = re.compile(
     r"\b(partly|partial(ly)?|half|halfway|mostly|most of|some of|part of it|one of (the )?(two|three|2|3)|"
     r"almost|nearly|incomplete|on the right track|right idea|good start|not quite|one part|"
@@ -414,10 +415,22 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     if results and not resume:
         raise SystemExit("%s already holds %d result(s); add --resume to grade only the rest, or pick a new --out"
                          % (rpath, len(results)))
+    # only a real verdict counts as done; a row with no grade (timeout, error) is graded again and replaced
+    redo = {r["id"]: r for r in results if r.get("verdict") not in GRADED}
+    if redo:
+        results = [r for r in results if r["id"] not in redo]
+        tmp_path = rpath + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as fh:
+            for r in results:
+                fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp_path, rpath)
     done = {r["id"] for r in results}
     todo = [it for it in items if it["id"] not in done]
-    if done:
-        log("resuming: %d answer(s) already graded, %d to go" % (len(items) - len(todo), len(todo)))
+    if done or redo:
+        log("resuming: %d answer(s) already graded, %d to go (%d of them had no grade)"
+            % (len(items) - len(todo), len(todo), len(redo)))
     first = max([r.get("batch", 0) for r in results] + [r.get("batch", 0) for r in runs] + [0]) + 1
     if not todo:
         return results, runs
@@ -455,6 +468,9 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
                        "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors")}
                                    for h in hist],
                        "cost_share_usd": share}
+                old = redo.get(item_id, {}).get("cost_share_usd")      # keep the money the failed try cost
+                if isinstance(old, (int, float)):
+                    row["cost_share_usd"] = (share or 0) + old
                 append_jsonl(rpath, row)       # saved now, not at the end
                 results.append(row)
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
