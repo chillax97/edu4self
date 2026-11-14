@@ -317,6 +317,41 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         self.assertIn("- 1a. ", text)
         self.assertIn("- 1c. ", text)
 
+    def test_saf_point_keys_reach_the_grader(self):
+        """A SAF question with a point-listed key hands the grader its points; one without keeps the notes."""
+        point_keys = run.saf_keys.load()
+        saf = [i for i in run.load_items("small") if i["source"] == "saf"]
+        self.assertTrue(saf)
+        self.assertTrue({i["qid"] for i in saf} <= set(point_keys), "every SAF question of the small set has a key")
+        for k in point_keys.values():
+            self.assertTrue(k["required"] and k["wrong"] and k["not_required"])
+        item = saf[0]
+        self.assertEqual(item["q"]["key"], point_keys[item["qid"]])
+        out, results, _ = self.go([item], 5)
+        with open(os.path.join(out, "batch-01", "vault", "_system", "keys", "networks", results[0]["task"] + ".md"),
+                  encoding="utf-8") as fh:
+            key = fh.read()
+        want = point_keys[item["qid"]]
+        for i, p in enumerate(want["required"]):
+            self.assertIn("- 1%s. %s" % ("abcdefghijklmnopqrstuvwxyz"[i], p), key)
+        for w in want["wrong"]:
+            self.assertIn("- " + w, key)
+        self.assertNotIn("The lecturer's notes, as written", key)
+        # a question with no point-listed key keeps the notes as its key
+        plain = dict(item["q"])
+        plain.pop("key")
+        self.assertIn("The lecturer's notes, as written", run.key_text("t-1", "p.html", plain))
+
+    def test_the_point_keys_are_in_the_grading_hash(self):
+        before = run.grading_hash()
+        real = run.saf_keys.load
+        try:
+            run.saf_keys.load = lambda *a, **k: {"net99": {"required": ["x"], "wrong": [], "not_required": []}}
+            self.assertNotEqual(run.grading_hash(), before)
+        finally:
+            run.saf_keys.load = real
+        self.assertEqual(run.grading_hash(), before)
+
     def test_code_answers_leave_a_work_record(self):
         items = [i for i in run.load_items("made-up") if i["id"] in ("sl02", "sl07")]
         out, results, _ = self.go(items, 5)
