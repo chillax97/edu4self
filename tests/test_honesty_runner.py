@@ -29,12 +29,15 @@ class RunnerSaves(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def fake_grade(self, fail_on_call=None):
+    def fake_grade(self, fail_on_call=None, time_out_on=()):
         """Stands in for run.grade: marks every pending answer graded (a pass for every second one), no Claude."""
         def grade(engine, vault, stream_path, timeout):
             self.calls.append(len(self.calls) + 1)
             if fail_on_call == len(self.calls):
                 raise Boom("crash while grading")
+            if len(self.calls) in time_out_on:       # a run killed by the timeout: no grade written
+                return {"exit": -9, "timed_out": True, "is_error": True, "cost_usd": 0.05, "duration_ms": 1,
+                        "num_turns": 1, "usage": None, "wall_s": 0.1, "stderr_tail": []}
             sp = os.path.join(vault, "_system", "state.json")
             state = run.load_json(sp)
             inbox = run.read_jsonl(os.path.join(vault, "_system", "inbox.jsonl"))
@@ -51,9 +54,9 @@ class RunnerSaves(unittest.TestCase):
                     "num_turns": 1, "usage": None, "wall_s": 0.1, "stderr_tail": []}
         return grade
 
-    def go(self, fail_on_call=None, resume=False):
-        with mock.patch.object(run, "grade", self.fake_grade(fail_on_call)):
-            return run.run(self.items, 1, self.out, log=lambda *a: None, resume=resume)
+    def go(self, fail_on_call=None, resume=False, time_out_on=(), items=None, meta=None):
+        with mock.patch.object(run, "grade", self.fake_grade(fail_on_call, time_out_on)):
+            return run.run(items or self.items, 1, self.out, log=lambda *a: None, resume=resume, meta=meta)
 
     def ids_on_disk(self):
         return [r["id"] for r in run.read_jsonl(os.path.join(self.out, "results.jsonl"))]
@@ -109,6 +112,55 @@ class RunnerSaves(unittest.TestCase):
                                score.read_jsonl(os.path.join(folder, "runs.jsonl")))
         self.assertEqual(scored(self.out), scored(old))
         self.assertEqual(score.report(scored(self.out)), score.report(scored(old)))
+
+    def test_resume_regrades_answers_that_got_no_grade_and_keeps_each_id_once(self):
+        self.go(time_out_on=(2,))                          # batch 2 times out: its answer has no grade
+        before = run.read_jsonl(os.path.join(self.out, "results.jsonl"))
+        bad = [r["id"] for r in before if r["verdict"] not in ("pass", "partial", "fail")]
+        self.assertEqual(bad, [self.items[1]["id"]])
+        self.calls.clear()
+        results, runs = self.go(resume=True)
+        self.assertEqual(len(self.calls), 1)               # only that answer
+        on_disk = run.read_jsonl(os.path.join(self.out, "results.jsonl"))
+        self.assertEqual(sorted(r["id"] for r in on_disk), sorted(i["id"] for i in self.items))
+        self.assertEqual(sorted(r["id"] for r in results), sorted(r["id"] for r in on_disk))
+        self.assertTrue(all(r["verdict"] in ("pass", "partial", "fail") for r in on_disk))
+        # the money spent on the timed-out run still counts in the result that replaced it
+        new = next(r for r in on_disk if r["id"] == bad[0])
+        self.assertAlmostEqual(new["cost_share_usd"], 0.09 + 0.05)
+
+    def test_the_cost_row_is_saved_before_the_results_rows(self):
+        with mock.patch.object(run, "verdict", side_effect=Boom("crash between")):
+            with mock.patch.object(run, "grade", self.fake_grade()):
+                with self.assertRaises(Boom):
+                    run.run(self.items, 1, self.out, log=lambda *a: None)
+        self.assertEqual(len(run.read_jsonl(os.path.join(self.out, "runs.jsonl"))), 1)
+        self.assertEqual(run.read_done(os.path.join(self.out, "results.jsonl")), [])
+
+    def test_resume_with_a_different_set_is_refused(self):
+        self.go(items=self.items[:3], meta={"set": "made-up"})
+        self.assertTrue(os.path.isfile(os.path.join(self.out, "meta.json")))
+        with self.assertRaises(SystemExit) as c:
+            self.go(items=self.items[:3], resume=True, meta={"set": "saf"})
+        self.assertIn("set", str(c.exception))
+        self.assertEqual(len(self.ids_on_disk()), 3)
+
+    def test_resume_with_a_different_case_list_is_refused(self):
+        self.go(items=self.items[:3], meta={"set": "made-up"})
+        with self.assertRaises(SystemExit) as c:
+            self.go(resume=True, meta={"set": "made-up"})   # 5 cases now, 3 before
+        self.assertIn("cases", str(c.exception))
+
+    def test_a_bad_line_in_the_middle_is_an_error_and_the_file_is_left_alone(self):
+        path = os.path.join(self.tmp, "r.jsonl")
+        text = '{"id": 1}\nnot json\n{"id": 3}\n'
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        with self.assertRaises(SystemExit) as c:
+            run.read_done(path)
+        self.assertIn("line 2", str(c.exception))
+        with open(path, encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), text)
 
 
 if __name__ == "__main__":
