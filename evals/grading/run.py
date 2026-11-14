@@ -35,6 +35,8 @@ from collections import OrderedDict
 from datetime import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "saf"))
+import keys as saf_keys  # noqa: E402  (point-listed SAF keys, saf/keys.json)
 ENGINE = os.path.dirname(os.path.dirname(HERE))
 FAKE = os.path.join(ENGINE, "tests", "fake_claude.py")
 SETS = {"made-up": os.path.join(HERE, "cases.jsonl"), "saf": os.path.join(HERE, "saf", "sample.jsonl")}
@@ -89,6 +91,7 @@ def load_items(which):
             sys.exit("%s names unknown case ids: %s" % (SUBSETS[which], ", ".join(missing)))
         return [by_id[i] for i in want]
     questions = {q["id"]: q for q in load_json(QUESTIONS)}
+    point_keys = saf_keys.load()
     items = []
     for name in (["made-up", "saf"] if which == "all" else [which]):
         path = SETS[name]
@@ -102,6 +105,8 @@ def load_items(which):
                 it["q"] = {"id": it["qid"], "title": it.get("title") or "Networks question",
                            "lesson": ["Notes from the lecture on this question:"] + it["reference"].split("\n"),
                            "question": it["question"], "hint": None, "reference": it["reference"]}
+                if it["qid"] in point_keys:     # a point-listed key; without one the notes themselves are the key
+                    it["q"]["key"] = point_keys[it["qid"]]
             items.append(it)
     return items
 
@@ -441,6 +446,7 @@ def grading_hash(engine=ENGINE):
     h.update(server_from(engine).GRADE_PROMPT.encode("utf-8") + b"\0")
     for fn in (key_text, lesson_html):
         h.update(inspect.getsource(fn).encode("utf-8") + b"\0")
+    h.update(json.dumps(saf_keys.load(), sort_keys=True).encode("utf-8") + b"\0")   # the point-listed SAF keys
     return h.hexdigest()[:16]
 
 
