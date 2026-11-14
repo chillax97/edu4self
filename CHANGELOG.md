@@ -3,6 +3,15 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- Rest days: `streak.rest_days` (a list of weekdays, `"mon"` to `"sun"`, default none; Settings → Goals → Rest days)
+  keeps a rest from breaking the streak. A rest day with no block is skipped, one with a block counts as a
+  normal day. The chalk board (current run, best) and the bartender's "days in a row" lines use one rule.
+  See [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md).
+
 ## 1.5.1 - 2026-11-14
 
 ### Fixed

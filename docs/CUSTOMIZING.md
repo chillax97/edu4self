@@ -21,6 +21,7 @@ Saving from Settings writes a fresh, valid file.
 | Mail me when I've been away | `reminders.mail` | `true` / `false` (needs `./edu4self mail setup`) | `true` |
 | Focused minutes a day | `goals.day_minutes` | 10–960 | 60 |
 | Days a week | `goals.week_days` | 1–7 | 4 |
+| Rest days (days that never break your streak) | `streak.rest_days` | a list of `"mon"`, `"tue"`, `"wed"`, `"thu"`, `"fri"`, `"sat"`, `"sun"`; not all seven | `[]` (every day counts) |
 | Durations | `blocks.presets` | 1–4 numbers, each 1–240 | `[25, 50, 90]` |
 | Kinds of block | `blocks.kinds` | 1–8 kinds, see below | Lessons, Practice, Reading, Free, Play |
 | Water | `water.every` | 15, 30 or 0 (off) | 15 |
@@ -33,6 +34,14 @@ Saving from Settings writes a fresh, valid file.
 
 The look (bar or classic) and the water setting are also remembered per browser once you switch them
 on the page itself. **Reset to defaults** in Settings clears both, and keeps your songs.
+
+### Rest days
+
+`streak.rest_days: ["sat", "sun"]` lets you rest without losing your run of days in a row. A rest day with no
+finished block is skipped: it neither breaks the streak nor adds to it. A rest day with a block counts like
+any other day (+1). Any other day with no block still breaks it. The same rule sets the current run, the best
+run and the bartender's "days in a row" lines, and "today" is skipped until you finish a block, as before.
+In Settings it is the **Rest days** ticks under Goals. The default is none, which counts every calendar day.
 
 ### Rotating subtitles on the sign
 
