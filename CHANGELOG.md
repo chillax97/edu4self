@@ -15,6 +15,8 @@ versions follow [Semantic Versioning](https://semver.org).
   batch is graded, and `run.py --out <folder> --resume` grades only the answers not yet saved or saved without a
   grade. A `meta.json` in the folder (set, seed, batch size, case list, a hash of the grading inputs) makes a
   resume with different settings, or after the plugin or grading prompt changed, refuse.
+- The honesty test's grading sandbox copies only git-tracked files (minus `evals/` and `tests/`), so an untracked
+  or ignored file, such as private notes, can never reach the grader.
 
 ## 1.5.0 - 2026-11-14
 

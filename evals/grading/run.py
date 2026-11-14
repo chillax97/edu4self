@@ -158,9 +158,28 @@ def is_code(answer):
 SERVER = {"mod": None, "engine": None}
 
 
-def copy_engine(dest):
-    """Copy the engine (the code the dashboard runs) without NOT_COPIED. Returns dest."""
-    shutil.copytree(ENGINE, dest, ignore=shutil.ignore_patterns(*NOT_COPIED))
+def copy_engine(dest, src=ENGINE):
+    """Copy the engine (the code the dashboard runs) into dest: only the files git tracks, minus NOT_COPIED, so an
+    untracked or ignored file (private notes, labels, anything) can never reach the grader. A folder that is not a
+    git checkout (no `git ls-files`) falls back to copying everything except NOT_COPIED. Returns dest."""
+    try:
+        r = subprocess.run(["git", "-C", src, "ls-files", "-z"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                           timeout=60)
+        tracked = r.stdout.decode("utf-8").split("\0") if r.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError):
+        tracked = None
+    if tracked is None:
+        shutil.copytree(src, dest, ignore=shutil.ignore_patterns(*NOT_COPIED))
+        return dest
+    for rel in filter(None, tracked):
+        if any(part in NOT_COPIED for part in rel.split("/")):
+            continue
+        s = os.path.join(src, rel)
+        if not os.path.isfile(s):                   # deleted in the working tree, still in the index
+            continue
+        d = os.path.join(dest, rel)
+        os.makedirs(os.path.dirname(d), exist_ok=True)
+        shutil.copy2(s, d)
     return dest
 
 

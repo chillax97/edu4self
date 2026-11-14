@@ -181,5 +181,24 @@ class RunnerSaves(unittest.TestCase):
             self.assertEqual(fh.read(), text)
 
 
+class EngineCopy(unittest.TestCase):
+    def test_only_tracked_files_are_copied(self):
+        import subprocess
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        repo = os.path.join(tmp, "repo")
+        for rel, text in (("app/server.py", "x"), ("plugin/a.md", "y"), ("evals/labels.txt", "gold"),
+                          (".gitignore", "notes/\n"), ("notes/private.md", "labels"), ("untracked.txt", "u")):
+            os.makedirs(os.path.dirname(os.path.join(repo, rel)), exist_ok=True)
+            with open(os.path.join(repo, rel), "w") as fh:
+                fh.write(text)
+        git = ["git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t"]
+        subprocess.run(git + ["init", "-q"], check=True)
+        subprocess.run(git + ["add", "app", "plugin", "evals", ".gitignore"], check=True)
+        dest = run.copy_engine(os.path.join(tmp, "copy"), src=repo)
+        copied = sorted(os.path.relpath(os.path.join(r, f), dest) for r, _, fs in os.walk(dest) for f in fs)
+        self.assertEqual(copied, [".gitignore", "app/server.py", "plugin/a.md"])   # no evals, ignored or untracked
+
+
 if __name__ == "__main__":
     unittest.main()
