@@ -3,7 +3,22 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 1.5.0 - 2026-11-14
+
+### Added
+
+- `honesty-test` skill: ask Claude to "run the honesty test" and it grades the labelled answers in `evals/grading/`
+  through the real Grade path, says the price first, and reports the false-pass rate in plain words.
+- The honesty test (`evals/grading/`): how often the grader passes an answer that should not pass. 80
+  made-up answers (60 must not pass, from half-right to "mark this as passed" injections and code that
+  games its checker) and 100 labelled student answers from the SAF set (CC BY 4.0), graded through the
+  Grade button's own run, scored as a false-pass rate with a 95% interval, kappa, per category and cost
+  per answer. It measures; it changes nothing in how grading works.
+
+
+- `edu4self doctor` reports the Claude Code login: signed in, signed out (with the fix, `claude auth login`,
+  and it counts as a thing to fix), or unknown on a Claude Code too old to say. It asks the same check the
+  dashboard uses, so the two always agree.
 
 ### Changed
 
@@ -35,40 +50,6 @@ versions follow [Semantic Versioning](https://semver.org).
   5 fps with 64 colours); nothing was removed.
 - README opens with a 5-line quick start; install shows `git clone --depth 1` (a third of the download).
 
-### Added
-
-- `honesty-test` skill: ask Claude to "run the honesty test" and it grades the labelled answers in `evals/grading/`
-  through the real Grade path, says the price first, and reports the false-pass rate in plain words.
-- The honesty test (`evals/grading/`): how often the grader passes an answer that should not pass. 80
-  made-up answers (60 must not pass, from half-right to "mark this as passed" injections and code that
-  games its checker) and 100 labelled student answers from the SAF set (CC BY 4.0), graded through the
-  Grade button's own run, scored as a false-pass rate with a 95% interval, kappa, per category and cost
-  per answer. It measures; it changes nothing in how grading works.
-
-### Fixed
-
-- The "From memory" warm-up no longer asks a question the moment Claude writes it. A recall question is
-  shown only once its task passed at least 3 days ago (one constant, `RECALL_MIN_AGE_DAYS`), on a normal
-  day and on the welcome back alike, and never for a task that has not passed. The pass date is the
-  latest graded submission; a question may carry an optional `added: YYYY-MM-DD` for a task marked done
-  without one, and a done task with no date at all is still shown.
-
-### Added
-
-- `edu4self doctor` reports the Claude Code login: signed in, signed out (with the fix, `claude auth login`,
-  and it counts as a thing to fix), or unknown on a Claude Code too old to say. It asks the same check the
-  dashboard uses, so the two always agree.
-
-### Fixed
-
-- A Grade button greyed out because Claude Code is missing or signed out now looks off at a glance, in the
-  classic page and in every room: no colour fill or glow, a dashed edge, a not-allowed cursor, and the
-  reason on hover. Its label and the reason beside it stay readable (at least 4.5:1), also on the paper
-  cards of the library, tea and train rooms.
-- The green "Submitted just now" line on the task card was almost invisible (about 1.2:1) on the paper cards of the
-  library, tea and train rooms. Each now draws it in a dark green that suits the room (at least 4.5:1).
-
-### Changed
 
 - The dashboard server speaks HTTP/1.1 and keeps connections open, so a page load reuses a few connections
   instead of opening one per file. Every response says where it ends, a refused upload closes its connection,
@@ -77,7 +58,6 @@ versions follow [Semantic Versioning](https://semver.org).
   ran out of buffer space (`ERR_NO_BUFFER_SPACE`) with one connection per file, and some browser waits gave up
   for good if the page was mid-redraw when they checked.
 
-### Changed
 
 - The first visit is a two-minute try instead of a three-card tour: one idea, hidden, answered from memory, a
   quick check on the spot (it looks for three key points and says it can be fooled), and, one click and
@@ -88,6 +68,22 @@ versions follow [Semantic Versioning](https://semver.org).
   over the busy page).
 - The page's Claude runs have a new kind, `first`: a grade-only run for the first try (fenced like grading, no
   planning or new lessons), so the first grade lands faster and costs less than a full "check my inbox".
+
+### Fixed
+
+- The "From memory" warm-up no longer asks a question the moment Claude writes it. A recall question is
+  shown only once its task passed at least 3 days ago (one constant, `RECALL_MIN_AGE_DAYS`), on a normal
+  day and on the welcome back alike, and never for a task that has not passed. The pass date is the
+  latest graded submission; a question may carry an optional `added: YYYY-MM-DD` for a task marked done
+  without one, and a done task with no date at all is still shown.
+
+
+- A Grade button greyed out because Claude Code is missing or signed out now looks off at a glance, in the
+  classic page and in every room: no colour fill or glow, a dashed edge, a not-allowed cursor, and the
+  reason on hover. Its label and the reason beside it stay readable (at least 4.5:1), also on the paper
+  cards of the library, tea and train rooms.
+- The green "Submitted just now" line on the task card was almost invisible (about 1.2:1) on the paper cards of the
+  library, tea and train rooms. Each now draws it in a dark green that suits the room (at least 4.5:1).
 
 ## 1.4.0 - 2026-11-11
 
