@@ -74,6 +74,15 @@ python3 evals/grading/run.py --set all --yes            # 80 made-up + 100 SAF, 
 python3 evals/grading/score.py evals/grading/out/<run>  # the numbers (add --json for JSON)
 ```
 
+**A paid run is saved as it goes.** Each answer's result is appended to `results.jsonl` (and each Claude run to
+`runs.jsonl`) the moment its batch is graded, so a crash or Ctrl-C keeps everything already paid for. To
+continue, run the same command again with the same `--out <folder>` and `--resume`: answers already in
+`results.jsonl` are skipped, the rest are graded and added (batch numbers carry on), and `score.py` reads the
+folder as usual. A batch that was cut off is graded again whole. A torn last line is dropped. Resume is a flag,
+not automatic, so a second run into a used folder without `--resume` stops instead of mixing two runs
+(for example one made before and one after a grading change). Resume with the same `--set`, `--seed`,
+`--limit` and `--batch`, and the same engine commit.
+
 Without `--fake` or `--yes` it only says how many Claude runs it would start. Every real run prints its
 `$` cost and time. Output goes to `evals/grading/out/<time>/` (ignored by git): `results.jsonl`,
 `runs.jsonl`, and per batch the raw stream and the vault as the grader left it, to read any grade in full.
