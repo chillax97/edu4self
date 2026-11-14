@@ -15,7 +15,8 @@ and editing `_system/state.json`, which only you write.
    of the key, `true` only if the answer states it, not if it could be inferred) and `errors` (every
    incorrect statement, even a minor one or wording that changes the meaning; `[]` if none). No key:
    grade against the lesson page and say so. The checklist decides the pass: `evidence: true` only when
-   every point is `true` and `errors` is empty; the check fails otherwise. If your own feedback names a
+   every point is `true` and `errors` is empty; the check fails otherwise. When a grade moves a region level, also write `levels` in the `history` entry:
+   `{"A": [1, 2]}` (region code: level before, level after), so a pass the check overrules can be undone. If your own feedback names a
    missing point or an error, it is not proof: say what to add or fix, and the learner tries again.
    When the plan's next unit isn't written yet (PROTOCOL.md section 5: two ready, always), write it with
    the `write-lesson` or `write-probe` skill (page and answer key) before you reply.

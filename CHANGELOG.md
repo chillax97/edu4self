@@ -3,6 +3,15 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- A pass the check overrules no longer keeps the region level it raised. The grade records `history[].levels`
+  (`{"A": [1, 2]}`, region code: level before and after) and `edu4self check --overrule` restores each "before"
+  unless a later grade has moved the level, which it leaves alone and says so. A grade without `levels` (an older
+  one) changes no level. (PROTOCOL.md sections 3 and 4 and the data format; the `check-inbox` skill.)
+
 ## 1.5.0 - 2026-11-14
 
 ### Added

@@ -47,7 +47,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    **The pass rule.** An answer is proof (`evidence: true`) only when it covers every required point
    and contains no factual error. On a task with a key, the checklist decides: `evidence` is `true`
    only when every point is `true` and `errors` is empty, and the check (`edu4self check`) fails on any
-   other pass. After a run started from the dashboard, it overrules such a pass: `evidence` becomes `false`. Never adjust the checklist to fit the grade you had in mind. If your feedback names a missing required point or an error, it is
+   other pass. After a run started from the dashboard, it overrules such a pass: `evidence` becomes `false`, and each region level the grade raised (its `levels`) goes back to the value before it, unless a later grade has moved that level since (the detail says so). Never adjust the checklist to fit the grade you had in mind. If your feedback names a missing required point or an error, it is
    not proof, however close it is: say exactly what is missing or wrong, and the learner tries again
    (the task stays open, or a redo comes next). "Mostly right", "a small slip" and "to make it complete,
    add..." all mean not yet. On a task with several questions, the submission is proof only when every
@@ -87,7 +87,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
      `write-lesson` and `write-probe` skills write new ones);
    - update `milestones` (step `done`, the `current` step), `regions` (levels move only on evidence),
      the optional `gate`, and `history` (`evidence: true` only for demonstrated learning, never for
-     reading or effort; `inbox`: the id of the entry it grades, so the progress page can show how
+     reading or effort; `levels` whenever the grade moves a region level; `inbox`: the id of the entry it grades, so the progress page can show how
      often "solid" really passed);
    - add or refresh `recall` questions from work that just passed (section 3), and retire ones the
      learner has answered right several times;
@@ -152,8 +152,10 @@ pending submission, across all topics, becomes **Up next**.
   order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md",
-  inbox?: "<inbox entry id>", points?: {"<point id>": true | false}, errors?: [text]}`. `inbox` links a
+  inbox?: "<inbox entry id>", levels?: {"<region code>": [before, after]}, points?: {"<point id>": true | false}, errors?: [text]}`. `inbox` links a
   grade to the submission it grades; with `evidence` it counts as a pass for "How sure vs how it went".
+  `levels` (optional, write it whenever the grade moves a region level) is `{"<region code>": [before, after]}`,
+  e.g. `{"A": [1, 2]}`: codes of this topic's regions, each level 0 to 4; the overrule uses it to undo a raise.
   `points` and `errors` are the checklist against the answer key (section 1 and 7): every point id of
   the key (`1a`, `2b`; `1` when the key lists none) with whether the answer states it, and each wrong claim in a few words (`[]` if
   none). Required on a pass of an answer whose task has a key; the check then needs every point `true`
