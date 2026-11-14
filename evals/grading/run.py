@@ -405,7 +405,16 @@ def read_done(path):
     return rows
 
 
-def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False):
+def _engine_commit():
+    try:
+        r = subprocess.run(["git", "-C", ENGINE, "rev-parse", "--short", "HEAD"], stdout=subprocess.PIPE,
+                           stderr=subprocess.DEVNULL, text=True, timeout=10)
+        return r.stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False, meta=None):
     """Grade items in batches. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
     out as soon as its batch is graded, so a crash keeps what was paid for. With resume, answers already in
     results.jsonl are skipped and the rest are graded into the same folder. Returns (results, runs), old and new."""
@@ -415,6 +424,21 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     if results and not resume:
         raise SystemExit("%s already holds %d result(s); add --resume to grade only the rest, or pick a new --out"
                          % (rpath, len(results)))
+    mpath = os.path.join(out, "meta.json")
+    now = {"set": (meta or {}).get("set"), "seed": (meta or {}).get("seed"), "batch": batch_size,
+           "cases": hashlib.sha256("\n".join(it["id"] for it in items).encode("utf-8")).hexdigest()[:16],
+           "n_cases": len(items)}
+    if resume and os.path.isfile(mpath):
+        saved = load_json(mpath)
+        diff = ["%s (saved %s, now %s)" % (k, saved.get(k), now[k])
+                for k in ("set", "seed", "batch", "cases") if saved.get(k) != now[k]]
+        if diff:
+            raise SystemExit("cannot resume into %s: it was started with different settings: %s. "
+                             "Use the same options, or a new --out." % (out, "; ".join(diff)))
+    else:
+        now["engine_commit"] = _engine_commit()     # for the record only; not compared
+        with open(mpath, "w", encoding="utf-8") as fh:
+            json.dump(now, fh, indent=1)
     # only a real verdict counts as done; a row with no grade (timeout, error) is graded again and replaced
     redo = {r["id"]: r for r in results if r.get("verdict") not in GRADED}
     if redo:
@@ -521,7 +545,8 @@ def main(argv=None):
                      "Add --yes to go ahead, or --fake to try it free." % (n_runs, len(items)))
     out = a.out or os.path.join(HERE, "out", datetime.now().strftime("%Y%m%d-%H%M%S") + ("-fake" if a.fake else ""))
     print("grading %d answers in %d run(s) of up to %d -> %s" % (len(items), n_runs, a.batch, out))
-    run(items, a.batch, out, fake=a.fake, timeout=a.timeout, resume=a.resume)
+    run(items, a.batch, out, fake=a.fake, timeout=a.timeout, resume=a.resume,
+        meta={"set": a.set, "seed": a.seed})
     print("score it: python3 %s %s" % (os.path.relpath(os.path.join(HERE, "score.py")), out))
 
 
