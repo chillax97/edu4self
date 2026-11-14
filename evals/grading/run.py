@@ -371,17 +371,59 @@ def task_status(state, topic, task_id):
 
 # ---------------------------------------------------------------- main
 
-def run(items, batch_size, out, fake=False, timeout=1800, log=print):
-    """Grade items in batches. Writes results.jsonl and runs.jsonl in out; returns (results, runs)."""
+def append_jsonl(path, row):
+    """Add one JSON line and flush it, so a crash right after loses nothing already graded."""
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
+def read_done(path):
+    """The rows already saved in a results.jsonl or runs.jsonl. A torn last line (a kill mid-write) is dropped
+    and the file is cut back to the last whole line, so the next append starts on a fresh line."""
+    rows, good = [], 0
+    if not os.path.isfile(path):
+        return rows
+    with open(path, "rb") as fh:
+        data = fh.read()
+    for line in data.splitlines(keepends=True):
+        try:
+            if line.strip():
+                rows.append(json.loads(line))
+        except ValueError:
+            break
+        good += len(line)
+    if good < len(data):
+        with open(path, "r+b") as fh:
+            fh.truncate(good)
+    return rows
+
+
+def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False):
+    """Grade items in batches. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
+    out as soon as its batch is graded, so a crash keeps what was paid for. With resume, answers already in
+    results.jsonl are skipped and the rest are graded into the same folder. Returns (results, runs), old and new."""
     os.makedirs(out, exist_ok=True)
+    rpath, upath = os.path.join(out, "results.jsonl"), os.path.join(out, "runs.jsonl")
+    results, runs = read_done(rpath), read_done(upath)
+    if results and not resume:
+        raise SystemExit("%s already holds %d result(s); add --resume to grade only the rest, or pick a new --out"
+                         % (rpath, len(results)))
+    done = {r["id"] for r in results}
+    todo = [it for it in items if it["id"] not in done]
+    if done:
+        log("resuming: %d answer(s) already graded, %d to go" % (len(items) - len(todo), len(todo)))
+    first = max([r.get("batch", 0) for r in results] + [r.get("batch", 0) for r in runs] + [0]) + 1
+    if not todo:
+        return results, runs
     tmp = os.path.realpath(tempfile.mkdtemp(prefix="edu4self-"))   # macOS: /var is /private/var
     env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(tmp, "cfg"))   # init must not touch the user's settings
     engine = copy_engine(os.path.join(tmp, "edu4self"))
     if fake:
         os.environ["EDU4SELF_CLAUDE"] = FAKE
-    results, runs = [], []
     try:
-        for b, batch in enumerate(batches(items, batch_size), 1):
+        for b, batch in enumerate(batches(todo, batch_size), first):
             vault = os.path.join(tmp, "vault-%02d" % b)
             tasks = build_vault(engine, vault, batch, env)
             ok, text = check(engine, vault, env)
@@ -394,20 +436,23 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
             summary["check_ok"], text = check(engine, vault, env, overrule=True)
             summary["overruled"] = text.count("OVERRULED: ")
             summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch])
-            runs.append(summary)
             state = load_json(os.path.join(vault, "_system", "state.json"))
             share = summary["cost_usd"] / len(batch) if isinstance(summary["cost_usd"], (int, float)) else None
             for entry_id, item_id in ids.items():
                 it = next(i for i in batch if i["id"] == item_id)
                 v, hist = verdict(state, entry_id)
                 topic, task_id, _ = tasks[item_id]
-                results.append({"id": item_id, "source": it["source"], "qid": it["qid"], "category": it["category"],
-                                "gold": it["gold"], "verdict": v, "batch": b, "inbox": entry_id, "task": task_id,
-                                "confidence": confidence_for(item_id), "task_status": task_status(state, topic, task_id),
-                                "checklist": checklist_verdict(hist),
-                                "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors")}
-                                            for h in hist],
-                                "cost_share_usd": share})
+                row = {"id": item_id, "source": it["source"], "qid": it["qid"], "category": it["category"],
+                       "gold": it["gold"], "verdict": v, "batch": b, "inbox": entry_id, "task": task_id,
+                       "confidence": confidence_for(item_id), "task_status": task_status(state, topic, task_id),
+                       "checklist": checklist_verdict(hist),
+                       "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors")}
+                                   for h in hist],
+                       "cost_share_usd": share}
+                append_jsonl(rpath, row)       # saved now, not at the end
+                results.append(row)
+            append_jsonl(upath, summary)
+            runs.append(summary)
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
             with open(os.path.join(bdir, "inbox-map.json"), "w", encoding="utf-8") as fh:
                 json.dump(ids, fh, indent=1)
@@ -420,12 +465,6 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print):
         shutil.rmtree(tmp, ignore_errors=True)
         if fake:
             os.environ.pop("EDU4SELF_CLAUDE", None)
-    with open(os.path.join(out, "results.jsonl"), "w", encoding="utf-8") as fh:
-        for r in results:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    with open(os.path.join(out, "runs.jsonl"), "w", encoding="utf-8") as fh:
-        for r in runs:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
     total = sum(r["cost_usd"] for r in runs if isinstance(r["cost_usd"], (int, float)))
     log("total: %d items in %d run(s) · $%.4f · %.1f s" % (len(results), len(runs), total, sum(r["wall_s"] for r in runs)))
     return results, runs
@@ -441,6 +480,8 @@ def main(argv=None):
     p.add_argument("--seed", type=int, default=SEED, help="the fixed order's seed (default %d)" % SEED)
     p.add_argument("--timeout", type=int, default=1800, help="seconds per Claude run before it is stopped")
     p.add_argument("--out", help="output folder (default evals/grading/out/<time>)")
+    p.add_argument("--resume", action="store_true",
+                   help="continue into --out: skip answers already in its results.jsonl (after a crash or Ctrl-C)")
     p.add_argument("--yes", action="store_true", help="really run Claude Code (each run costs money)")
     a = p.parse_args(argv)
     items = order(load_items(a.set), a.seed)
@@ -460,7 +501,7 @@ def main(argv=None):
                      "Add --yes to go ahead, or --fake to try it free." % (n_runs, len(items)))
     out = a.out or os.path.join(HERE, "out", datetime.now().strftime("%Y%m%d-%H%M%S") + ("-fake" if a.fake else ""))
     print("grading %d answers in %d run(s) of up to %d -> %s" % (len(items), n_runs, a.batch, out))
-    run(items, a.batch, out, fake=a.fake, timeout=a.timeout)
+    run(items, a.batch, out, fake=a.fake, timeout=a.timeout, resume=a.resume)
     print("score it: python3 %s %s" % (os.path.relpath(os.path.join(HERE, "score.py")), out))
 
 

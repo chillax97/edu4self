@@ -165,7 +165,14 @@ def read_jsonl(path):
     if not os.path.isfile(path):
         return []
     with open(path, encoding="utf-8") as fh:
-        return [json.loads(l) for l in fh if l.strip()]
+        rows = []
+        for l in fh:
+            try:
+                if l.strip():
+                    rows.append(json.loads(l))
+            except ValueError:
+                break                   # a torn last line from a run killed mid-write
+        return rows
 
 
 def main(argv=None):
