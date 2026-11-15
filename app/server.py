@@ -55,7 +55,7 @@ MUSIC_EXTS = {".m4a", ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".aac", 
 MAX_TRACKS = 100                        # songs in the jukebox's list
 MUSIC_NAME = re.compile(r"^[A-Za-z0-9._-]{1,120}$")
 MUSIC_LOCK = threading.Lock()           # one upload at a time picks a name and adds itself to the list
-KINDS = {"answers", "done", "note", "recall"}
+KINDS = {"answers", "done", "note", "recall", "follow-up"}   # follow-up: the reply to the one question a grade asked
 CONFIDENCE = ("guessed", "shaky", "solid")   # "How sure are you?" on the submit form, asked for answers and done
 INBOX_LOCK = threading.Lock()
 BLOCKS_LOCK = threading.Lock()
@@ -777,7 +777,7 @@ def clean_submission(body, state):
     title = body.get("title") or ""
     if not isinstance(note, str) or len(note) > 8000 or not isinstance(title, str) or len(title) > 200:
         raise ValueError("bad note or title")
-    if kind in ("answers", "recall") and not any(v.strip() for v in clean_fields.values()):
+    if kind in ("answers", "recall", "follow-up") and not any(v.strip() for v in clean_fields.values()):
         raise ValueError("no answers")
     if kind == "note" and not note.strip():
         raise ValueError("empty note")
@@ -791,6 +791,10 @@ def clean_submission(body, state):
         if body.get("confidence") not in CONFIDENCE:
             raise ValueError("say how sure you are: guessed, shaky or solid")
         entry["confidence"] = body["confidence"]
+    if kind == "follow-up":
+        entry["ref"] = follow_up_ref(body.get("ref"), topic, task, state)
+        if len(clean_fields) != 1:
+            raise ValueError("a follow-up reply is one answer")
     if kind == "recall":
         known = {q["id"] for q in recall_questions(state)}
         ids = body.get("recall")
@@ -801,6 +805,22 @@ def clean_submission(body, state):
         if pick_recall(state, inbox_entries(), read_jsonl(BLOCKS), datetime.now().astimezone())["comeback"]:
             entry["comeback"] = True          # the welcome back after a gap, so the tutor knows
     return entry
+
+
+def follow_up_ref(ref, topic, task, state):
+    """The answer a follow-up reply answers (PROTOCOL section 1): an answer to this task whose grade asked one
+    question (history[].follow_up), not answered yet. One reply per question; a withdrawn reply doesn't count."""
+    entries = inbox_entries()
+    asked = any(isinstance(h, dict) and h.get("inbox") == ref and isinstance(h.get("follow_up"), dict)
+                for t in state.get("topics", []) for h in t.get("history", []))
+    original = next((e for e in entries if e.get("id") == ref), None) if isinstance(ref, str) else None
+    if not asked or not original or original.get("kind") != "answers" or \
+            (original.get("topic"), original.get("task")) != (topic, task):
+        raise ValueError("no follow-up question was asked about that answer")
+    withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
+    if any(e.get("kind") == "follow-up" and e.get("ref") == ref and e.get("id") not in withdrawn for e in entries):
+        raise ValueError("that question was answered already")
+    return ref
 
 
 # ---------------------------------------------------------------- the recall warm-up
@@ -881,11 +901,24 @@ def pick_recall(state, entries, blocks, now):
 def calibration(state, entries):
     """How sure the learner said they were, against how it went. A graded answer is one a history entry
     names in its `inbox` field; it passed when that entry is evidence."""
-    graded = {}
+    graded, asked = {}, set()
     for t in state.get("topics", []):
         for h in t.get("history", []):
             if isinstance(h, dict) and isinstance(h.get("inbox"), str):
                 graded[h["inbox"]] = bool(h.get("evidence"))
+                if isinstance(h.get("follow_up"), dict) and not h.get("evidence"):
+                    asked.add(h["inbox"])
+    # An answer whose grade asked a follow-up question goes by how the reply was graded: a pass on follow-up is a
+    # pass. Until the reply is graded, it is still open and counts neither way.
+    withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
+    for e in entries:
+        if e.get("kind") == "follow-up" and e.get("ref") in asked and e.get("id") in graded \
+                and e.get("id") not in withdrawn:
+            graded[e["ref"]] = graded[e["ref"]] or graded[e["id"]]
+            asked.discard(e["ref"])
+    for ref in asked:
+        if not graded.get(ref):
+            graded.pop(ref, None)
     out = {c: {"n": 0, "passed": 0} for c in CONFIDENCE}
     for e in entries:
         c = e.get("confidence")

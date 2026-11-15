@@ -169,6 +169,79 @@ class ServerTest(unittest.TestCase):
             code, d, _ = self.req("POST", "/api/inbox", dict(good, calc=bad))
             self.assertEqual((code, d["error"]), (400, "bad calculator history"), bad)
 
+    def test_a_follow_up_reply_goes_to_the_inbox_and_is_pending_like_any_answer(self):
+        answer = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"Q": "A"},
+                  "confidence": "solid"}
+        code, d, _ = self.req("POST", "/api/inbox", answer)
+        self.assertEqual(code, 201)
+        ref = d["id"]
+        q = "What does the controller use the statistics for?"
+        reply = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "follow-up", "ref": ref,
+                 "fields": {q: "To pick routes."}}
+        code, d, _ = self.req("POST", "/api/inbox", reply)
+        self.assertEqual((code, d.get("error")), (400, "no follow-up question was asked about that answer"))
+        path = self.sys_path("state.json")
+        with open(path, encoding="utf-8") as fh:
+            before = fh.read()
+        st = json.loads(before)
+        st["processed_inbox"].append(ref)
+        st["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Almost: one question first",
+                                           "detail": "d", "evidence": False, "inbox": ref, "follow_up": {"q": q, "point": "1a"}})
+        write_json(path, st)
+        try:
+            for change, msg in (({"ref": "nope"}, "no follow-up question was asked about that answer"),
+                                ({"ref": None}, "no follow-up question was asked about that answer"),
+                                ({"task": "hlw-probe-01"}, "no follow-up question was asked about that answer"),
+                                ({"fields": {q: "  "}}, "no answers"),
+                                ({"fields": {q: "a", "Q2": "b"}}, "a follow-up reply is one answer")):
+                code, d, _ = self.req("POST", "/api/inbox", dict(reply, **change))
+                self.assertEqual((code, d.get("error")), (400, msg), change)
+            code, d, _ = self.req("POST", "/api/inbox", reply)          # no "how sure": it answers one question
+            self.assertEqual(code, 201, d)
+            fid = d["id"]
+            saved = [json.loads(l) for l in open(self.sys_path("inbox.jsonl"), encoding="utf-8") if l.strip()]
+            e = [x for x in saved if x["id"] == fid][0]
+            self.assertEqual((e["kind"], e["ref"], e["fields"]), ("follow-up", ref, {q: "To pick routes."}))
+            self.assertNotIn("confidence", e)
+            code, d, _ = self.req("POST", "/api/inbox", reply)
+            self.assertEqual((code, d.get("error")), (400, "that question was answered already"))
+            code, d, _ = self.req("GET", "/api/state")
+            self.assertIn(fid, [x["id"] for x in d["inbox"]["pending"]])     # pending, graded like any other entry
+            self.assertNotIn(ref, [x["id"] for x in d["inbox"]["pending"]])
+            self.assertEqual(self.req("POST", "/api/withdraw", {"id": fid})[0], 200)
+            code, d, _ = self.req("GET", "/api/state")
+            self.assertNotIn(fid, [x["id"] for x in d["inbox"]["pending"]])
+            self.assertEqual(self.req("POST", "/api/inbox", reply)[0], 201, "a withdrawn reply can be sent again")
+        finally:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(before)
+
+    def test_a_follow_up_ref_never_withdraws_the_answer_it_replies_to(self):
+        entries = [{"id": "a", "kind": "answers"}, {"id": "f", "kind": "follow-up", "ref": "a"}]
+        with open(self.sys_path("inbox.jsonl"), encoding="utf-8") as fh:
+            keep = fh.read()
+        try:
+            with open(self.sys_path("inbox.jsonl"), "w", encoding="utf-8") as fh:
+                fh.write("".join(json.dumps(e) + "\n" for e in entries))
+            self.assertEqual([e["id"] for e in server.pending_entries({"processed_inbox": []})], ["a", "f"])
+        finally:
+            with open(self.sys_path("inbox.jsonl"), "w", encoding="utf-8") as fh:
+                fh.write(keep)
+
+    def test_calibration_counts_a_pass_on_follow_up_as_a_pass(self):
+        fu = {"q": "Why?", "point": "1a"}
+        entries = [{"id": "a", "confidence": "solid", "kind": "answers"}, {"id": "f", "kind": "follow-up", "ref": "a"},
+                   {"id": "b", "confidence": "shaky", "kind": "answers"}, {"id": "g", "kind": "follow-up", "ref": "b"},
+                   {"id": "c", "confidence": "guessed", "kind": "answers"}]
+        hist = [{"inbox": "a", "evidence": False, "follow_up": fu}, {"inbox": "f", "evidence": True},
+                {"inbox": "b", "evidence": False, "follow_up": fu}, {"inbox": "g", "evidence": False},
+                {"inbox": "c", "evidence": False, "follow_up": fu}]              # c: the question isn't answered yet
+        c = server.calibration({"topics": [{"history": hist}]}, entries)
+        self.assertEqual(c["solid"], {"n": 1, "passed": 1})
+        self.assertEqual(c["shaky"], {"n": 1, "passed": 0})
+        self.assertEqual(c["guessed"], {"n": 0, "passed": 0})          # still open: not counted either way
+        self.assertEqual(c["rated"], 2)
+
     def test_calibration_counts_only_graded_answers(self):
         state = {"topics": [{"history": [
             {"inbox": "a", "evidence": True}, {"inbox": "b", "evidence": False}, {"inbox": "c", "evidence": True},
