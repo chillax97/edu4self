@@ -1,7 +1,7 @@
 # edu4self
 
-**A learning dashboard that runs on your computer, with Claude as your tutor. Hand it to your agent
-and it sets itself up around you.**
+**A learning dashboard that runs on your computer, with Claude Code as your tutor. Hand it to your
+agent and it sets itself up around you.**
 
 ![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
 
