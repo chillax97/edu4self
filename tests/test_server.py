@@ -794,6 +794,48 @@ class ValidatorTest(unittest.TestCase):
         with open(self.state_path, encoding="utf-8") as fh:
             self.assertEqual(fh.read(), before)
 
+    # A follow-up (PROTOCOL section 1): every point there, one only bare, sloppy or unclear: one question first
+    FOLLOW_UP = {"q": "You said the table keeps statistics. What does the controller use them for?", "point": "2a"}
+
+    def test_a_not_yet_may_ask_one_follow_up_question(self):
+        r = self.keyed_grade(evidence=False, points=self.ALL_MET, errors=[], follow_up=dict(self.FOLLOW_UP))
+        self.assertEqual(r.returncode, 0, r.stdout)
+        r = self.keyed_grade(evidence=False, follow_up={"q": "x" * 200, "point": "1b"})       # the longest question
+        self.assertEqual(r.returncode, 0, r.stdout)
+
+    def test_a_follow_up_is_never_a_pass(self):
+        r = self.keyed_grade(evidence=True, points=self.ALL_MET, errors=[], follow_up=dict(self.FOLLOW_UP))
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("follow_up", r.stdout)
+        self.assertIn("evidence", r.stdout)
+
+    def test_a_follow_up_has_a_short_question_and_a_point(self):
+        for bad in ("ask more", {"q": "Why?"}, {"point": "1a"}, {"q": "", "point": "1a"}, {"q": "x" * 201, "point": "1a"},
+                    {"q": "Why?", "point": ""}, {"q": "Why?", "point": 2}, {"q": 5, "point": "1a"},
+                    {"q": "Why?", "point": "1a", "more": "x"}, None):
+            r = self.keyed_grade(evidence=False, follow_up=bad)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertIn("follow_up", r.stdout)
+
+    def test_a_reply_to_a_follow_up_never_gets_a_second_one(self):
+        self.keyed_grade(evidence=False, points=self.ALL_MET, errors=[], follow_up=dict(self.FOLLOW_UP))
+        reply = {"id": "fu00000001", "ts": "2026-01-03T10:00:00", "topic": "how-learning-works", "task": "hlw-lesson-01",
+                 "kind": "follow-up", "ref": "ab12cd34ef", "fields": {self.FOLLOW_UP["q"]: "To pick routes."}}
+        with open(os.path.join(self.vault, "_system", "inbox.jsonl"), "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(reply) + "\n")
+        hist = self.state["topics"][0]["history"]
+        h = {"date": "2026-01-03", "kind": "lesson", "title": "Passed on the follow-up", "detail": "d", "inbox": reply["id"],
+             "evidence": True, "points": dict(self.ALL_MET), "errors": []}
+        hist.append(h)
+        self.assertEqual(self.check(self.state).returncode, 0)        # a pass on a follow-up: the key's checklist, as usual
+        h["points"]["2a"] = False
+        r = self.check(self.state)
+        self.assertEqual(r.returncode, 1, r.stdout)                  # graded against the same key
+        h.update(evidence=False, follow_up={"q": "And why?", "point": "2a"})
+        r = self.check(self.state)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("one follow-up per answer", r.stdout)
+
     def test_a_pass_without_a_key_validates_as_before(self):
         self.state["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Old", "detail": "d",
                                                    "evidence": True, "inbox": "0000000000"})      # no such inbox entry

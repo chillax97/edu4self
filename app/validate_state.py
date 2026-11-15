@@ -91,10 +91,32 @@ def check_levels(topic, h):
             'e.g. {"A": [1, 2]}' % h.get("title"))
 
 
+FOLLOW_UP_MAX = 200     # one short targeted question (PROTOCOL section 1)
+
+
+def check_follow_up(h):
+    """history[].follow_up: {q, point}, the one question asked before a pass. Only on a not yet, and never on the
+    grade of a reply to a follow-up (one follow-up per answer, never a chain)."""
+    name, fu = h.get("title"), h.get("follow_up")
+    if not (isinstance(fu, dict) and set(fu) == {"q", "point"} and isinstance(fu["q"], str)
+            and 0 < len(fu["q"].strip()) and len(fu["q"]) <= FOLLOW_UP_MAX
+            and isinstance(fu["point"], str) and fu["point"].strip()):
+        err('history %r: follow_up must be {"q": "<one question, 1-%d characters>", "point": "<point id>"}'
+            % (name, FOLLOW_UP_MAX))
+    if h.get("evidence") is not False:
+        err("history %r: a grade with a follow_up question is not a pass yet: set evidence to false" % name)
+    e = _inbox.get(h.get("inbox")) if isinstance(h.get("inbox"), str) else None
+    if e and e.get("kind") == "follow-up":
+        err("history %r: this grades a reply to a follow-up; one follow-up per answer, so it is a pass or a plain "
+            "not yet: leave follow_up out" % name)
+
+
 def check_grade(topic, h):
     name = h.get("title")
     if "levels" in h:
         check_levels(topic, h)
+    if "follow_up" in h:
+        check_follow_up(h)
     pts, errs = h.get("points"), h.get("errors")
     if "points" in h and (not isinstance(pts, dict) or not pts or not all(
             isinstance(k, str) and POINT_ID.match(k) and isinstance(v, bool) for k, v in pts.items())):
