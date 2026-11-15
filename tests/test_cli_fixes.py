@@ -81,6 +81,13 @@ class BusyPortTest(Cmd):
 class FirstRunTest(Cmd):
     """What a stranger (or the agent setting it up for them) reads on the first run."""
 
+    def setup_no_service(self):
+        vault = os.path.join(self.tmp, "fresh")
+        r = self.run_cli("setup", "--vault", vault, "--name", "Kim", "--port", str(self.free), "--no-service",
+                         "--no-open", "--no-plugin", "--gifts", "off")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        return r.stdout
+
     def test_serve_says_where_it_runs_even_when_its_output_goes_to_a_file(self):
         # an agent starts serve in the background with its output in a log; the URL must be in there at once
         vault = self.make_vault()
@@ -95,6 +102,9 @@ class FirstRunTest(Cmd):
         p.stdout.close()
         self.assertTrue(got, "serve printed nothing within 10 s")
         self.assertIn("http://127.0.0.1:%d/" % self.free, got[0])
+
+    def test_setup_without_a_terminal_does_not_ask_to_press_enter(self):
+        self.assertNotIn("Press Enter", self.setup_no_service())
 
 
 class SetupTwiceTest(Cmd):

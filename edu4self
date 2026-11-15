@@ -825,7 +825,7 @@ def cmd_mail(args):
 
 
 def cmd_setup(args):
-    print("edu4self setup. Press Enter to accept the suggestion in brackets.\n")
+    print("edu4self setup." + (" Press Enter to accept the suggestion in brackets." if sys.stdin.isatty() else "") + "\n")
     want_port = args.port or int(read_settings().get("port") or DEFAULT_PORT)
     if port_busy(want_port) and not health(want_port):      # ours answering is fine (a re-run); anything else is in the way
         sys.exit(port_taken_message(want_port).replace("./edu4self serve --port", "./edu4self setup --port"))
