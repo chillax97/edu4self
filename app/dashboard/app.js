@@ -802,7 +802,7 @@
       .catch(function () { toast("Couldn't withdraw it. It may already have been graded."); load(); });
   }
 
-  // onboarding: the first try (docs/SPEC.md FR-28). Before any dashboard, one idea, hidden, answered from memory.
+  // onboarding: the first try. Before any dashboard, one idea, hidden, answered from memory.
   // Two checks, named for what they are: a quick check here, by key words (instant, free, can be fooled), and,
   // one click and opt-in, Claude's real grade of the same answer from the inbox. Only Claude writes state.json,
   // so only Claude can keep it as proof; this card just shows what it wrote. Then the learner picks: their own

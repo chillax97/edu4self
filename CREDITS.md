@@ -33,7 +33,7 @@ consider [supporting them](https://radioparadise.com).
 
 - **Learning research.** Robert A. Bjork and Elizabeth L. Bjork (desirable difficulties; storage vs
   retrieval strength), Henry L. Roediger III and Jeffrey D. Karpicke (the testing effect), John Dunlosky
-  and colleagues (which study techniques work). See the [spec's references](docs/SPEC.md#references).
+  and colleagues (which study techniques work). See [References](#references).
 - ***Disco Elysium*** (ZA/UM). The bar view's dialogue, where your own skills talk to you, is a tribute
   to that game's design. edu4self uses its own characters, names, text and art; it is not affiliated with
   or endorsed by ZA/UM.
@@ -43,6 +43,18 @@ consider [supporting them](https://radioparadise.com).
 - **[Obsidian](https://obsidian.md).** The vault layout works as an Obsidian vault, and notes can open
   there. Optional; edu4self is not affiliated with Obsidian.
 - **[Contributor Covenant](https://www.contributor-covenant.org).** The basis of our code of conduct.
+
+## References
+
+- Bjork, R. A., & Bjork, E. L. (2020). Desirable difficulties in theory and practice. *Journal of Applied
+  Research in Memory and Cognition*, 9(4), 475-479.
+- Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2013). Improving students'
+  learning with effective learning techniques. *Psychological Science in the Public Interest*, 14(1), 4-58.
+- Roediger, H. L., & Karpicke, J. D. (2006). Test-enhanced learning. *Psychological Science*, 17(3), 249-255.
+- Wittbrodt, M. T., & Millard-Stafford, M. (2018). Dehydration impairs cognitive performance: a
+  meta-analysis. *Medicine & Science in Sports & Exercise*, 50(11), 2360-2368. (Why the water rounds exist:
+  the effect is small but real, and largest for attention.)
+- Cirillo, F. Pomodoro® trademark guidelines. <https://www.pomodorotechnique.com/pomodoro-trademark-guidelines/>
 
 ## People
 

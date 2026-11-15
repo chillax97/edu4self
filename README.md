@@ -98,7 +98,7 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 - **One next step, always.** The Up next card says what to do. No planning, no deciding.
 - **Proof, not time.** The evidence log lights up only when you demonstrate something, like an answer
   from memory or a solved problem. Reading doesn't count. This follows the research on retrieval
-  practice ([why](docs/SPEC.md#principles)).
+  practice ([sources](CREDITS.md#references)).
 - **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
   8 dies a row, 4 rows a tray. A water reminder arrives every 15 minutes while a block runs, if you want one.
 - **A room, or plain.** In a room your skills talk to you about tonight's work, the music plays a
@@ -216,7 +216,7 @@ edu4self/               the code (this repo)            ~/learn/                
   edu4self                the command line                _system/inbox.jsonl     your submissions
   template/               what a new vault starts as      _system/blocks.jsonl    your focus blocks
   plugin/                 Claude Code skills              _system/config.json     your Settings
-  docs/                   spec, protocol, customizing     _system/music/          your jukebox track
+  docs/                   protocol, customizing, rooms    _system/music/          your jukebox track
                                                           themes/                 rooms you made
                                                           gifts/                  what Claude made you
                                                           _system/keepsakes.json  your trophies
@@ -230,7 +230,6 @@ Obsidian" in Settings), and works with git if you want history.
 ## Documentation
 
 - [AGENTS.md](AGENTS.md): what an agent does when you hand it this repo
-- [Product spec](docs/SPEC.md): who it's for, what it does, why it's built this way
 - [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
 - [Rooms](docs/THEMES.md): how a room is made, for you or your agent
 - [The Claude protocol](docs/PROTOCOL.md): the contract between the dashboard and the tutor
