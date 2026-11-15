@@ -422,9 +422,44 @@ def run(cmd, check=False):
     return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=check)
 
 
+PRIVATE_FOLDERS = ("Documents", "Desktop", "Downloads")
+
+
+def private_folder_warning(engine, vault, home=None, system=None):
+    """On macOS, a program started at login may be kept out of ~/Documents, ~/Desktop and ~/Downloads (privacy
+    protection), so the dashboard would never answer. The warning, with how to move out, or None."""
+    if (system or platform.system()) != "Darwin":
+        return None
+    home = os.path.realpath(home or os.path.expanduser("~"))
+
+    def inside(path):
+        p = os.path.realpath(path).lower()
+        for folder in PRIVATE_FOLDERS:
+            top = os.path.join(home, folder).lower()
+            if p == top or p.startswith(top + os.sep):
+                return folder
+        return None
+    lines = []
+    folder = inside(engine)
+    if folder:
+        lines.append("edu4self is in ~/%s. Move it out, then run setup again from there:\n"
+                     "    mv %s ~/edu4self && cd ~/edu4self && ./edu4self setup" % (folder, shell_quote(engine)))
+    folder = inside(vault)
+    if folder:
+        lines.append("Your vault is in ~/%s. Move it out (for example to ~/learn) and point setup at it:\n"
+                     "    ./edu4self setup --vault ~/learn" % folder)
+    if not lines:
+        return None
+    return ("Heads up: macOS may stop a program that starts at login from reading Documents, Desktop or Downloads,\n"
+            "and then the dashboard won't start. " + "\n".join(lines))
+
+
 def cmd_install(args):
     vault, port = resolve(args)
     need_vault(vault)
+    warning = private_folder_warning(ENGINE, vault)
+    if warning:
+        print(warning + "\n")
     write_settings(vault=vault, port=port)   # status, doctor and open use the same port from now on
     os.makedirs(os.path.join(vault, "_system", "logs"), exist_ok=True)
     system = platform.system()

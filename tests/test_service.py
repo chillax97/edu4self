@@ -80,5 +80,57 @@ class WindowsFlowTest(unittest.TestCase):
         self.assertEqual(calls, [["schtasks", "/End", "/TN"], ["schtasks", "/Delete", "/F"]])
 
 
+class MacPrivateFolderTest(unittest.TestCase):
+    """macOS may keep a program started at login out of Documents, Desktop and Downloads. install warns before it
+    hands the dashboard to launchd from there, and says how to move it."""
+
+    def setUp(self):
+        import tempfile
+        self.home = tempfile.mkdtemp()
+
+    def warn(self, engine, vault, system="Darwin"):
+        return cli.private_folder_warning(engine, vault, home=self.home, system=system)
+
+    def test_an_engine_or_vault_in_a_private_folder_gets_a_warning_with_the_fix(self):
+        for folder in ("Documents", "Desktop", "Downloads"):
+            engine = os.path.join(self.home, folder, "code", "edu4self")
+            text = self.warn(engine, os.path.join(self.home, "learn"))
+            self.assertIn("~/%s" % folder, text)
+            self.assertIn("~/edu4self", text, "says where to move it")
+        text = self.warn(os.path.join(self.home, "edu4self"), os.path.join(self.home, "Documents", "learn"))
+        self.assertIn("vault", text)
+        self.assertIn("--vault", text)
+
+    def test_anywhere_else_or_another_system_is_quiet(self):
+        self.assertIsNone(self.warn(os.path.join(self.home, "edu4self"), os.path.join(self.home, "learn")))
+        self.assertIsNone(self.warn(os.path.join(self.home, "DocumentsArchive", "edu4self"), os.path.join(self.home, "learn")))
+        self.assertIsNone(self.warn(os.path.join(self.home, "Documents", "edu4self"), os.path.join(self.home, "learn"), "Linux"))
+
+    def test_install_on_a_mac_prints_it_before_handing_over_to_launchd(self):
+        import tempfile
+        vault = tempfile.mkdtemp()
+        os.makedirs(os.path.join(vault, "_system"))
+        engine = os.path.join(self.home, "Desktop", "edu4self")
+        out, calls = io.StringIO(), []
+
+        def fake_run(cmd, check=False):
+            calls.append((cmd[:2], len(out.getvalue())))
+            return mock.Mock(returncode=0, stdout="")
+        with mock.patch.object(cli.platform, "system", return_value="Darwin"), mock.patch.object(cli, "run", fake_run), \
+                mock.patch.object(cli, "health", return_value={"version": "x"}), \
+                mock.patch.object(cli, "resolve", return_value=(vault, 4747)), mock.patch.object(cli, "need_vault"), \
+                mock.patch.object(cli, "write_settings"), mock.patch.object(cli, "ENGINE", engine), \
+                mock.patch.object(cli, "plist_path", return_value=os.path.join(vault, "x.plist")), \
+                mock.patch.object(cli.os.path, "expanduser", lambda p: p.replace("~", self.home, 1)), \
+                mock.patch.object(cli.os, "getuid", return_value=501, create=True):
+            with contextlib.redirect_stdout(out):
+                rc = cli.cmd_install(mock.Mock())
+        self.assertEqual(rc, 0)
+        at = out.getvalue().find("~/Desktop")
+        self.assertGreaterEqual(at, 0, out.getvalue())
+        bootstrap = [n for cmd, n in calls if cmd == ["launchctl", "bootstrap"]]
+        self.assertTrue(bootstrap and at < bootstrap[0], "warned before launchd got it")
+
+
 if __name__ == "__main__":
     unittest.main()
