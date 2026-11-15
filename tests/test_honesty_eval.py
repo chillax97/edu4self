@@ -233,6 +233,11 @@ class TestVerdict(unittest.TestCase):
         self.assertEqual(run.verdict(self.state(h("Not yet.", False), h("Passed.", True)), "e1")[0], "pass")
         self.assertEqual(run.verdict(self.state(h("Passed.", True, "other"), processed=["e1"]), "e1")[0], "missing")
         self.assertEqual(run.verdict(self.state(), "e1")[0], "ungraded")
+        fu = {"q": "Why does the stack run out?", "point": "1b"}
+        almost = dict(h("Almost: one question first", False), follow_up=fu)
+        self.assertEqual(run.verdict(self.state(almost), "e1")[0], "follow-up")
+        self.assertEqual(run.follow_up_of(run.verdict(self.state(almost), "e1")[1]), fu)
+        self.assertIsNone(run.follow_up_of(run.verdict(self.state(h("Not yet.", False)), "e1")[1]))
 
 
 class TestOrder(unittest.TestCase):
@@ -279,6 +284,7 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
         self.keep = {k: os.environ.get(k) for k in ("FAKE_CLAUDE_PASS_IF", "FAKE_CLAUDE_PARTIAL_IF", "FAKE_CLAUDE_LOG",
+                                                    "FAKE_CLAUDE_FOLLOW_UP_IF", "FAKE_CLAUDE_REPLY_PASS_IF",
                                                     "EDU4SELF_CLAUDE")}
         os.environ["FAKE_CLAUDE_LOG"] = os.path.join(self.tmp, "fake.log")
 
@@ -290,10 +296,52 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
                 os.environ[k] = v
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def go(self, items, batch):
-        out = os.path.join(self.tmp, "out")
-        results, runs = run.run(items, batch, out, fake=True, log=lambda *a: None)
+    def go(self, items, batch, replies=None, out="out"):
+        out = os.path.join(self.tmp, out)
+        results, runs = run.run(items, batch, out, fake=True, log=lambda *a: None, replies=replies)
         return out, results, runs
+
+    def follow_up_items(self):
+        os.environ["FAKE_CLAUDE_PASS_IF"] = "frames never pop"          # rc02 passes
+        os.environ["FAKE_CLAUDE_FOLLOW_UP_IF"] = "RecursionError"       # rc04: almost, one question first
+        os.environ["FAKE_CLAUDE_REPLY_PASS_IF"] = "constant space"      # in the reference, so a good reply settles it
+        return [i for i in run.load_items("made-up") if i["id"] in ("rc02", "rc04", "rc07")]
+
+    def test_a_follow_up_is_a_third_verdict(self):
+        out, results, runs = self.go(self.follow_up_items(), 1)
+        by = {r["id"]: r for r in results}
+        self.assertEqual({i: r["verdict"] for i, r in by.items()}, {"rc02": "pass", "rc04": "follow-up", "rc07": "fail"})
+        fu = by["rc04"]["follow_up"]
+        self.assertTrue(fu["q"] and len(fu["q"]) <= 200 and fu["point"])
+        self.assertIsNone(by["rc02"]["follow_up"])
+        self.assertTrue(all("reply" not in r for r in results), "no replies unless asked for")
+        self.assertEqual(len(runs), 3)
+        self.assertTrue(all(r["check_ok"] for r in runs), runs)
+
+    def test_a_good_scripted_reply_settles_it_and_a_bad_one_does_not(self):
+        reference = next(i for i in run.load_items("made-up") if i["id"] == "rc04")["q"]["reference"]
+        for replies, want in (("good", "pass"), ("bad", "fail")):
+            out, results, runs = self.go(self.follow_up_items(), 1, replies=replies, out="out-" + replies)
+            by = {r["id"]: r for r in results}
+            r = by["rc04"]
+            self.assertEqual((r["verdict"], r["reply"], r["reply_verdict"], r["final"]),
+                             ("follow-up", replies, want, want), replies)
+            self.assertNotEqual(r["reply_inbox"], r["inbox"])
+            self.assertEqual((by["rc02"]["final"], by["rc02"]["reply"]), ("pass", None))   # no question, no reply
+            self.assertEqual(by["rc07"]["final"], "fail")
+            phases = [x.get("phase") for x in runs]
+            self.assertEqual(phases.count("replies"), 1, runs)          # one more run, only where a question was asked
+            self.assertTrue(all(x["check_ok"] for x in runs), runs)
+            vault = os.path.join(out, "batch-%02d" % r["batch"], "vault", "_system")
+            inbox = run.read_jsonl(os.path.join(vault, "inbox.jsonl"))
+            reply = next(e for e in inbox if e["id"] == r["reply_inbox"])
+            self.assertEqual((reply["kind"], reply["ref"], list(reply["fields"])),
+                             ("follow-up", r["inbox"], [r["follow_up"]["q"]]))
+            text = list(reply["fields"].values())[0]
+            if replies == "good":
+                self.assertEqual(text, reference)
+            else:
+                self.assertNotIn("constant space", text)
 
     def test_checklist_verdict(self):
         cv = run.checklist_verdict

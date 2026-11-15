@@ -145,6 +145,17 @@ class RunnerSaves(unittest.TestCase):
         self.assertIn("set", str(c.exception))
         self.assertEqual(len(self.ids_on_disk()), 3)
 
+    def test_resume_with_other_scripted_replies_is_refused(self):
+        with mock.patch.object(run, "grade", self.fake_grade()):
+            run.run(self.items[:3], 1, self.out, log=lambda *a: None, replies="good")
+            with self.assertRaises(SystemExit) as c:
+                run.run(self.items[:3], 1, self.out, log=lambda *a: None, resume=True, replies="bad")
+            self.assertIn("replies", str(c.exception))
+            with self.assertRaises(SystemExit):
+                run.run(self.items[:3], 1, self.out, log=lambda *a: None, resume=True)     # none now, good before
+            run.run(self.items[:3], 1, self.out, log=lambda *a: None, resume=True, replies="good")
+        self.assertEqual(len(self.ids_on_disk()), 3)
+
     def test_resume_is_refused_when_the_grading_inputs_changed(self):
         self.go(items=self.items[:3])
         with mock.patch.object(run, "grading_hash", return_value="changed"):

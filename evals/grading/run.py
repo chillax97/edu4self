@@ -56,7 +56,10 @@ CONFIDENCE = ("guessed", "shaky", "solid")
 # non-pass is split into partial / fail by these words in the entry's title and detail: a heuristic,
 # used only for the 3-class kappa. The false-pass rate never depends on it. "Not yet" is the product's
 # word for any non-pass, so it is not a partial word.
-GRADED = ("pass", "partial", "fail")     # verdicts that came from a grade; missing / ungraded are tried again on resume
+GRADED = ("pass", "partial", "fail", "follow-up")   # verdicts from a grade; missing / ungraded are tried again on resume
+# Scripted replies to a follow-up question (--replies): good is the question's reference answer, bad a reply that
+# settles nothing. A good one must pass, a bad one must not.
+BAD_REPLY = "I'm not sure. I think it just works that way."
 PARTIAL_WORDS = re.compile(
     r"\b(partly|partial(ly)?|half|halfway|mostly|most of|some of|part of it|one of (the )?(two|three|2|3)|"
     r"almost|nearly|incomplete|on the right track|right idea|good start|not quite|one part|"
@@ -319,6 +322,28 @@ def submit(engine, vault, batch, tasks):
     return ids
 
 
+def reply_text(item, kind):
+    """The scripted reply to a follow-up question: good is the question's reference answer, bad settles nothing."""
+    return item["q"]["reference"] if kind == "good" else BAD_REPLY
+
+
+def submit_replies(engine, vault, batch, ids, tasks, asked, kind):
+    """Answer each follow-up question the way the dashboard's reply box does: a `follow-up` inbox entry whose ref
+    is the graded answer. asked: {answer inbox id: follow_up}. Returns {answer inbox id: reply inbox id}."""
+    server = server_from(engine)
+    server.configure(vault, PORT)
+    out = {}
+    for entry_id, fu in asked.items():
+        it = next(i for i in batch if i["id"] == ids[entry_id])
+        topic, task_id, _ = tasks[it["id"]]
+        entry = server.clean_submission({"topic": topic, "task": task_id, "kind": "follow-up", "ref": entry_id,
+                                         "title": it["q"]["title"], "fields": {fu["q"]: reply_text(it, kind)},
+                                         "note": "", "honor": False}, server.read_state_safe())
+        server.append_inbox(entry)
+        out[entry_id] = entry["id"]
+    return out
+
+
 def check(engine, vault, env, overrule=False):
     """`edu4self check`; after a grade with --overrule, as the dashboard runs it, so the verdicts are the product's."""
     r = subprocess.run([sys.executable, os.path.join(engine, "edu4self"), "check", "--vault", vault]
@@ -363,16 +388,23 @@ def grade(engine, vault, stream_path, timeout):
             "wall_s": round(time.time() - t0, 1), "stderr_tail": err.strip().splitlines()[-3:]}
 
 
+def follow_up_of(hist):
+    """The follow-up question a grade asked ({q, point}, PROTOCOL.md section 1), or None."""
+    return next((h["follow_up"] for h in hist if isinstance(h.get("follow_up"), dict)), None)
+
+
 def verdict(state, entry_id):
-    """(verdict, the history entries that grade this submission). verdict: pass | partial | fail |
-    missing (processed, no history entry names it) | ungraded (not processed)."""
+    """(verdict, the history entries that grade this submission). verdict: pass | follow-up (not a pass yet,
+    one question asked) | partial | fail | missing (processed, no history entry names it) | ungraded (not processed)."""
     hist = [h for t in state.get("topics", []) for h in t.get("history", [])
             if isinstance(h, dict) and h.get("inbox") == entry_id]
     if not hist:
         return ("missing" if entry_id in state.get("processed_inbox", []) else "ungraded"), []
     if any(h.get("evidence") is True for h in hist):
         return "pass", hist
-    text = " ".join("%s %s" % (h.get("title", ""), h.get("detail", "")) for h in hist)
+    if follow_up_of(hist):
+        return "follow-up", hist
+    text =" ".join("%s %s" % (h.get("title", ""), h.get("detail", "")) for h in hist)
     return ("partial" if PARTIAL_WORDS.search(text) else "fail"), hist
 
 
@@ -459,8 +491,9 @@ def _engine_commit():
         return None
 
 
-def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False, meta=None):
-    """Grade items in batches. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
+def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False, meta=None, replies=None):
+    """Grade items in batches. With replies ("good" or "bad"), each follow-up question gets that scripted reply and
+    a second run grades it, in the same vault. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
     out as soon as its batch is graded, so a crash keeps what was paid for. With resume, answers already in
     results.jsonl are skipped and the rest are graded into the same folder. Returns (results, runs), old and new."""
     os.makedirs(out, exist_ok=True)
@@ -473,11 +506,13 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     now = {"set": (meta or {}).get("set"), "seed": (meta or {}).get("seed"), "batch": batch_size,
            "cases": hashlib.sha256("\n".join(it["id"] for it in items).encode("utf-8")).hexdigest()[:16],
            "n_cases": len(items), "grading": grading_hash()}
+    if replies:
+        now["replies"] = replies
     if resume and os.path.isfile(mpath):
         saved = load_json(mpath)
-        diff = ["%s (saved %s, now %s)" % (k, saved.get(k), now[k])
-                for k in ("set", "seed", "batch", "cases", "grading")
-                if k in saved and saved.get(k) != now[k]]
+        diff = ["%s (saved %s, now %s)" % (k, saved.get(k), now.get(k))
+                for k in ("set", "seed", "batch", "cases", "grading", "replies")
+                if (k in saved or k == "replies") and saved.get(k) != now.get(k)]   # no replies saved: none
         if diff:
             raise SystemExit("cannot resume into %s: it was started with different settings: %s. "
                              "Use the same options, or a new --out." % (out, "; ".join(diff)))
@@ -525,22 +560,44 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
             summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch])
             append_jsonl(upath, summary)       # the cost row first: a crash below never hides money spent
             runs.append(summary)
-            state = load_json(os.path.join(vault, "_system", "state.json"))
+            spath = os.path.join(vault, "_system", "state.json")
+            state = load_json(spath)
             share = summary["cost_usd"] / len(batch) if isinstance(summary["cost_usd"], (int, float)) else None
+            graded = {entry_id: verdict(state, entry_id) for entry_id in ids}
+            replied, reply_share = {}, None
+            asked = {e: follow_up_of(h) for e, (v, h) in graded.items() if v == "follow-up"}
+            if replies and asked:
+                # the second half: the learner answers each question, and the next "check my inbox" grades the reply
+                replied = submit_replies(engine, vault, batch, ids, tasks, asked, replies)
+                second = grade(engine, vault, os.path.join(bdir, "stream-replies.jsonl"), timeout)
+                second["check_ok"], text = check(engine, vault, env, overrule=True)
+                second["overruled"] = text.count("OVERRULED: ")
+                second.update(batch=b, phase="replies", items=len(replied), item_ids=[ids[e] for e in replied])
+                append_jsonl(upath, second)
+                runs.append(second)
+                state = load_json(spath)
+                if isinstance(second["cost_usd"], (int, float)):
+                    reply_share = second["cost_usd"] / len(replied)
             for entry_id, item_id in ids.items():
                 it = next(i for i in batch if i["id"] == item_id)
-                v, hist = verdict(state, entry_id)
+                v, hist = graded[entry_id]
                 topic, task_id, _ = tasks[item_id]
                 row = {"id": item_id, "source": it["source"], "qid": it["qid"], "category": it["category"],
                        "gold": it["gold"], "verdict": v, "batch": b, "inbox": entry_id, "task": task_id,
                        "confidence": confidence_for(item_id), "task_status": task_status(state, topic, task_id),
-                       "checklist": checklist_verdict(hist),
-                       "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors")}
+                       "checklist": checklist_verdict(hist), "follow_up": follow_up_of(hist),
+                       "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors", "follow_up")}
                                    for h in hist],
                        "cost_share_usd": share}
+                if replies:
+                    rid = replied.get(entry_id)
+                    rv = verdict(state, rid)[0] if rid else None
+                    row.update(reply=replies if rid else None, reply_inbox=rid, reply_verdict=rv, final=rv or v)
+                    if rid and reply_share is not None:
+                        row["cost_share_usd"] = (share or 0) + reply_share
                 old = redo.get(item_id, {}).get("cost_share_usd")      # keep the money the failed try cost
                 if isinstance(old, (int, float)):
-                    row["cost_share_usd"] = (share or 0) + old
+                    row["cost_share_usd"] = (row["cost_share_usd"] or 0) + old
                 append_jsonl(rpath, row)       # saved now, not at the end
                 results.append(row)
             shutil.copytree(vault, os.path.join(bdir, "vault"), ignore=shutil.ignore_patterns("__pycache__"))
@@ -572,6 +629,9 @@ def main(argv=None):
     p.add_argument("--out", help="output folder (default evals/grading/out/<time>)")
     p.add_argument("--resume", action="store_true",
                    help="continue into --out: skip answers already in its results.jsonl (after a crash or Ctrl-C)")
+    p.add_argument("--replies", choices=["good", "bad"],
+                   help="answer each follow-up question with a scripted reply (good: the reference answer; bad: one that "
+                        "settles nothing) and grade it in a second run per batch that asked one")
     p.add_argument("--yes", action="store_true", help="really run Claude Code (each run costs money)")
     a = p.parse_args(argv)
     items = order(load_items(a.set), a.seed)
@@ -587,12 +647,13 @@ def main(argv=None):
         if ready["problem"]:
             sys.exit("Claude Code is %s: %s" % (ready["problem"], ready["detail"] or "run `claude auth login`"))
         if not a.yes:
-            sys.exit("This would start %d real Claude Code run(s) for %d answers, on your account. "
-                     "Add --yes to go ahead, or --fake to try it free." % (n_runs, len(items)))
+            sys.exit("This would start %d real Claude Code run(s)%s for %d answers, on your account. "
+                     "Add --yes to go ahead, or --fake to try it free."
+                     % (n_runs, " (up to %d with the replies)" % (2 * n_runs) if a.replies else "", len(items)))
     out = a.out or os.path.join(HERE, "out", datetime.now().strftime("%Y%m%d-%H%M%S") + ("-fake" if a.fake else ""))
     print("grading %d answers in %d run(s) of up to %d -> %s" % (len(items), n_runs, a.batch, out))
     run(items, a.batch, out, fake=a.fake, timeout=a.timeout, resume=a.resume,
-        meta={"set": a.set, "seed": a.seed})
+        meta={"set": a.set, "seed": a.seed}, replies=a.replies)
     print("score it: python3 %s %s" % (os.path.relpath(os.path.join(HERE, "score.py")), out))
 
 

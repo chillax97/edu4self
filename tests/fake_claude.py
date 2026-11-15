@@ -87,15 +87,26 @@ elif "check my inbox" in prompt:
                 continue
             text = json.dumps(e.get("fields"))
             topic = next(t for t in state["topics"] if t["id"] == e.get("topic"))
+            # FAKE_CLAUDE_FOLLOW_UP_IF: an answer holding it gets one follow-up question (PROTOCOL section 1);
+            # a reply to one (kind follow-up) passes when it holds FAKE_CLAUDE_REPLY_PASS_IF, else it is a plain not yet.
+            if e.get("kind") == "follow-up":
+                passed, ask = (os.environ.get("FAKE_CLAUDE_REPLY_PASS_IF") or "\0") in text, False
+            else:
+                passed = marker in text
+                ask = not passed and (os.environ.get("FAKE_CLAUDE_FOLLOW_UP_IF") or "\0") in text
             h = {"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
-                 "title": "Passed." if marker in text else "Partly right." if part in text else "Not yet.",
-                 "detail": "Graded by the fake tutor.", "evidence": marker in text or bool(os.environ.get("FAKE_CLAUDE_LENIENT"))}
+                 "title": "Passed." if passed else "Almost: one question first." if ask else
+                 "Partly right." if part in text else "Not yet.",
+                 "detail": "Graded by the fake tutor.", "evidence": passed or bool(os.environ.get("FAKE_CLAUDE_LENIENT"))}
             key = os.path.join("_system", "keys", topic["path"], "%s.md" % e.get("task"))
+            pts = ["1a"]
             if os.path.isfile(key):   # the checklist (PROTOCOL section 3): all met on a pass, the first point missed otherwise
                 with open(key, encoding="utf-8") as fh:
                     pts = re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", fh.read()) or ["1a"]
-                h["points"] = {p: marker in text or i > 0 for i, p in enumerate(pts)}
+                h["points"] = {p: passed or ask or i > 0 for i, p in enumerate(pts)}
                 h["errors"] = []
+            if ask:
+                h["follow_up"] = {"q": "You named it. Why does that happen?", "point": pts[0]}
             topic["history"].append(h)
     state["processed_inbox"] = sorted(set(state.get("processed_inbox", []) + ids))
     state["coach"]["headline"] = "Graded by the fake tutor."
