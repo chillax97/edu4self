@@ -116,6 +116,14 @@ class FirstRunTest(Cmd):
         self.assertNotIn("Press Enter", self.setup_no_service())
 
 
+    def test_the_server_starts_without_asking_dns_for_its_own_name(self):
+        # http.server looks up 127.0.0.1's name when it binds; on a Mac with slow reverse DNS (CI's macOS runners,
+        # a VPN) that held serve's first line, and the start-at-login check, for about 35 s
+        vault = self.make_vault()
+        with mock.patch.object(socket, "getfqdn", side_effect=AssertionError("asked DNS for its own name")):
+            httpd = server.make_server(vault, 0)
+        httpd.server_close()
+
     def test_agents_md_quotes_what_setup_really_prints(self):
         # AGENTS.md tells the agent to run the plugin commands only when setup printed this line
         self.assertIn('"Give Claude the tutor skills"', read(os.path.join(ENGINE, "AGENTS.md")))

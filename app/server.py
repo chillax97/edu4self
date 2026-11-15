@@ -22,6 +22,7 @@ import os
 import posixpath
 import re
 import shutil
+import socketserver
 import subprocess
 import sys
 import threading
@@ -1899,10 +1900,18 @@ def add_types():
         mimetypes.add_type(ctype, ext)
 
 
+class Server(ThreadingHTTPServer):
+    def server_bind(self):
+        """Bind without http.server's reverse DNS lookup of 127.0.0.1 (socket.getfqdn): on a Mac with slow reverse
+        DNS (a VPN, CI's macOS runners) it held the start for about 35 s. The name it would find is never used."""
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def make_server(vault, port):
     configure(vault, port)
     add_types()
-    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    httpd = Server((HOST, PORT), Handler)
     httpd.daemon_threads = True
     return httpd
 
