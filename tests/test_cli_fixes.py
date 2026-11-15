@@ -97,10 +97,11 @@ class FirstRunTest(Cmd):
         reader = threading.Thread(target=lambda: got.append(p.stdout.readline()), daemon=True)
         reader.start()
         reader.join(10)
+        timed_out = reader.is_alive()       # read before kill: killing closes the pipe and readline returns ''
         p.kill()
         p.wait()
         p.stdout.close()
-        self.assertTrue(got, "serve printed nothing within 10 s")
+        self.assertFalse(timed_out, "serve printed nothing within 10 s")
         self.assertIn("http://127.0.0.1:%d/" % self.free, got[0])
 
     def test_setup_without_a_service_says_to_start_the_dashboard_before_opening_it(self):
