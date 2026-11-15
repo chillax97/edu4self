@@ -70,8 +70,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
 
    don't toss a coin between pass and not yet: ask one question. Write the `history` entry with
    `evidence: false` and `follow_up: {q, point}`: `q` is one targeted question about that point, at
-   most 200 characters (for example "You said the table stores statistics. What does the controller
-   use them for?"), and `point` is its point id. Title it like "Almost: one question first", leave the
+   most 200 characters (for example "You said plants need light. What do they make with it?"), and `point` is its point id. Title it like "Almost: one question first", leave the
    task `todo`, and in the feedback credit what is right and ask the question. Mark the point as you
    judged it (a bare or sloppy point may be `true`; `follow_up` says why it isn't a pass yet). A
    missing point, a skipped part of the question or any factual error is a plain not yet, never a
