@@ -9,7 +9,8 @@ You pick what to learn. Claude writes short lessons, tests what you know, and gr
 against a key it wrote before you answered. When one point is thin, it asks you one follow-up
 question instead of guessing.
 The dashboard always shows one next step, keeps a record of what you've actually proven, and turns
-your focused time into something you can see grow. Nothing leaves your machine.
+your focused time into something you can see grow. The dashboard and your files stay on your
+computer; Claude Code talks to Anthropic as it always does ([privacy](#privacy)).
 
 ## Quick start
 
