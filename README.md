@@ -16,8 +16,9 @@ computer; Claude Code talks to Anthropic as it always does ([privacy](#privacy))
 
 1. Install [Claude Code](https://claude.com/claude-code) and sign in. Python 3.9+ and git too.
 2. Easiest: open Claude Code and paste `Clone https://github.com/chillax97/edu4self (git clone --depth 1), read its AGENTS.md, and set it up for me.`
-3. Or do it yourself: `git clone --depth 1 https://github.com/chillax97/edu4self.git && cd edu4self`
+3. Or do it yourself, from your home folder: `cd ~ && git clone --depth 1 https://github.com/chillax97/edu4self.git && cd edu4self`
 4. Then `./edu4self setup` (makes your vault, starts the dashboard at login, installs the tutor skills, opens it).
+   On Windows, type `python edu4self` wherever this page says `./edu4self`, here `python edu4self setup`.
 5. Check anything with `./edu4self doctor`. More below: [rooms](#make-it-your-room), [full setup](#set-it-up-yourself).
 
 ## What you need
@@ -30,6 +31,8 @@ computer; Claude Code talks to Anthropic as it always does ([privacy](#privacy))
   that counts against your plan's limits, with no extra bill. With an API key each run is billed: one measured first-try
   grade cost $0.28; grading a full inbox does more work and costs more.
 - **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python; on Windows install it from python.org.
+  On a Mac that has never used them, the first `git` or `python3` offers to install Apple's Command Line Tools:
+  say yes, it takes a few minutes.
 
 [![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
 
@@ -124,9 +127,10 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
 You need [Claude Code](https://claude.com/claude-code), Python 3.9+ and git (see [What you need](#what-you-need)).
 
 ```sh
+cd ~                     # your home folder: macOS may keep the login service out of Documents, Desktop and Downloads
 git clone --depth 1 https://github.com/chillax97/edu4self.git
 cd edu4self
-./edu4self setup
+./edu4self setup         # on Windows: python edu4self setup
 ```
 
 `setup` asks where to put your learning vault (default `~/learn`) and what to call you, and offers to
@@ -183,6 +187,8 @@ the dashboard when you log on; `uninstall` removes it. You can also see it in th
 </details>
 
 ## Everyday commands
+
+On Windows, write `python edu4self` for `./edu4self`.
 
 | command | what it does |
 |---|---|

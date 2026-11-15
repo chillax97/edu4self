@@ -122,6 +122,30 @@ class FirstRunTest(Cmd):
         self.assertIn("Give Claude the tutor skills", self.setup_no_service())
 
 
+class ReadmeSetupTest(unittest.TestCase):
+    """The README's setup steps work as written on every system they name."""
+
+    def section(self, title):
+        text = read(os.path.join(ENGINE, "README.md"))
+        start = text.index("## " + title)
+        end = text.find("\n## ", start + 3)
+        return text[start:end if end > 0 else None]
+
+    def test_every_setup_section_gives_the_windows_form_too(self):
+        for title in ("Quick start", "Set it up yourself", "Everyday commands"):
+            body = self.section(title)
+            self.assertIn("./edu4self", body)
+            self.assertIn("python edu4self", body, "%s says ./edu4self, which PowerShell can't run" % title)
+
+    def test_a_fresh_mac_is_told_about_the_command_line_tools(self):
+        self.assertIn("Command Line Tools", self.section("What you need"))
+
+    def test_the_clone_goes_to_the_home_folder(self):
+        # not Documents, Desktop or Downloads, which macOS may keep a login service out of
+        for title in ("Quick start", "Set it up yourself"):
+            self.assertIn("cd ~", self.section(title), title)
+
+
 class SetupTwiceTest(Cmd):
     def test_setup_on_an_existing_vault_carries_on_and_leaves_it_alone(self):
         vault = self.make_vault()
