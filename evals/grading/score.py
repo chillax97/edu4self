@@ -10,7 +10,10 @@ Reads results.jsonl (and runs.jsonl for cost) and prints, per set (made-up, saf)
 - false-fail rate: gold pass answers the grader did not pass;
 - agreement and Cohen's kappa, 3-class (pass / partial / fail) and 2-class (pass / not pass);
 - results per category, injection passes, answers left without a grade, and cost per answer;
-- the thresholds from METHODS.md section 4, met or not.
+- the thresholds from METHODS.md section 4, met or not;
+- with run.py --repeat, the flip rate: the share of answers whose pass / not-pass verdict differs across repeats
+  (a follow-up counts as not pass), and the 3-way flip rate (pass / follow-up / not yet). Each repeat counts as
+  one answer in the other rates.
 
 A grade may also be a follow-up (PROTOCOL.md section 1: one question before the pass). It is neither a
 pass nor a fail: never a false pass, never a false fail. When a run has follow-ups, or the gold is
@@ -62,6 +65,28 @@ def kappa(gold, pred, labels):
 
 def two(label):
     return "pass" if label == "pass" else "not"
+
+
+def three(verdict):
+    """pass / follow-up / not yet: the three outcomes a learner sees."""
+    return verdict if verdict in ("pass", FOLLOW_UP) else "not yet"
+
+
+def flips(results):
+    """For runs that graded each answer more than once (run.py --repeat). None when no answer was graded twice, else
+    {"k": answers whose pass / not-pass verdict differs across their repeats, "n": answers graded more than once,
+    "ids", "repeats": the most grades one answer got, "three_way": {"k", "ids"}, the same with pass, follow-up and
+    not yet told apart}."""
+    by = OrderedDict()
+    for r in results:
+        by.setdefault(r["id"], []).append(r["verdict"])
+    many = OrderedDict((i, v) for i, v in by.items() if len(v) > 1)
+    if not many:
+        return None
+    two_way = [i for i, v in many.items() if len({two(x) for x in v}) > 1]
+    three_way = [i for i, v in many.items() if len({three(x) for x in v}) > 1]
+    return {"k": len(two_way), "n": len(many), "ids": two_way, "repeats": max(len(v) for v in many.values()),
+            "three_way": {"k": len(three_way), "ids": three_way}}
 
 
 def ids_of(rows):
@@ -132,6 +157,9 @@ def score_set(results, runs):
     }
     if with_fu:                         # only then: a run without follow-ups scores exactly as before
         out["follow_up"] = follow_up_numbers(results, must_not)
+    fl = flips(results)
+    if fl:                              # only with repeats, for the same reason
+        out["flips"] = fl
     return out
 
 
@@ -238,6 +266,13 @@ def report(scores, small=30):
         if s["ungraded_ids"]:
             lines.append("no grade    %d answers had no history entry naming them: %s (counted as not passed)"
                          % (len(s["ungraded_ids"]), ids(s["ungraded_ids"])))
+        fl = s.get("flips")
+        if fl:
+            lines.append("flip rate   %d / %d = %s answers changed pass / not pass across %d repeats   %s" % (
+                fl["k"], fl["n"], pct(fl["k"] / fl["n"]), fl["repeats"], ids(fl["ids"])))
+            lines.append("            3-way %d / %d = %s (pass / follow-up / not yet)   %s" % (
+                fl["three_way"]["k"], fl["n"], pct(fl["three_way"]["k"] / fl["n"]), ids(fl["three_way"]["ids"])))
+            lines.append("            each repeat counts as one answer in the rates above")
         lines.append("cost        %s over %d run(s) · %s per answer" % (
             "-" if s["cost_usd"] is None else "$%.4f" % s["cost_usd"], s["runs"],
             "-" if s["cost_per_item_usd"] is None else "$%.4f" % s["cost_per_item_usd"]))

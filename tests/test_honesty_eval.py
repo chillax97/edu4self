@@ -208,6 +208,29 @@ class TestScorer(unittest.TestCase):
         with open(os.path.join(d, "report.txt"), encoding="utf-8") as fh:
             self.assertEqual(score.report(s) + "\n", fh.read())
 
+    def test_flip_rate(self):
+        """With run.py --repeat: answers whose verdict differs across their repeats. pass / not pass counts a follow-up
+        as not pass; the 3-way count tells pass, follow-up and not yet apart."""
+        rows = [dict(self.r("a", "pass", "pass"), repeat=0), dict(self.r("a", "pass", "fail"), repeat=1),
+                dict(self.r("b", "fail", "fail"), repeat=0), dict(self.r("b", "fail", "partial"), repeat=1),
+                dict(self.r("c", "pass", "follow-up"), repeat=0), dict(self.r("c", "pass", "missing"), repeat=1),
+                dict(self.r("d", "pass", "pass"), repeat=0), dict(self.r("d", "pass", "pass"), repeat=1)]
+        f = score.flips(rows)
+        self.assertEqual((f["k"], f["n"], f["ids"]), (1, 4, ["a"]))        # partial and fail are both "not pass"
+        self.assertEqual((f["three_way"]["k"], f["three_way"]["ids"]), (2, ["a", "c"]))   # follow-up vs not yet
+        self.assertEqual(f["repeats"], 2)
+        s = score.score(rows, [])["made-up"]
+        self.assertEqual(s["flips"], f)
+        text = score.report(score.score(rows, []))
+        self.assertIn("flip rate   1 / 4 = 25.0%", text)
+        self.assertIn("3-way 2 / 4 = 50.0%", text)
+
+    def test_no_repeats_no_flip_rate(self):
+        self.assertIsNone(score.flips([self.r("a", "pass", "pass"), self.r("b", "pass", "fail")]))
+        s = score.score([self.r("a", "pass", "pass")], [])
+        self.assertNotIn("flips", s["made-up"])            # the JSON of a run without repeats is unchanged
+        self.assertNotIn("flip rate", score.report(s))
+
     def test_thresholds(self):
         good = [self.r("p%d" % i, "pass", "pass", "correct") for i in range(20)] + \
                [self.r("f%d" % i, "fail", "fail") for i in range(60)]
