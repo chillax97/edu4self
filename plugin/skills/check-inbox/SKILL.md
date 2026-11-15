@@ -19,7 +19,7 @@ and editing `_system/state.json`, which only you write.
    `{"A": [1, 2]}` (region code: level before, level after), so a pass the check overrules can be undone. If your own feedback names a
    missing point or an error, it is not proof: say what to add or fix, and the learner tries again.
    **Same meaning counts:** a point said in the learner's own words, or framed differently from the lecture
-   or the key, is met ("cwnd doubles every round trip" meets "+1 per acknowledged segment" in slow start),
+   or the key, is met ("up a mountain water boils sooner" meets "lower pressure lowers the boiling point"),
    and so is a correct item outside the lecture's list. Failing a right answer for its wording is a grading
    error.
    **Follow-up:** when no point is missing and there is no error, but one point is only bare (true but thin),

@@ -43,9 +43,9 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
      doesn't is not.
    - If your feedback names a gap, that point is `false`; if it names a mistake, it is in `errors`.
    **Same meaning counts.** An answer meets a point when it means the same thing, in the learner's own
-   words or framed differently from the lecture or the key. In slow start, "cwnd doubles every round
-   trip" meets a key point "cwnd grows by 1 per acknowledged segment": the same fact, counted per round
-   trip instead of per acknowledgement. A correct item that isn't on the lecture's list counts too,
+   words or framed differently from the lecture or the key. "Up a mountain the air pushes down less,
+   so water boils sooner" meets a key point "lower air pressure lowers the boiling point": the same
+   fact, told as a story instead of a rule. A correct item that isn't on the lecture's list counts too,
    when the question asks for items of that kind. Never fail an answer for its wording, its framing, or
    a correct item from outside the lecture's list. Failing a right answer for its wording is a grading
    error.
