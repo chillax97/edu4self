@@ -47,6 +47,15 @@ versions follow [Semantic Versioning](https://semver.org).
   `docs/SPEC.md` is gone: the repo keeps what a learner uses, plus its tests and community files. The
   spec's research references are in `CREDITS.md`.
 
+### Fixed
+
+- `serve` prints its URL at once when its output goes to a file or pipe (an agent running it in the background,
+  the login service's log); the line used to sit in the buffer.
+- `setup` without a login service lists "Start the dashboard: `./edu4self serve --open`" as a step before the
+  dashboard's address, and says "Press Enter" only when it will ask something.
+- AGENTS.md: the agent runs the plugin commands only when setup says they are still to do, and Windows agents
+  are told to use `python edu4self`.
+
 ## 1.5.1 - 2026-11-14
 
 ### Fixed
