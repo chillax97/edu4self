@@ -55,6 +55,12 @@ versions follow [Semantic Versioning](https://semver.org).
   dashboard's address, and says "Press Enter" only when it will ask something.
 - AGENTS.md: the agent runs the plugin commands only when setup says they are still to do, and Windows agents
   are told to use `python edu4self`.
+- On macOS, `setup` and `install` warn when edu4self or the vault is in Documents, Desktop or Downloads, which
+  macOS may keep a login service out of, and say how to move it.
+- README setup steps give the Windows form (`python edu4self`), clone from the home folder, and tell a fresh Mac
+  about Apple's Command Line Tools prompt.
+- CI runs a stranger's first run (setup, check, serve, status, doctor: `tests/first_run.py`) on Linux, Windows
+  and macOS for every push.
 
 ## 1.5.1 - 2026-11-14
 

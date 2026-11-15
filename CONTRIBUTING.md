@@ -41,7 +41,7 @@ cd tests/e2e && npm ci && npm test               # a real Chrome; set CHROME_PAT
 ```
 
 New behaviour needs a test that would fail without it. Bug fixes start with a test that reproduces the
-bug. CI runs the unit tests on Python 3.10 and 3.13 on Linux and 3.9 and 3.13 on Windows, and the browser tests on Linux and Windows, for every push and pull request; the macOS unit tests (Python 3.9 and 3.13) run only for `v*` tags and manual runs.
+bug. CI runs the unit tests on Python 3.10 and 3.13 on Linux and 3.9 and 3.13 on Windows, and the browser tests on Linux and Windows, for every push and pull request; the macOS unit tests (Python 3.9 and 3.13) run only for `v*` tags and manual runs. A first-run job runs `tests/first_run.py` (setup, check, serve, status, doctor in a temporary folder) on all three systems for every push; run it locally with `python3 tests/first_run.py`.
 While working, run only the changed test file; run the full suite before a push.
 
 If you change `docs/PROTOCOL.md`, copy it to `plugin/skills/check-inbox/PROTOCOL.md` (a test checks they
