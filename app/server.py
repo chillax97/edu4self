@@ -720,7 +720,8 @@ def api_state():
         "state": state,
         "derived": derived,
         "inbox": {"pending": pending_entries(state), "all_submissions": [
-            {"id": e.get("id"), "ts": e.get("ts"), "task": e.get("task"), "kind": e.get("kind")}
+            dict({"id": e.get("id"), "ts": e.get("ts"), "task": e.get("task"), "kind": e.get("kind")},
+                 **({"ref": e.get("ref")} if e.get("kind") == "follow-up" else {}))   # which answer it replies to
             for e in entries if e.get("kind") != "withdraw" and e.get("id") not in withdrawn]},
         "blocks": [{k: e.get(k) for k in ("ts", "started", "block", "minutes", "task", "water_served", "water_drunk") if k in e}
                    for e in read_jsonl(BLOCKS)],

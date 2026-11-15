@@ -208,6 +208,10 @@ class ServerTest(unittest.TestCase):
             code, d, _ = self.req("GET", "/api/state")
             self.assertIn(fid, [x["id"] for x in d["inbox"]["pending"]])     # pending, graded like any other entry
             self.assertNotIn(ref, [x["id"] for x in d["inbox"]["pending"]])
+            # the page needs the ref after grading too, to tell an answered question from an open one
+            subs = {x["id"]: x for x in d["inbox"]["all_submissions"]}
+            self.assertEqual(subs[fid].get("ref"), ref)
+            self.assertNotIn("ref", subs[ref])
             self.assertEqual(self.req("POST", "/api/withdraw", {"id": fid})[0], 200)
             code, d, _ = self.req("GET", "/api/state")
             self.assertNotIn(fid, [x["id"] for x in d["inbox"]["pending"]])
