@@ -124,6 +124,21 @@ class FirstRunTest(Cmd):
             httpd = server.make_server(vault, 0)
         httpd.server_close()
 
+    def test_setup_asks_nothing_when_only_stdin_looks_like_a_terminal(self):
+        # Windows calls NUL a terminal: an agent's setup has stdin=NUL (isatty True) and its output in a pipe
+        class Nul(io.StringIO):
+            def isatty(self):
+                return True
+        vault = os.path.join(self.tmp, "nul")
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, self.env), mock.patch.object(cli.sys, "stdin", Nul("")), \
+                mock.patch("builtins.input", side_effect=AssertionError("asked a question")), \
+                contextlib.redirect_stdout(out):
+            cli.main(["setup", "--vault", vault, "--name", "Kim", "--port", str(self.free), "--no-service",
+                      "--no-open", "--no-plugin"])
+        self.assertNotIn("Press Enter", out.getvalue())
+        self.assertNotIn("Turn gifts on", out.getvalue())
+
     def test_agents_md_quotes_what_setup_really_prints(self):
         # AGENTS.md tells the agent to run the plugin commands only when setup printed this line
         self.assertIn('"Give Claude the tutor skills"', read(os.path.join(ENGINE, "AGENTS.md")))

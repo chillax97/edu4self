@@ -766,12 +766,18 @@ def cmd_doctor(args):
 
 # ---------------------------------------------------------------- setup
 
+def interactive():
+    """True when a person is at a terminal. stdin alone isn't enough: Windows calls the NUL device a terminal, so
+    an agent running setup with no input looked like one. Its output goes to a pipe, so ask both."""
+    return all(s is not None and s.isatty() for s in (sys.stdin, sys.stdout))
+
+
 def ask(prompt, default):
-    if not sys.stdin.isatty():
+    if not interactive():
         return default
     try:
         got = input("%s [%s]: " % (prompt, default)).strip()
-    except EOFError:        # Windows calls the NUL device a terminal, so isatty() lets a closed input through
+    except EOFError:        # a terminal whose input is closed after all
         print()
         return default
     return got or default
@@ -860,7 +866,7 @@ def cmd_mail(args):
 
 
 def cmd_setup(args):
-    print("edu4self setup." + (" Press Enter to accept the suggestion in brackets." if sys.stdin.isatty() else "") + "\n")
+    print("edu4self setup." + (" Press Enter to accept the suggestion in brackets." if interactive() else "") + "\n")
     want_port = args.port or int(read_settings().get("port") or DEFAULT_PORT)
     if port_busy(want_port) and not health(want_port):      # ours answering is fine (a re-run); anything else is in the way
         sys.exit(port_taken_message(want_port).replace("./edu4self serve --port", "./edu4self setup --port"))
@@ -873,13 +879,13 @@ def cmd_setup(args):
             sys.exit("Pick another folder:  ./edu4self setup --vault <new folder>")
     name = args.name if args.name is not None or reuse else ask("What should the dashboard call you?", os.environ.get("USER", "").capitalize() or "friend")
     gifts = args.gifts
-    if gifts is None and sys.stdin.isatty() and not reuse:
+    if gifts is None and interactive() and not reuse:
         print("\nWhen you win a week or finish a die, Claude can make you a small gift from what you proved.")
         print("Each gift is one short Claude run on your own account, so it uses a little of your plan.")
         gifts = "on" if ask("Turn gifts on? (y/n)", "n").lower().startswith("y") else "off"
     claude = find_claude()
     plugin = not args.no_plugin and bool(claude)
-    if plugin and sys.stdin.isatty():
+    if plugin and interactive():
         print("\nClaude needs the edu4self plugin: it holds the tutor's skills (writing lessons, grading your work).")
         plugin = ask("Install the tutor plugin now? (y/n)", "y").lower().startswith("y")
     if reuse:
