@@ -74,21 +74,10 @@ elif "check my inbox" in prompt:
         for line in fh:
             if line.strip():
                 ids.append(json.loads(line)["id"])
-    # FAKE_CLAUDE_PASS_IF (for the honesty test's runner): also write a history entry per answer, a pass when its
-    # text holds that marker, "Partly right" when it holds FAKE_CLAUDE_PARTIAL_IF, else "Not yet".
+    # FAKE_CLAUDE_PASS_IF: also write a history entry per answer, a pass when its text holds that marker, else "Not yet."
     # FAKE_CLAUDE_LENIENT=1 plays the grader we guard against: it passes every answer, whatever its checklist says.
     marker = os.environ.get("FAKE_CLAUDE_PASS_IF")
-    # FAKE_CLAUDE_COUNT (a file) counts the grading runs; past FAKE_CLAUDE_STRICT_AFTER of them every answer is a
-    # plain "Not yet." (no pass, no follow-up), a grader that changes its mind on a re-grade (run.py --repeat).
-    strict = False
-    if marker and os.environ.get("FAKE_CLAUDE_COUNT"):
-        with open(os.environ["FAKE_CLAUDE_COUNT"], "a+", encoding="utf-8") as fh:
-            fh.write("run\n")
-            fh.seek(0)
-            n_runs = len(fh.readlines())
-        strict = n_runs > int(os.environ.get("FAKE_CLAUDE_STRICT_AFTER", "1000000"))
     if marker:
-        part = os.environ.get("FAKE_CLAUDE_PARTIAL_IF") or "\0"
         with open(os.path.join("_system", "inbox.jsonl"), encoding="utf-8") as fh:
             entries = [json.loads(l) for l in fh if l.strip()]
         for e in entries:
@@ -96,29 +85,16 @@ elif "check my inbox" in prompt:
                 continue
             text = json.dumps(e.get("fields"))
             topic = next(t for t in state["topics"] if t["id"] == e.get("topic"))
-            # FAKE_CLAUDE_FOLLOW_UP_IF: an answer holding it gets one follow-up question (PROTOCOL section 1);
-            # a reply to one (kind follow-up) passes when it holds FAKE_CLAUDE_REPLY_PASS_IF, else it is a plain not yet.
-            if e.get("kind") == "follow-up":
-                passed, ask = (os.environ.get("FAKE_CLAUDE_REPLY_PASS_IF") or "\0") in text, False
-            else:
-                passed = marker in text
-                ask = not passed and (os.environ.get("FAKE_CLAUDE_FOLLOW_UP_IF") or "\0") in text
-            if strict:
-                passed = ask = False
-                part = "\0"
+            passed = marker in text
             h = {"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
-                 "title": "Passed." if passed else "Almost: one question first." if ask else
-                 "Partly right." if part in text else "Not yet.",
+                 "title": "Passed." if passed else "Not yet.",
                  "detail": "Graded by the fake tutor.", "evidence": passed or bool(os.environ.get("FAKE_CLAUDE_LENIENT"))}
             key = os.path.join("_system", "keys", topic["path"], "%s.md" % e.get("task"))
-            pts = ["1a"]
             if os.path.isfile(key):   # the checklist (PROTOCOL section 3): all met on a pass, the first point missed otherwise
                 with open(key, encoding="utf-8") as fh:
                     pts = re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", fh.read()) or ["1a"]
-                h["points"] = {p: passed or ask or i > 0 for i, p in enumerate(pts)}
+                h["points"] = {p: passed or i > 0 for i, p in enumerate(pts)}
                 h["errors"] = []
-            if ask:
-                h["follow_up"] = {"q": "You named it. Why does that happen?", "point": pts[0]}
             topic["history"].append(h)
     state["processed_inbox"] = sorted(set(state.get("processed_inbox", []) + ids))
     state["coach"]["headline"] = "Graded by the fake tutor."
