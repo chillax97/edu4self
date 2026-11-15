@@ -89,6 +89,22 @@ jobs:
           python edu4self init "$RUNNER_TEMP/empty" --no-example
           python edu4self check --vault "$RUNNER_TEMP/empty"
 
+  first-run:
+    name: first run (setup, check, serve, doctor) · ${{ matrix.os }}
+    # what a stranger runs from the README, on every system it names; no login service, no plugin, a free port
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python tests/first_run.py
+
   browser:
     name: browser tests (Chrome)
     runs-on: ubuntu-latest
