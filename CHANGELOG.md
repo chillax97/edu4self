@@ -41,6 +41,12 @@ versions follow [Semantic Versioning](https://semver.org).
   N above 1, so older run folders score as before; `--resume` goes by answer and repeat.
   A run without follow-ups scores exactly as before.
 
+### Removed
+
+- The honesty test (`evals/grading/`, the `honesty-test` skill and its tests) moved out of the engine, and
+  `docs/SPEC.md` is gone: the repo keeps what a learner uses, plus its tests and community files. The
+  spec's research references are in `CREDITS.md`.
+
 ## 1.5.1 - 2026-11-14
 
 ### Fixed

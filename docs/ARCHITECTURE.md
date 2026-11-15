@@ -25,7 +25,7 @@ edu4self is three small programs around one folder of plain files.
 | validators | `app/validate_state.py`, `app/check_links.py` | the check the tutor runs after every edit |
 | CLI | `edu4self` | setup, init, serve, login service, check, doctor |
 | template | `template/` | what a new vault starts as, including the example topic |
-| plugin | `plugin/`, `.claude-plugin/marketplace.json` | Claude Code skills: check-inbox, new-topic, write-lesson, write-probe, customize, honesty-test |
+| plugin | `plugin/`, `.claude-plugin/marketplace.json` | Claude Code skills: check-inbox, new-topic, write-lesson, write-probe, customize |
 
 All Python is standard library (3.9+). The page is vanilla JavaScript in one IIFE: no framework, no
 bundler, no network requests beyond its own server (except a radio stream, if the learner picks one).
@@ -184,6 +184,3 @@ A terminal `claude` session uses your own permissions, not these. Grade shared m
 - `cd tests/e2e && npm ci && npm test`: a real Chrome against a throwaway vault: first visit, both
   views, submitting, a focus block, every Settings field, music upload/playback/removal, a server
   restart, and phone width.
-- `python3 evals/grading/run.py` then `score.py`: the honesty test. It grades labelled answers through
-  the Grade button's own run and reports how often a wrong answer passes. Real runs cost money; `--fake`
-  checks the plumbing for free. See [evals/grading/README.md](../evals/grading/README.md).

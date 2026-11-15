@@ -1106,8 +1106,7 @@ def engine_rule_path():
     return p.lstrip("/")
 
 
-# What the Grade button asks for. evals/grading/run.py sends the same words through claude_args, so the
-# honesty test grades by exactly this path.
+# What the Grade button asks for.
 GRADE_PROMPT = "check my inbox"
 # Runs that read what the learner (or a lesson from someone else) wrote get no web tools, so nothing can leave.
 # "first" is the welcome card's grade of the first try: grading only, see FIRST_PROMPT.
