@@ -116,6 +116,12 @@ class FirstRunTest(Cmd):
         self.assertNotIn("Press Enter", self.setup_no_service())
 
 
+    def test_agents_md_quotes_what_setup_really_prints(self):
+        # AGENTS.md tells the agent to run the plugin commands only when setup printed this line
+        self.assertIn('"Give Claude the tutor skills"', read(os.path.join(ENGINE, "AGENTS.md")))
+        self.assertIn("Give Claude the tutor skills", self.setup_no_service())
+
+
 class SetupTwiceTest(Cmd):
     def test_setup_on_an_existing_vault_carries_on_and_leaves_it_alone(self):
         vault = self.make_vault()

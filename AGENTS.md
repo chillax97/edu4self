@@ -40,14 +40,18 @@ Use neutral stand-ins (Kim, Sam, Spanish, Rust, `~/learn`).
 
        ./edu4self setup --vault ~/learn --name "<name>"          # add --no-service to skip start-at-login
 
-   It makes the vault (with a small example topic), starts the dashboard, and prints the port. Then
-   give the tutor its skills (Claude Code; other agents read the vault's `AGENTS.md` instead):
+   On Windows, write `python edu4self` wherever this file says `./edu4self`.
+
+   It makes the vault (with a small example topic), starts the dashboard, prints the port, and gives
+   Claude Code the tutor skills (the edu4self plugin) when `claude` is on the PATH. Only if its output
+   lists "Give Claude the tutor skills", run those two commands yourself (other agents read the vault's
+   `AGENTS.md` instead):
 
        claude plugin marketplace add chillax97/edu4self
        claude plugin install edu4self@edu4self
 
    Done when `./edu4self status` shows the server running. (With `--no-service`, start it yourself
-   in the background: `./edu4self serve --vault <vault>`.)
+   in the background: `./edu4self serve --vault <vault>`; its first line is the URL.)
 3. **Apply the wishes** to `<vault>/_system/config.json`. Every key, range and default is in
    [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md); read it before writing. Translate each wish into keys,
    for example "45-minute sessions" → `blocks.presets` and the kinds' `minutes`; "no water
