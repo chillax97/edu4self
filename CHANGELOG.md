@@ -22,7 +22,14 @@ versions follow [Semantic Versioning](https://semver.org).
   reply is a `follow-up` inbox entry (`ref`: the graded answer), graded with the original against the same key:
   a pass, or a plain not yet, never a second question. The check refuses a follow-up on a pass or on the grade of
   a reply, and the server takes a reply only for an answer whose grade asked one. A pass on follow-up counts as a
-  pass in "How sure vs how it went". The dashboard's reply box comes later.
+  pass in "How sure vs how it went".
+- The dashboard asks the follow-up question. While a task's latest answer has a grade with a question and no reply,
+  its card (Up next, the room's job card) shows "Almost: one question first", the question and a one-field reply box
+  with **Send reply**, instead of the button that sends the whole task again; a task further down the list gets
+  **Answer the question**, which opens a one-question form. The reply needs no "How sure are you?". Once sent the
+  card says **Reply sent** and waits for the tutor like any submission, and it can be withdrawn the same way, which
+  opens the question again. A reply being typed survives the page refreshing itself. `/api/state` now gives a
+  `follow-up` entry's `ref` in `inbox.all_submissions`.
 - Section 1 now says it outright: same meaning counts. A point said in other words or framed differently from the
   lecture or the key is met, and failing a right answer for its wording is a grading error.
 - The honesty test knows the follow-up: `run.py` records it as a verdict of its own (with the question),
