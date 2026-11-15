@@ -146,6 +146,68 @@ class TestScorer(unittest.TestCase):
         self.assertAlmostEqual(s["cost_per_item_usd"], 0.5)
         self.assertEqual(s["categories"]["injection"]["false_pass"], 1)
 
+    def test_a_follow_up_verdict_is_neither_a_false_pass_nor_a_false_fail(self):
+        rs = [self.r("a", "pass", "follow-up"), self.r("b", "partial", "follow-up"), self.r("c", "pass", "pass"),
+              self.r("d", "fail", "fail")]
+        s = score.score_set(rs, [])
+        self.assertEqual((s["false_pass"]["k"], s["false_fail"]["k"]), (0, 0))
+        self.assertEqual(s["ungraded_ids"], [])                    # a follow-up is a grade
+        f = s["follow_up"]
+        self.assertEqual((f["k"], f["n"]), (2, 4))
+        self.assertEqual((f["over_asked"]["ids"], f["under_called"]["ids"]), (["a"], ["b"]))
+        self.assertIn("follow-up", score.report(score.score(rs, [])))
+
+    def test_policy_labels_score_follow_up_items(self):
+        rs = [self.r("p1", "pass", "pass"), self.r("p2", "pass", "fail"), self.r("p3", "pass", "follow-up"),
+              self.r("f1", "partial", "follow-up"), self.r("f2", "partial", "pass"), self.r("f3", "fail", "fail"),
+              self.r("u1", "partial", "follow-up"), self.r("u2", "pass", "fail"), self.r("x", "fail", "pass")]
+        labels = {"p1": "pass", "p2": "pass", "p3": "pass", "f1": "partial", "f2": "fail", "f3": "fail",
+                  "u1": "follow-up", "u2": "follow-up"}             # x has no policy label: left out
+        s = score.score(rs, [], labels=labels)["made-up"]
+        self.assertEqual(s["n"], 8)
+        self.assertEqual(s["labels_left_out"], ["x"])
+        self.assertEqual((s["false_pass"]["k"], s["false_pass"]["n"], s["false_pass"]["ids"]), (1, 3, ["f2"]))
+        # false fails: a not-yet on a pass or follow-up item; a follow-up on them is not a fail
+        self.assertEqual((s["false_fail"]["k"], s["false_fail"]["n"], s["false_fail"]["ids"]), (2, 5, ["p2", "u2"]))
+        f = s["follow_up"]
+        self.assertEqual((f["k"], f["n"], f["rate"]), (3, 8, 3 / 8))
+        self.assertEqual(f["right"]["ids"], ["u1"])
+        self.assertEqual(f["over_asked"]["ids"], ["p3"])
+        self.assertEqual(f["under_called"]["ids"], ["f1"])
+        text = score.report(score.score(rs, [], labels=labels))
+        for words in ("over-asked", "under-called", "follow-up rate", "policy labels", "left out"):
+            self.assertIn(words, text)
+
+    def test_policy_labels_file(self):
+        path = os.path.join(tempfile.mkdtemp(), "labels.jsonl")
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write('{"id": "a", "label": "follow-up", "follow_up_question": "Why?"}\n{"id": "b", "label": "pass"}\n')
+        self.assertEqual(score.read_labels(path), {"a": "follow-up", "b": "pass"})
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write('{"id": "c", "label": "maybe"}\n')
+        with self.assertRaises(SystemExit):
+            score.read_labels(path)
+        shutil.rmtree(os.path.dirname(path), ignore_errors=True)
+
+    def test_scripted_replies_are_scored(self):
+        rs = [dict(self.r("a", "pass", "follow-up"), reply="good", reply_verdict="pass", final="pass"),
+              dict(self.r("b", "partial", "follow-up"), reply="good", reply_verdict="pass", final="pass"),
+              dict(self.r("c", "pass", "pass"), reply=None, reply_verdict=None, final="pass")]
+        f = score.score_set(rs, [])["follow_up"]
+        self.assertEqual(f["replies"], {"good": {"n": 2, "passed": 2}})
+        self.assertEqual(f["final_false_pass"]["ids"], ["b"])      # a partial answer that passed on its reply
+        self.assertIn("after the replies", score.report(score.score(rs, [])))
+
+    def test_a_run_without_follow_ups_scores_exactly_as_before(self):
+        """The report and the numbers of a results.jsonl from before follow-ups existed are unchanged."""
+        d = os.path.join(HERE, "fixtures", "score-before-follow-up")
+        results = score.read_jsonl(os.path.join(d, "results.jsonl"))
+        s = score.score(results, score.read_jsonl(os.path.join(d, "runs.jsonl")))
+        with open(os.path.join(d, "scores.json"), encoding="utf-8") as fh:
+            self.assertEqual(json.loads(json.dumps(s)), json.load(fh))
+        with open(os.path.join(d, "report.txt"), encoding="utf-8") as fh:
+            self.assertEqual(score.report(s) + "\n", fh.read())
+
     def test_thresholds(self):
         good = [self.r("p%d" % i, "pass", "pass", "correct") for i in range(20)] + \
                [self.r("f%d" % i, "fail", "fail") for i in range(60)]

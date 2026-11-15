@@ -1,0 +1,4 @@
+{"exit": 0, "timed_out": false, "is_error": false, "cost_usd": 1.0, "duration_ms": 1, "num_turns": 3, "usage": null, "wall_s": 1.0, "stderr_tail": [], "check_ok": true, "overruled": 0, "batch": 1, "items": 3, "item_ids": []}
+{"exit": 0, "timed_out": false, "is_error": false, "cost_usd": 1.0, "duration_ms": 1, "num_turns": 3, "usage": null, "wall_s": 1.0, "stderr_tail": [], "check_ok": true, "overruled": 0, "batch": 2, "items": 3, "item_ids": []}
+{"exit": 0, "timed_out": false, "is_error": false, "cost_usd": 1.0, "duration_ms": 1, "num_turns": 3, "usage": null, "wall_s": 1.0, "stderr_tail": [], "check_ok": true, "overruled": 0, "batch": 3, "items": 3, "item_ids": []}
+{"exit": 0, "timed_out": false, "is_error": false, "cost_usd": 1.0, "duration_ms": 1, "num_turns": 3, "usage": null, "wall_s": 1.0, "stderr_tail": [], "check_ok": true, "overruled": 0, "batch": 4, "items": 3, "item_ids": []}
