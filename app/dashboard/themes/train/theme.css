@@ -45,6 +45,7 @@
 .room .tr-ticket { --off-ink: #4a3420; }   /* a greyed Grade and its reason, on the ticket */
 .room .tr-ticket .bx-sent { color: #2a5a2e; }   /* the Submitted line: dark green on the ticket */
 .room .tr-ticket .bx-rules { color: #8a2a3a; }
+.room .tr-ticket .followup textarea, .room .tr-ticket .followup textarea:focus { background: #fff8e8; color: #2a1a10; border-color: #c9a87a; }   /* the follow-up reply box: on the ticket, not the dark carriage */
 .room .tr-ticket .bx-label { color: #8a2a3a; }
 .room .tr-ticket .bx-r { color: #8a2a3a; }
 .room .tr-ticket .bx-r:hover, .room .tr-ticket .bx-r:focus-visible { background: rgba(138,42,58,.1); color: #5e1a26; }

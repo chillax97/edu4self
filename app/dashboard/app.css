@@ -231,6 +231,20 @@ main { padding-top: 28px; padding-bottom: 40px; }
   font-size: 14px;
 }
 .hero-submitted p { margin: 0; flex: 1; min-width: 220px; color: var(--ink-2); }
+/* the one question a grade asks before the pass (history[].follow_up), answered on the card */
+.followup {
+  margin-top: 18px; padding: 14px; border-radius: 14px; display: grid; gap: 8px;
+  background: color-mix(in srgb, var(--c, var(--topic)) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c, var(--topic)) 35%, var(--line));
+}
+.fu-k { font: 600 12px/1.2 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.fu-q { margin: 0; font-size: 16px; color: var(--ink); max-width: 62ch; }
+.fu-err { margin: 0; font-size: 13.5px; color: var(--red, #b42318); }
+.fu-actions { display: flex; gap: .7rem; align-items: center; flex-wrap: wrap; }
+.fu-note { margin: 0; font-size: 13px; color: var(--muted); }
+.followup.is-room { margin-top: 10px; padding: 0; background: none; border: 0; }
+.followup.is-room .fu-note { margin: 0; font-size: 13px; opacity: .8; }   /* a <p>: the room's paper colour applies */
+.followup .fu-q, .followup .fu-note { margin: 0; }   /* the rooms' card paragraphs carry a bottom margin */
+.q-fu { margin: 6px 0 0; font-size: 14px; color: var(--ink); }
 .hero-empty { text-align: center; padding: 40px 20px; }
 .hero-empty h2 { max-width: none; }
 

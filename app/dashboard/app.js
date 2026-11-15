@@ -106,6 +106,23 @@
     return list.length ? list[list.length - 1] : null;
   }
 
+  // A grade may ask one question before the pass (PROTOCOL.md section 1, history[].follow_up). It is open while
+  // the task is todo, the grade names the task's latest answer, and no reply to that answer is in the inbox (the
+  // server leaves withdrawn ones out). Then the card asks just that question, not the whole task again.
+  function followUpFor(t) {
+    if (!DATA || !DATA.inbox || !t || t.status !== "todo") return null;
+    var subs = DATA.inbox.all_submissions || [], last = null, out = null;
+    subs.forEach(function (e) { if (e.task === t.id && e.kind === "answers") last = e; });
+    if (!last || subs.some(function (e) { return e.kind === "follow-up" && e.ref === last.id; })) return null;
+    (DATA.state.topics || []).forEach(function (tp) {
+      (tp.history || []).forEach(function (h) {
+        if (h && h.inbox === last.id && !h.evidence && h.follow_up && typeof h.follow_up.q === "string") out = { ref: last.id, q: h.follow_up.q };
+      });
+    });
+    return out;
+  }
+  function sentWord(pend) { return pend && pend.kind === "follow-up" ? "Reply sent" : "Submitted"; }
+
   function actionableTasks() {
     var out = [];
     (DATA.state.topics || []).forEach(function (topic) {
@@ -131,7 +148,21 @@
 
 
   // ---------------------------------------------------------------- render: shell
+  // The page redraws on every poll; a reply being typed into a card keeps its text, caret and focus.
   function render() {
+    var a = document.activeElement, f = a && a.tagName === "TEXTAREA" && a.closest("form[data-followup]");
+    var keep = f ? { id: f.dataset.followup, s: a.selectionStart, e: a.selectionEnd } : null;
+    renderPage();
+    document.querySelectorAll("form[data-followup] textarea").forEach(function (ta) {
+      var d = fuDraft[ta.closest("form").dataset.followup];
+      if (d != null && ta.value !== d) ta.value = d;
+    });
+    if (!keep) return;
+    var back = document.querySelector('form[data-followup="' + CSS.escape(keep.id) + '"] textarea');
+    if (back && document.activeElement !== back) { back.focus(); back.setSelectionRange(keep.s, keep.e); }
+  }
+
+  function renderPage() {
     var app = $("#app");
     applyConfig();
     document.body.classList.toggle("v-bar", isBar());
@@ -344,7 +375,7 @@
           : 'Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></section>";
     }
     var t = entry.task, topic = entry.topic, meta = kindMeta(t.kind);
-    var pend = pendingFor(t.id);
+    var pend = pendingFor(t.id), fu = !pend && followUpFor(t);
     var color = "var(--" + (KIND[t.kind] ? t.kind : "lesson") + ")";
     var html = '<section class="hero" style="--c:' + color + '" aria-labelledby="hero-title">' +
       '<div class="hero-eyebrow"><span class="kicker">Up next</span><span class="dot-sep"></span>' +
@@ -358,15 +389,15 @@
         (t.kind === "lesson" ? '<span>✦ Ends with exercises</span>' : "") + calcChip(t) + '</div>';
     if (t.rules) html += '<div class="hero-rules"><span aria-hidden="true">⚑</span><span><strong>Rules:</strong> ' + esc(t.rules) + '</span></div>';
     if (pend) {
-      html += '<div class="hero-submitted"><span class="chip chip-wait">Submitted</span>' +
+      html += '<div class="hero-submitted"><span class="chip chip-wait">' + sentWord(pend) + '</span>' +
         '<p>Sent ' + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <strong>"check my inbox"</strong> to get it graded.') + "</p>" + gradeButton() +
         '<button class="btn btn-ghost btn-sm" data-withdraw="' + esc(pend.id) + '">Withdraw</button></div>' +
         '<div class="hero-actions">' + openButton(t, "btn btn-ghost") + '</div>';
     } else {
       var running = active && active.task === t.id;
-      html += (running ? '<div class="hero-live" data-hero-clock></div>' : "") +
-        '<div class="hero-actions">' + openButton(t, "btn btn-topic") +
-        (t.submit ? '<button class="btn ' + (t.href ? "btn-ghost" : "btn-topic") + '" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
+      html += (running ? '<div class="hero-live" data-hero-clock></div>' : "") + (fu ? followUpBox(t, fu) : "") +
+        '<div class="hero-actions">' + openButton(t, fu ? "btn btn-ghost" : "btn btn-topic") +
+        (t.submit && !fu ? '<button class="btn ' + (t.href ? "btn-ghost" : "btn-topic") + '" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
         hintsButton(t, "btn btn-ghost") +
         (!active ? '<button class="btn btn-ghost" data-start-task="' + esc(t.id) + '">▶ Start ' + taskMinutes(topic) + ' min on this</button>' : "") +
         '</div>' + stuckNudge(t);
@@ -440,16 +471,19 @@
     var locked = rest.filter(function (e) { return e.task.status === "locked"; });
     function row(e) {
       var t = e.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), locked = t.status === "locked";
+      var fu = !locked && !pend && followUpFor(t);
       n++;
       var right = "";
       if (locked) right = '<span class="chip">🔒 Locked</span>';
-      else if (pend) right = '<span class="chip chip-wait">Submitted</span>';
+      else if (pend) right = '<span class="chip chip-wait">' + sentWord(pend) + '</span>';
+      else if (fu) right = openButton(t, "btn btn-ghost btn-sm") + ' <button class="btn btn-soft btn-sm" data-submit="' + esc(t.id) + '">Answer the question</button>';
       else right = openButton(t, "btn btn-ghost btn-sm") + (t.submit ? ' <button class="btn btn-soft btn-sm" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
         (t.exercise ? " " + hintsButton(t, "btn btn-ghost btn-sm") : "");
       return '<div class="q-item' + (locked ? " is-locked" : "") + '" style="--c:var(--' + esc(KIND[t.kind] ? t.kind : "lesson") + ')">' +
         '<div class="q-num">' + n + '</div>' +
         '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span>' + (locked ? "" : calcChip(t)) + '<span class="card-sub">' + esc(t.label || "") + '</span></div>' +
-        '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p>' + (locked ? "" : stuckNudge(t)) + '</div>' +
+        '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p>' +
+        (fu ? '<p class="q-fu"><b>Almost: one question first.</b> ' + esc(fu.q) + "</p>" : "") + (locked ? "" : stuckNudge(t)) + '</div>' +
         '<div class="q-actions">' + right + '</div></div>';
     }
     var items = open.map(row).join("");
@@ -616,7 +650,13 @@
   function openSubmit(taskId) {
     var entry = findTask(taskId);
     if (!entry) return;
-    var t = entry.task, meta = kindMeta(t.kind), sub = t.submit || {};
+    var t = entry.task, meta = kindMeta(t.kind), sub = t.submit || {}, fu = !pendingFor(t.id) && followUpFor(t);
+    if (fu) {
+      submitCtx = { kind: "follow-up", ref: fu.ref, topic: entry.topic.id, task: t.id, title: followUpTitle(t) };
+      return renderSubmitForm({ chipClass: "chip-" + t.kind, chip: meta.label, title: "Almost: one question first",
+        intro: "Your answer is nearly there. Answer just this one question; Claude grades it together with your answer.",
+        fields: [fu.q], honor: false, button: "Send reply", sure: false, calculator: t.calculator === true });
+    }
     submitCtx = { kind: sub.type === "done" ? "done" : "answers", topic: entry.topic.id, task: t.id, title: (t.label ? t.label + " · " : "") + t.title, probe: t.kind === "probe" || t.kind === "checkpoint" };
     renderSubmitForm({
       chipClass: "chip-" + t.kind, chip: meta.label, title: submitCtx.title,
@@ -687,26 +727,73 @@
     var sure = form.querySelector('input[name="__sure"]:checked');
 
     function fail(msg) { err.textContent = msg; err.hidden = false; }
-    if ((submitCtx.kind === "answers" || submitCtx.kind === "recall") && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
+    if ((submitCtx.kind === "answers" || submitCtx.kind === "recall" || submitCtx.kind === "follow-up") && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
     if (submitCtx.kind === "note" && !note.trim()) return fail("Write your note first.");
-    if (submitCtx.kind !== "note" && submitCtx.kind !== "recall" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
+    if (submitCtx.kind !== "note" && submitCtx.kind !== "recall" && submitCtx.kind !== "follow-up" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
     if (submitCtx.probe && !honor) return fail("Tick the box to confirm you did it unaided. If you did get help, don't submit this one. Send Claude a note instead and you'll get a fresh probe.");
 
     var btn = $("#sub-send");
     btn.disabled = true; btn.textContent = "Saving…";
-    fetch("/api/inbox", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall, calc: calcSent() })
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
-        if (!res.ok) throw new Error(res.body.error || "Could not save");
+    postInbox({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, ref: submitCtx.ref, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall, calc: calcSent() })
+      .then(function () {
         delete calcHistory[submitCtx.task];
+        if (submitCtx.kind === "follow-up") delete fuDraft[submitCtx.task];
         closeOverlay($("#submit"));
-        toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade it now when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
+        savedToast();
         load();
       })
       .catch(function (e) { btn.disabled = false; btn.textContent = "Try again"; fail("Couldn't save: " + e.message + ". Your text is still here."); });
   }
+
+  function postInbox(body) {
+    return fetch("/api/inbox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not save"); return j; }); });
+  }
+  function savedToast() {
+    toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade it now when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
+  }
+
+  // The follow-up question on a task's card: one reply box, sent as a "follow-up" inbox entry (PROTOCOL.md section 3).
+  // The words are core learning words, the same in every room (docs/THEMES.md).
+  var fuDraft = {};
+  function followUpTitle(t) { return "Follow-up · " + (t.label ? t.label + " · " : "") + t.title; }
+  function followUpBox(t, fu, room) {
+    var qid = "fu-q-" + t.id.replace(/[^A-Za-z0-9_-]/g, "_");
+    return '<form class="followup' + (room ? " is-room" : "") + '" data-followup="' + esc(t.id) + '" novalidate>' +
+      '<div class="' + (room ? "bx-k " : "") + 'fu-k">Almost: one question first</div>' +
+      '<p class="fu-q" id="' + qid + '">' + esc(fu.q) + "</p>" +
+      '<textarea name="reply" rows="2" aria-labelledby="' + qid + '" placeholder="Your reply, or &quot;I don\'t know&quot;"></textarea>' +
+      '<div class="fu-err" role="alert" hidden></div>' +
+      '<div class="fu-actions"><button class="btn btn-topic btn-sm" type="submit">Send reply</button>' +
+      '<p class="fu-note">Just this question. Claude grades it together with your answer.</p></div></form>';
+  }
+  function sendFollowUp(form) {
+    var id = form.dataset.followup, entry = findTask(id), fu = entry && followUpFor(entry.task);
+    var ta = form.querySelector("textarea"), err = form.querySelector(".fu-err"), btn = form.querySelector('button[type="submit"]');
+    function fail(msg) { err.textContent = msg; err.hidden = false; }
+    if (!fu) return load();
+    if (!ta.value.trim()) return fail("Write a reply first. \"I don't know\" counts.");
+    var fields = {};
+    fields[fu.q] = ta.value;
+    btn.disabled = true; btn.textContent = "Saving…";
+    postInbox({ topic: entry.topic.id, task: id, kind: "follow-up", ref: fu.ref, title: followUpTitle(entry.task), fields: fields })
+      .then(function () { delete fuDraft[id]; savedToast(); load(); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = "Try again"; fail("Couldn't save: " + e.message + ". Your text is still here."); });
+  }
+  document.addEventListener("submit", function (ev) {
+    var f = ev.target.closest && ev.target.closest("form[data-followup]");
+    if (!f) return;
+    ev.preventDefault();
+    sendFollowUp(f);
+  });
+  document.addEventListener("input", function (ev) {
+    var f = ev.target.tagName === "TEXTAREA" && ev.target.closest("form[data-followup]");
+    if (f) fuDraft[f.dataset.followup] = ev.target.value;
+  });
+  document.addEventListener("keydown", function (ev) {
+    var f = ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && ev.target.tagName === "TEXTAREA" && ev.target.closest("form[data-followup]");
+    if (f) { ev.preventDefault(); sendFollowUp(f); }
+  });
 
   function withdraw(id) {
     if (!confirm("Withdraw this submission? You can submit again afterwards.")) return;
@@ -1941,7 +2028,7 @@
     if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">' + esc(W("job")) + '</div><h2>Nothing waiting on you.</h2><p>' +
       (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
         : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></div>";
-    var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id);
+    var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), fu = !pend && followUpFor(t);
     return '<div class="bx-job" style="--c:var(--' + (KIND[t.kind] ? t.kind : "lesson") + ')">' +
       '<div class="bx-k">' + esc(W("job")) + " · " + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
       "<h2>" + (t.label ? '<span class="bx-label">' + esc(t.label) + "</span>" : "") + esc(t.title) + "</h2>" +
@@ -1950,7 +2037,7 @@
         (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
         (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + calcChip(t) + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
-      (pend ? '<div class="bx-sent">Submitted ' + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : stuckNudge(t, true)) +
+      (pend ? '<div class="bx-sent">' + sentWord(pend) + " " + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : fu ? followUpBox(t, fu, true) : stuckNudge(t, true)) +
       "</div>";
   }
 
@@ -1960,11 +2047,11 @@
     function quiet(html) { R.push('<li class="is-quiet"><b class="bx-n">–</b><span>' + html + "</span></li>"); }
     function chk(s) { return ' <span class="bx-chk">' + s + "</span>"; }
     if (hero) {
-      var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id);
+      var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), fu = !pend && followUpFor(t);
       if (t.href) { var href = resolveHref(t.href); act('<a class="bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>"); }
-      if (pend) act('<button class="bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the submission.]' + chk("only before Claude grades it") + "</button>");
+      if (pend) act('<button class="bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the ' + (pend.kind === "follow-up" ? "reply" : "submission") + ".]" + chk("only before Claude grades it") + "</button>");
       else {
-        if (t.submit) act('<button class="bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
+        if (t.submit && !fu) act('<button class="bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
         if (t.exercise) act('<button class="bx-r" type="button" data-hints="' + esc(t.id) + '">[Ask for a hint.]' + chk("each one is noted for Claude") + "</button>");
         if (!active) act('<button class="bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + taskMinutes(hero.topic) + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
         else if (active.task === t.id) quiet("The clock is running on this one.");
@@ -1976,7 +2063,8 @@
       var m = kindMeta(x.kind), name = x.label || x.title;
       if (pendingFor(x.id)) return quiet(esc(name) + chk("submitted, waiting for Claude"));
       if (x.href) { var h2 = resolveHref(x.href); act('<a class="bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>"); }
-      if (x.submit) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
+      if (followUpFor(x)) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[Answer the question: ' + esc(name) + ".]" + chk("one question before the pass") + "</button>");
+      else if (x.submit) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
     });
     if (claudeOK()) act('<button class="bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
     else act('<button class="bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
