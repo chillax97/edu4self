@@ -3,6 +3,27 @@
 All notable changes. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+### Fixed
+
+- `serve` prints its URL at once when its output goes to a file or pipe (an agent running it in the background,
+  the login service's log); the line used to sit in the buffer.
+- `setup` without a login service lists "Start the dashboard: `./edu4self serve --open`" as a step before the
+  dashboard's address, and says "Press Enter" only when it will ask something.
+- AGENTS.md: the agent runs the plugin commands only when setup says they are still to do, and Windows agents
+  are told to use `python edu4self`.
+- `serve` no longer looks up 127.0.0.1's name in DNS as it starts; on a Mac with slow reverse DNS that held the start
+  for about 35 s.
+- `setup` asks its questions only when both its input and its output are a terminal: on Windows an agent's empty
+  input (NUL) counted as one.
+- On macOS, `setup` and `install` warn when edu4self or the vault is in Documents, Desktop or Downloads, which
+  macOS may keep a login service out of, and say how to move it.
+- README setup steps give the Windows form (`python edu4self`), clone from the home folder, and tell a fresh Mac
+  about Apple's Command Line Tools prompt.
+- CI runs a stranger's first run (setup, check, serve, status, doctor: `tests/first_run.py`) on Linux, Windows
+  and macOS for every push.
+
 ## 1.6.0 - 2026-11-16
 
 ### Added
@@ -46,25 +67,6 @@ versions follow [Semantic Versioning](https://semver.org).
 - The honesty test (`evals/grading/`, the `honesty-test` skill and its tests) moved out of the engine, and
   `docs/SPEC.md` is gone: the repo keeps what a learner uses, plus its tests and community files. The
   spec's research references are in `CREDITS.md`.
-
-### Fixed
-
-- `serve` prints its URL at once when its output goes to a file or pipe (an agent running it in the background,
-  the login service's log); the line used to sit in the buffer.
-- `setup` without a login service lists "Start the dashboard: `./edu4self serve --open`" as a step before the
-  dashboard's address, and says "Press Enter" only when it will ask something.
-- AGENTS.md: the agent runs the plugin commands only when setup says they are still to do, and Windows agents
-  are told to use `python edu4self`.
-- `serve` no longer looks up 127.0.0.1's name in DNS as it starts; on a Mac with slow reverse DNS that held the start
-  for about 35 s.
-- `setup` asks its questions only when both its input and its output are a terminal: on Windows an agent's empty
-  input (NUL) counted as one.
-- On macOS, `setup` and `install` warn when edu4self or the vault is in Documents, Desktop or Downloads, which
-  macOS may keep a login service out of, and say how to move it.
-- README setup steps give the Windows form (`python edu4self`), clone from the home folder, and tell a fresh Mac
-  about Apple's Command Line Tools prompt.
-- CI runs a stranger's first run (setup, check, serve, status, doctor: `tests/first_run.py`) on Linux, Windows
-  and macOS for every push.
 
 ## 1.5.1 - 2026-11-14
 
