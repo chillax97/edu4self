@@ -16,6 +16,19 @@ versions follow [Semantic Versioning](https://semver.org).
   written from the question and the reference answer alone. `run.py` uses one when a question has it and keeps the
   lecturer's notes as the key otherwise. The keys are part of the grading-inputs hash, so a run made before this
   cannot be resumed and a new run is needed.
+- A third grading outcome, the follow-up (PROTOCOL.md sections 1 and 3, the `check-inbox` skill): when no key point
+  is missing and there is no error, but one point is only bare, sloppy or unclear, the tutor asks one question
+  (`history[].follow_up: {q, point}`, at most 200 characters, `evidence: false`) instead of tossing a coin. The
+  reply is a `follow-up` inbox entry (`ref`: the graded answer), graded with the original against the same key:
+  a pass, or a plain not yet, never a second question. The check refuses a follow-up on a pass or on the grade of
+  a reply, and the server takes a reply only for an answer whose grade asked one. A pass on follow-up counts as a
+  pass in "How sure vs how it went". The dashboard's reply box comes later.
+- Section 1 now says it outright: same meaning counts. A point said in other words or framed differently from the
+  lecture or the key is met, and failing a right answer for its wording is a grading error.
+- The honesty test knows the follow-up: `run.py` records it as a verdict of its own (with the question),
+  `--replies good|bad` answers each question with a scripted reply and grades it in a second run, and `score.py`
+  reports over-asked, under-called and the follow-up rate, and scores against policy labels with `--labels`.
+  A run without follow-ups scores exactly as before.
 
 ## 1.5.1 - 2026-11-14
 

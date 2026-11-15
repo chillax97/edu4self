@@ -54,6 +54,16 @@ For each batch of answers (`--batch`, default 10, about one inbox), `run.py`:
    which turns a pass the checklist doesn't allow into not passed. `runs.jsonl` records whether the check
    passed (`check_ok`) and how many passes it overruled (`overruled`).
 
+**Follow-ups.** A grade can also ask one question before the pass (PROTOCOL.md section 1: every point there,
+one only bare, sloppy or unclear). Its verdict is `follow-up`, and the result keeps the question in `follow_up`
+(`{q, point}`). It is neither a pass nor a fail: never counted as a false pass or a false fail. With
+`--replies good` or `--replies bad`, each question gets a scripted reply the way the dashboard sends one (a
+`follow-up` inbox entry whose `ref` is the answer): `good` is the question's reference answer, `bad` a reply that
+settles nothing. A second run per batch that asked a question grades the replies (`runs.jsonl`: `phase:
+"replies"`), and each result gets `reply`, `reply_inbox`, `reply_verdict` and `final` (the reply's verdict, or the
+first one when nothing was asked). A good reply should pass; a bad one must not. `--replies` is saved in
+`meta.json` and a resume must use the same.
+
 **The keys** come from the question alone, so every answer to a question gets the same key. A made-up
 question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
 reference answer. A SAF question the small set uses has a point-listed key in `saf/keys.json`, written from the
@@ -75,7 +85,17 @@ python3 evals/grading/run.py --limit 10 --yes           # 10 answers, real Claud
 python3 evals/grading/run.py --set small --yes          # the fixed small set (30 answers, 4 runs, about $3)
 python3 evals/grading/run.py --set all --yes            # 80 made-up + 100 SAF, 18 runs
 python3 evals/grading/score.py evals/grading/out/<run>  # the numbers (add --json for JSON)
+python3 evals/grading/run.py --set small --replies good --yes          # follow-ups answered with the reference
+python3 evals/grading/score.py <run> --labels <policy-labels.jsonl>    # score against policy labels
 ```
+
+**Policy labels** (`--labels`) are a JSONL file of `{id, label}`, label `pass`, `partial`, `fail` or `follow-up`
+(an answer that should get one question first). They replace the gold labels, and answers without one are left
+out (the report lists them). Then false passes are passes on partial or fail items; false fails are not-yets on
+pass or follow-up items (a follow-up on them is not a fail); over-asked is a follow-up on a pass item (a small
+cost: one extra question); under-called a follow-up on a partial or fail item (safe, but not a decision); and the
+follow-up rate is follow-ups over all answers, with a cap of 30% among the thresholds (above it the tutor dodges
+decisions). After `--replies`, the report adds how the replies were graded and the false passes after them.
 
 **A paid run is saved as it goes.** Each answer's result is appended to `results.jsonl` (and each Claude run to
 `runs.jsonl`) the moment its batch is graded, so a crash or Ctrl-C keeps everything already paid for. To
