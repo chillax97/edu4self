@@ -870,11 +870,13 @@ def cmd_setup(args):
         print("  1. Give Claude the tutor skills (once):")
         print_plugin_steps()
         n = 2
+    running = not (args.no_service or rc)
+    if not running:      # nothing serves the page yet: say how to start it before saying where it is
+        print("  %d. Start the dashboard, and keep that terminal open while you study:  ./edu4self serve --open" % n)
+        n += 1
     print("  %d. Open the dashboard:   http://127.0.0.1:%d/" % (n, port))
     print("  %d. Work from your vault: cd %s && claude" % (n + 1, shell_quote(vault)))
-    if args.no_service or rc:
-        print("\nThe dashboard isn't running as a service. Start it with:  ./edu4self serve")
-    elif not args.no_open:
+    if running and not args.no_open:
         webbrowser.open("http://127.0.0.1:%d/" % port)
     return 0
 

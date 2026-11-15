@@ -103,6 +103,15 @@ class FirstRunTest(Cmd):
         self.assertTrue(got, "serve printed nothing within 10 s")
         self.assertIn("http://127.0.0.1:%d/" % self.free, got[0])
 
+    def test_setup_without_a_service_says_to_start_the_dashboard_before_opening_it(self):
+        out = self.setup_no_service()
+        steps = [l.strip() for l in out[out.index("Next:"):].splitlines() if l.strip()[:2].rstrip(".").isdigit()]
+        start = [i for i, l in enumerate(steps) if "./edu4self serve" in l]
+        url = [i for i, l in enumerate(steps) if "http://127.0.0.1:%d/" % self.free in l]
+        self.assertTrue(start, "a numbered step says how to start it: %r" % steps)
+        self.assertTrue(url, steps)
+        self.assertLessEqual(start[0], url[0], "start comes before open: %r" % steps)
+
     def test_setup_without_a_terminal_does_not_ask_to_press_enter(self):
         self.assertNotIn("Press Enter", self.setup_no_service())
 

@@ -1419,7 +1419,7 @@ class SetupPluginTest(unittest.TestCase):
         self.assertIn("Successfully installed plugin", out, "claude's own output is shown")
         self.assertIn("the tutor plugin is installed and enabled", out)
         self.assertNotIn("Give Claude the tutor skills", out, "no step left to do by hand")
-        self.assertIn("1. Open the dashboard", out)
+        self.assertIn("1. Start the dashboard", out, "the first step left is starting it (--no-service), not the plugin")
         self.assertEqual(len(self.doctor()), 1)
         self.assertIn("✓", self.doctor()[0])
 
