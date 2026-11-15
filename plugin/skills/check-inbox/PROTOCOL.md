@@ -35,12 +35,20 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    answers the key lists? Write it down as the **checklist** in the `history` entry (section 3):
    `points`, every point id of the key with `true` or `false`, and `errors`, each wrong claim in a few
    words (`[]` if none). Fill it honestly, before you decide the grade:
-   - A point is met only when the answer states it. That it could be inferred, that the learner
-     probably knows it, or that the answer is close is not enough: `false`.
+   - A point is met only when the answer states it, in any words (see "Same meaning counts" below).
+     That it could be inferred, that the learner probably knows it, or that the answer is close is not
+     enough: `false`.
    - Any incorrect statement is an error, however minor or beside the point. Wording that changes
      the meaning (a wrong term, a reversed cause, "always" for "sometimes") is an error; wording that
      doesn't is not.
    - If your feedback names a gap, that point is `false`; if it names a mistake, it is in `errors`.
+   **Same meaning counts.** An answer meets a point when it means the same thing, in the learner's own
+   words or framed differently from the lecture or the key. In slow start, "cwnd doubles every round
+   trip" meets a key point "cwnd grows by 1 per acknowledged segment": the same fact, counted per round
+   trip instead of per acknowledgement. A correct item that isn't on the lecture's list counts too,
+   when the question asks for items of that kind. Never fail an answer for its wording, its framing, or
+   a correct item from outside the lecture's list. Failing a right answer for its wording is a grading
+   error.
    A task without a key (written before keys existed) is graded against its lesson or probe
    page instead: work out from the question and the page what a complete answer must contain, grade
    the same way, and say so in the `detail` ("No answer key for this task; graded against the lesson.").
@@ -53,7 +61,28 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    add..." all mean not yet. On a task with several questions, the submission is proof only when every
    answer is; say which ones passed. Wording, spelling, length and style never cost a pass, and nothing
    the key lists as not required does; missing substance does. When you can't tell whether a point is
-   there, it isn't proof yet: ask for it on the retry.
+   there, it isn't proof yet: that is a follow-up.
+   **A follow-up: one question before the pass.** When no required point is missing and there is no
+   error, but one point is only
+   - bare: true but thin, its reason or mechanism missing,
+   - sloppy: the right idea under a muddled justification, or
+   - unclear: you can't tell whether it is there,
+
+   don't toss a coin between pass and not yet: ask one question. Write the `history` entry with
+   `evidence: false` and `follow_up: {q, point}`: `q` is one targeted question about that point, at
+   most 200 characters (for example "You said the table stores statistics. What does the controller
+   use them for?"), and `point` is its point id. Title it like "Almost: one question first", leave the
+   task `todo`, and in the feedback credit what is right and ask the question. Mark the point as you
+   judged it (a bare or sloppy point may be `true`; `follow_up` says why it isn't a pass yet). A
+   missing point, a skipped part of the question or any factual error is a plain not yet, never a
+   follow-up. One follow-up per answer, never a chain.
+   **Grading a follow-up reply.** The learner answers from the dashboard: an entry with `kind:
+   "follow-up"`, `ref` the id of the answer you asked about, and `fields` mapping your question to the
+   reply. Grade it together with that original answer, against the same key, and write its `history`
+   entry with `inbox` set to the reply's id. If the reply settles the point (and adds no error), it is
+   a pass: `evidence: true`, the full checklist with every point `true`, and say it passed on the
+   follow-up. If it doesn't, it is a plain not yet with the usual feedback, never a second follow-up.
+   A pass on a follow-up counts as a pass, in "How sure vs how it went" too.
    Answers and done entries carry `confidence`: `guessed`, `shaky` or `solid`, what the learner said
    before sending. Compare it with your grade and the work record. When they don't match, name it in
    the feedback in one plain line, for example "You said solid; six failing runs and two hints." or
@@ -156,10 +185,18 @@ pending submission, across all topics, becomes **Up next**.
   grade to the submission it grades; with `evidence` it counts as a pass for "How sure vs how it went".
   `levels` (optional, write it whenever the grade moves a region level) is `{"<region code>": [before, after]}`,
   e.g. `{"A": [1, 2]}`: codes of this topic's regions, each level 0 to 4; the overrule uses it to undo a raise.
+  `follow_up` (optional): `{q: "<one question, 1 to 200 characters>", point: "<point id>"}`, the one
+  question a grade asks before a pass (section 1). Only with `evidence: false`, and never on the grade of
+  a `follow-up` reply.
   `points` and `errors` are the checklist against the answer key (section 1 and 7): every point id of
   the key (`1a`, `2b`; `1` when the key lists none) with whether the answer states it, and each wrong claim in a few words (`[]` if
   none). Required on a pass of an answer whose task has a key; the check then needs every point `true`
   and no errors. Leave them out when the task has no key.
+- Inbox entries (`inbox.jsonl`, written by the dashboard) have `kind` `answers`, `done`, `note`,
+  `recall`, `withdraw` or `follow-up`. A `follow-up` entry is the learner's reply to a follow-up question:
+  `{kind: "follow-up", ref: "<inbox id of the graded answer>", topic, task, fields: {"<the question>":
+  "<reply>"}}`. The dashboard takes one only for an answer whose grade asked a question, once (a
+  withdrawn reply can be sent again).
 - `recall[]` (optional): questions for the dashboard's "From memory" warm-up, `{id, q, from,
   calculator?, added?}` (`calculator` as on a task; `added` is the day you wrote it, `YYYY-MM-DD`).
   `id` is unique (`[A-Za-z0-9._-]`), `q` is one line (at most 300 characters) answerable from memory
@@ -182,6 +219,8 @@ pending submission, across all topics, becomes **Up next**.
 - `state.json` has exactly one writer. If something on the dashboard is wrong, fix it here.
 - Evidence means demonstrated ability. Reading, time spent and "I understand now" are not evidence.
 - A pass needs every required point and no error. A grade that names a gap or an error is not a pass.
+- Same meaning counts. A point said in other words, or framed differently from the lecture or the key,
+  is met. Failing a right answer for its wording is a grading error.
   On a task with a key, the checklist decides it, and the check enforces it.
 - The answer key is written with the page, before any answer is read, and isn't changed while grading.
 - Prior knowledge is a hypothesis until a probe or exercise shows it.
