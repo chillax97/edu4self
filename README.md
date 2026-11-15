@@ -3,11 +3,11 @@
 **A learning dashboard that runs on your computer, with Claude as your tutor. Hand it to your agent
 and it sets itself up around you.**
 
+![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
+
 You pick what to learn. Claude writes short lessons, tests what you know, and grades your answers.
 The dashboard always shows one next step, keeps a record of what you've actually proven, and turns
 your focused time into something you can see grow. Nothing leaves your machine.
-
-![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
 
 ## Quick start
 
