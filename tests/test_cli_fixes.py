@@ -130,7 +130,7 @@ class FirstRunTest(Cmd):
         class Nul(io.StringIO):
             def isatty(self):
                 return True
-        vault = os.path.join(self.tmp, "nul")
+        vault = os.path.join(self.tmp, "agent-vault")      # not "nul": a reserved device name on Windows
         out = io.StringIO()
         with mock.patch.dict(os.environ, self.env), mock.patch.object(cli.sys, "stdin", Nul("")), \
                 mock.patch("builtins.input", side_effect=AssertionError("asked a question")), \
