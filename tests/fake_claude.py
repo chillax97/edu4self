@@ -78,6 +78,15 @@ elif "check my inbox" in prompt:
     # text holds that marker, "Partly right" when it holds FAKE_CLAUDE_PARTIAL_IF, else "Not yet".
     # FAKE_CLAUDE_LENIENT=1 plays the grader we guard against: it passes every answer, whatever its checklist says.
     marker = os.environ.get("FAKE_CLAUDE_PASS_IF")
+    # FAKE_CLAUDE_COUNT (a file) counts the grading runs; past FAKE_CLAUDE_STRICT_AFTER of them every answer is a
+    # plain "Not yet." (no pass, no follow-up), a grader that changes its mind on a re-grade (run.py --repeat).
+    strict = False
+    if marker and os.environ.get("FAKE_CLAUDE_COUNT"):
+        with open(os.environ["FAKE_CLAUDE_COUNT"], "a+", encoding="utf-8") as fh:
+            fh.write("run\n")
+            fh.seek(0)
+            n_runs = len(fh.readlines())
+        strict = n_runs > int(os.environ.get("FAKE_CLAUDE_STRICT_AFTER", "1000000"))
     if marker:
         part = os.environ.get("FAKE_CLAUDE_PARTIAL_IF") or "\0"
         with open(os.path.join("_system", "inbox.jsonl"), encoding="utf-8") as fh:
@@ -94,6 +103,9 @@ elif "check my inbox" in prompt:
             else:
                 passed = marker in text
                 ask = not passed and (os.environ.get("FAKE_CLAUDE_FOLLOW_UP_IF") or "\0") in text
+            if strict:
+                passed = ask = False
+                part = "\0"
             h = {"date": time.strftime("%Y-%m-%d"), "kind": "lesson", "inbox": e["id"],
                  "title": "Passed." if passed else "Almost: one question first." if ask else
                  "Partly right." if part in text else "Not yet.",

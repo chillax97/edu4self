@@ -308,7 +308,7 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.keep = {k: os.environ.get(k) for k in ("FAKE_CLAUDE_PASS_IF", "FAKE_CLAUDE_PARTIAL_IF", "FAKE_CLAUDE_LOG",
                                                     "FAKE_CLAUDE_FOLLOW_UP_IF", "FAKE_CLAUDE_REPLY_PASS_IF",
-                                                    "EDU4SELF_CLAUDE")}
+                                                    "FAKE_CLAUDE_COUNT", "FAKE_CLAUDE_STRICT_AFTER", "EDU4SELF_CLAUDE")}
         os.environ["FAKE_CLAUDE_LOG"] = os.path.join(self.tmp, "fake.log")
 
     def tearDown(self):
@@ -319,10 +319,80 @@ class TestRunnerWithFakeClaude(unittest.TestCase):
                 os.environ[k] = v
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def go(self, items, batch, replies=None, out="out"):
+    def go(self, items, batch, replies=None, out="out", **kw):
         out = os.path.join(self.tmp, out)
-        results, runs = run.run(items, batch, out, fake=True, log=lambda *a: None, replies=replies)
+        results, runs = run.run(items, batch, out, fake=True, log=lambda *a: None, replies=replies, **kw)
         return out, results, runs
+
+    def calls(self):
+        return run.read_jsonl(os.environ["FAKE_CLAUDE_LOG"]) if os.path.isfile(os.environ["FAKE_CLAUDE_LOG"]) else []
+
+    def test_one_run_writes_no_repeat_field(self):
+        """Without --repeat the rows, runs and meta.json look as they always did."""
+        out, results, runs = self.go(self.follow_up_items(), 3)
+        self.assertTrue(all("repeat" not in r for r in results + runs))
+        self.assertNotIn("repeat", run.load_json(os.path.join(out, "meta.json")))
+
+    def test_repeat_grades_every_answer_n_times_each_in_a_fresh_vault(self):
+        items = self.follow_up_items()                     # three answers to one question: one run each
+        os.environ["FAKE_CLAUDE_COUNT"] = os.path.join(self.tmp, "count")
+        os.environ["FAKE_CLAUDE_STRICT_AFTER"] = "3"       # the second repeat's grader passes nothing, asks nothing
+        out, results, runs = self.go(items, 1, repeat=2)
+        self.assertEqual(Counter((r["id"], r["repeat"]) for r in results),
+                         Counter({(i["id"], k): 1 for i in items for k in range(2)}))
+        self.assertEqual(len(runs), 6)
+        self.assertEqual(sorted(x["repeat"] for x in runs), [0, 0, 0, 1, 1, 1])
+        self.assertEqual(len({r["batch"] for r in results}), 6)          # never two grades in one vault
+        self.assertEqual(run.load_json(os.path.join(out, "meta.json"))["repeat"], 2)
+        for r in results:                                  # each vault saw one answer and holds one grade
+            state = run.load_json(os.path.join(out, "batch-%02d" % r["batch"], "vault", "_system", "state.json"))
+            self.assertEqual(state["processed_inbox"], [r["inbox"]])
+            self.assertEqual(len([h for t in state["topics"] for h in t["history"]]), 1)
+        got = {(r["id"], r["repeat"]): r["verdict"] for r in results}
+        self.assertEqual(got, {("rc02", 0): "pass", ("rc04", 0): "follow-up", ("rc07", 0): "fail",
+                               ("rc02", 1): "fail", ("rc04", 1): "fail", ("rc07", 1): "fail"})
+        fl = score.score(results, runs)["made-up"]["flips"]
+        self.assertEqual((fl["k"], fl["n"], fl["ids"], fl["three_way"]["ids"]), (1, 3, ["rc02"], ["rc02", "rc04"]))
+
+    def test_resume_goes_by_answer_and_repeat(self):
+        items = self.follow_up_items()
+        out, results, runs = self.go(items, 3, repeat=2)
+        self.assertEqual(len(self.calls()), 6)
+        rpath = os.path.join(out, "results.jsonl")
+        rows = run.read_jsonl(rpath)
+        # a crash after the first repeat, and one second-repeat grade that timed out
+        kept = [r for r in rows if r["repeat"] == 0] + [dict(next(r for r in rows if r["repeat"] == 1), verdict="ungraded")]
+        with open(rpath, "w", encoding="utf-8") as fh:
+            fh.write("".join(json.dumps(r) + "\n" for r in kept))
+        out, results, runs = self.go(items, 3, repeat=2, resume=True)
+        self.assertEqual(len(self.calls()), 9)             # the three second-repeat answers, nothing else
+        self.assertEqual(Counter((r["id"], r["repeat"]) for r in results),
+                         Counter({(i["id"], k): 1 for i in items for k in range(2)}))
+        self.assertEqual(run.read_jsonl(rpath), results)
+        self.go(items, 3, repeat=2, resume=True)           # all done: no run
+        self.assertEqual(len(self.calls()), 9)
+        with self.assertRaises(SystemExit) as cm:
+            self.go(items, 3, repeat=3, resume=True)
+        self.assertIn("repeat", str(cm.exception))
+
+    def test_repeat_with_scripted_replies(self):
+        out, results, runs = self.go(self.follow_up_items(), 1, replies="good", repeat=2)
+        asked = [r for r in results if r["id"] == "rc04"]
+        self.assertEqual(sorted((r["repeat"], r["verdict"], r["final"]) for r in asked),
+                         [(0, "follow-up", "pass"), (1, "follow-up", "pass")])
+        second = [x for x in runs if x.get("phase") == "replies"]
+        self.assertEqual(sorted(x["repeat"] for x in second), [0, 1])
+        self.assertEqual({x["batch"] for x in second}, {r["batch"] for r in asked})   # each reply in its own vault
+
+    def test_the_plan_line_scales_with_repeat(self):
+        self.assertIn("4 real Claude Code run(s)", run.plan_line(30, 4, 1, None))
+        line = run.plan_line(30, 4, 3, None)
+        self.assertIn("12 real Claude Code run(s)", line)
+        self.assertIn("30 answers x 3", line)
+        self.assertIn("up to 24 with the replies", run.plan_line(30, 4, 3, "good"))
+        with self.assertRaises(SystemExit) as cm:
+            run.main(["--set", "small", "--fake", "--repeat", "0"])
+        self.assertEqual(str(cm.exception), "nothing to grade")
 
     def follow_up_items(self):
         os.environ["FAKE_CLAUDE_PASS_IF"] = "frames never pop"          # rc02 passes

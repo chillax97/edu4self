@@ -13,9 +13,11 @@ evals/, tests/ and docs media, in a neutrally named temp folder: same code, noth
     python3 evals/grading/run.py --fake                    # the whole set, with the test stand-in (free)
     python3 evals/grading/run.py --limit 10 --yes          # 10 cases, real Claude Code (costs money)
     python3 evals/grading/run.py --set saf --batch 10 --yes
+    python3 evals/grading/run.py --set small --repeat 3 --yes   # each answer graded 3 times, for the flip rate
 
 Output (--out, default evals/grading/out/<time>/): results.jsonl (one line per answer), runs.jsonl (one
-line per Claude run, with its $ cost), and batch-NN/ (the stream, the vault as Claude left it).
+line per Claude run, with its $ cost), and batch-NN/ (the stream, the vault as Claude left it). With --repeat N
+each answer is graded N times, each time in a fresh vault, and its rows carry `repeat` (0 to N-1).
 Then: python3 evals/grading/score.py <out folder>. Standard library only.
 """
 import argparse
@@ -491,11 +493,13 @@ def _engine_commit():
         return None
 
 
-def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False, meta=None, replies=None):
-    """Grade items in batches. With replies ("good" or "bad"), each follow-up question gets that scripted reply and
-    a second run grades it, in the same vault. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
+def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=False, meta=None, replies=None, repeat=1):
+    """Grade items in batches, repeat times over: every answer once, then again, each batch in a fresh vault, so no
+    grade sees an earlier one (with repeat above 1 every row carries `repeat`, 0 to repeat-1). With replies ("good" or
+    "bad"), each follow-up question gets that scripted reply and a second run grades it, in the same vault. Each answer's result is appended to results.jsonl (and each run to runs.jsonl) in
     out as soon as its batch is graded, so a crash keeps what was paid for. With resume, answers already in
-    results.jsonl are skipped and the rest are graded into the same folder. Returns (results, runs), old and new."""
+    results.jsonl (per answer and repeat) are skipped and the rest are graded into the same folder. Returns
+    (results, runs), old and new."""
     os.makedirs(out, exist_ok=True)
     rpath, upath = os.path.join(out, "results.jsonl"), os.path.join(out, "runs.jsonl")
     results, runs = read_done(rpath), read_done(upath)
@@ -508,11 +512,14 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
            "n_cases": len(items), "grading": grading_hash()}
     if replies:
         now["replies"] = replies
+    if repeat > 1:                                  # saved only then, so a one-grade run's meta.json is as before
+        now["repeat"] = repeat
     if resume and os.path.isfile(mpath):
         saved = load_json(mpath)
-        diff = ["%s (saved %s, now %s)" % (k, saved.get(k), now.get(k))
-                for k in ("set", "seed", "batch", "cases", "grading", "replies")
-                if (k in saved or k == "replies") and saved.get(k) != now.get(k)]   # no replies saved: none
+        unsaved = {"replies": None, "repeat": 1}     # what a meta.json without the key was run with
+        diff = ["%s (saved %s, now %s)" % (k, saved.get(k, unsaved.get(k)), now.get(k, unsaved.get(k)))
+                for k in ("set", "seed", "batch", "cases", "grading", "replies", "repeat")
+                if (k in saved or k in unsaved) and saved.get(k, unsaved.get(k)) != now.get(k, unsaved.get(k))]
         if diff:
             raise SystemExit("cannot resume into %s: it was started with different settings: %s. "
                              "Use the same options, or a new --out." % (out, "; ".join(diff)))
@@ -521,9 +528,10 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
         with open(mpath, "w", encoding="utf-8") as fh:
             json.dump(now, fh, indent=1)
     # only a real verdict counts as done; a row with no grade (timeout, error) is graded again and replaced
-    redo = {r["id"]: r for r in results if r.get("verdict") not in GRADED}
+    slot = lambda r: (r["id"], r.get("repeat", 0))         # noqa: E731  (one grade of one answer)
+    redo = {slot(r): r for r in results if r.get("verdict") not in GRADED}
     if redo:
-        results = [r for r in results if r["id"] not in redo]
+        results = [r for r in results if slot(r) not in redo]
         tmp_path = rpath + ".tmp"
         with open(tmp_path, "w", encoding="utf-8") as fh:
             for r in results:
@@ -531,13 +539,14 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp_path, rpath)
-    done = {r["id"] for r in results}
-    todo = [it for it in items if it["id"] not in done]
+    done = {slot(r) for r in results}
+    todo = [(k, [it for it in items if (it["id"], k) not in done]) for k in range(repeat)]   # every answer once first
+    left = sum(len(t) for _, t in todo)
     if done or redo:
-        log("resuming: %d answer(s) already graded, %d to go (%d of them had no grade)"
-            % (len(items) - len(todo), len(todo), len(redo)))
-    first = max([r.get("batch", 0) for r in results] + [r.get("batch", 0) for r in runs] + [0]) + 1
-    if not todo:
+        log("resuming: %d grade(s) already saved, %d to go (%d of them had no grade)"
+            % (len(items) * repeat - left, left, len(redo)))
+    b = max([r.get("batch", 0) for r in results] + [r.get("batch", 0) for r in runs] + [0])
+    if not left:
         return results, runs
     tmp = os.path.realpath(tempfile.mkdtemp(prefix="edu4self-"))   # macOS: /var is /private/var
     env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(tmp, "cfg"))   # init must not touch the user's settings
@@ -545,8 +554,10 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     if fake:
         os.environ["EDU4SELF_CLAUDE"] = FAKE
     try:
-        for b, batch in enumerate(batches(todo, batch_size), first):
-            vault = os.path.join(tmp, "vault-%02d" % b)
+        for rep, batch in ((rep, batch) for rep, its in todo for batch in batches(its, batch_size)):
+            b += 1
+            tag = {"repeat": rep} if repeat > 1 else {}
+            vault = os.path.join(tmp, "vault-%02d" % b)          # a fresh vault per batch, and so per repeat
             tasks = build_vault(engine, vault, batch, env)
             ok, text = check(engine, vault, env)
             if not ok:
@@ -557,7 +568,7 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
             summary = grade(engine, vault, os.path.join(bdir, "stream.jsonl"), timeout)
             summary["check_ok"], text = check(engine, vault, env, overrule=True)
             summary["overruled"] = text.count("OVERRULED: ")
-            summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch])
+            summary.update(batch=b, items=len(batch), item_ids=[it["id"] for it in batch], **tag)
             append_jsonl(upath, summary)       # the cost row first: a crash below never hides money spent
             runs.append(summary)
             spath = os.path.join(vault, "_system", "state.json")
@@ -572,7 +583,7 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
                 second = grade(engine, vault, os.path.join(bdir, "stream-replies.jsonl"), timeout)
                 second["check_ok"], text = check(engine, vault, env, overrule=True)
                 second["overruled"] = text.count("OVERRULED: ")
-                second.update(batch=b, phase="replies", items=len(replied), item_ids=[ids[e] for e in replied])
+                second.update(batch=b, phase="replies", items=len(replied), item_ids=[ids[e] for e in replied], **tag)
                 append_jsonl(upath, second)
                 runs.append(second)
                 state = load_json(spath)
@@ -589,13 +600,14 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
                        "history": [{k: h.get(k) for k in ("title", "detail", "evidence", "points", "errors", "follow_up")}
                                    for h in hist],
                        "cost_share_usd": share}
+                row.update(tag)
                 if replies:
                     rid = replied.get(entry_id)
                     rv = verdict(state, rid)[0] if rid else None
                     row.update(reply=replies if rid else None, reply_inbox=rid, reply_verdict=rv, final=rv or v)
                     if rid and reply_share is not None:
                         row["cost_share_usd"] = (share or 0) + reply_share
-                old = redo.get(item_id, {}).get("cost_share_usd")      # keep the money the failed try cost
+                old = redo.get((item_id, rep), {}).get("cost_share_usd")      # keep the money the failed try cost
                 if isinstance(old, (int, float)):
                     row["cost_share_usd"] = (row["cost_share_usd"] or 0) + old
                 append_jsonl(rpath, row)       # saved now, not at the end
@@ -604,8 +616,9 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
             with open(os.path.join(bdir, "inbox-map.json"), "w", encoding="utf-8") as fh:
                 json.dump(ids, fh, indent=1)
             cost = summary["cost_usd"]
-            log("batch %d: %d items · %s · %s s · %s turns%s%s" % (
-                b, len(batch), "$%.4f" % cost if isinstance(cost, (int, float)) else "$?", summary["wall_s"],
+            log("batch %d%s: %d items · %s · %s s · %s turns%s%s" % (
+                b, " (repeat %d of %d)" % (rep + 1, repeat) if repeat > 1 else "", len(batch),
+                "$%.4f" % cost if isinstance(cost, (int, float)) else "$?", summary["wall_s"],
                 summary["num_turns"], "" if summary["check_ok"] else " · CHECK FAILED",
                 " · ERROR" if summary["is_error"] else ""))
     finally:
@@ -615,6 +628,16 @@ def run(items, batch_size, out, fake=False, timeout=1800, log=print, resume=Fals
     total = sum(r["cost_usd"] for r in runs if isinstance(r["cost_usd"], (int, float)))
     log("total: %d items in %d run(s) · $%.4f · %.1f s" % (len(results), len(runs), total, sum(r["wall_s"] for r in runs)))
     return results, runs
+
+
+def plan_line(n_items, n_batches, repeat, replies):
+    """What a real run would start, said before it starts: the run count scales with repeat (and doubles at most
+    with replies)."""
+    n_runs = n_batches * repeat
+    return ("This would start %d real Claude Code run(s)%s for %d answers%s, on your account. "
+            "Add --yes to go ahead, or --fake to try it free."
+            % (n_runs, " (up to %d with the replies)" % (2 * n_runs) if replies else "", n_items,
+               " x %d repeats" % repeat if repeat > 1 else ""))
 
 
 def main(argv=None):
@@ -632,14 +655,17 @@ def main(argv=None):
     p.add_argument("--replies", choices=["good", "bad"],
                    help="answer each follow-up question with a scripted reply (good: the reference answer; bad: one that "
                         "settles nothing) and grade it in a second run per batch that asked one")
+    p.add_argument("--repeat", type=int, default=1,
+                   help="grade every answer N times, each time in a fresh vault (default 1); score.py then reports "
+                        "the flip rate. Costs N times as much")
     p.add_argument("--yes", action="store_true", help="really run Claude Code (each run costs money)")
     a = p.parse_args(argv)
     items = order(load_items(a.set), a.seed)
     if a.limit:
         items = items[:a.limit]
-    if not items or a.batch < 1:
+    if not items or a.batch < 1 or a.repeat < 1:
         sys.exit("nothing to grade")
-    n_runs = len(batches(items, a.batch))
+    n_batches = len(batches(items, a.batch))
     if not a.fake:
         sys.path.insert(0, os.path.join(ENGINE, "app"))
         import server
@@ -647,13 +673,12 @@ def main(argv=None):
         if ready["problem"]:
             sys.exit("Claude Code is %s: %s" % (ready["problem"], ready["detail"] or "run `claude auth login`"))
         if not a.yes:
-            sys.exit("This would start %d real Claude Code run(s)%s for %d answers, on your account. "
-                     "Add --yes to go ahead, or --fake to try it free."
-                     % (n_runs, " (up to %d with the replies)" % (2 * n_runs) if a.replies else "", len(items)))
+            sys.exit(plan_line(len(items), n_batches, a.repeat, a.replies))
     out = a.out or os.path.join(HERE, "out", datetime.now().strftime("%Y%m%d-%H%M%S") + ("-fake" if a.fake else ""))
-    print("grading %d answers in %d run(s) of up to %d -> %s" % (len(items), n_runs, a.batch, out))
+    print("grading %d answers%s in %d run(s) of up to %d -> %s" % (
+        len(items), " x %d repeats" % a.repeat if a.repeat > 1 else "", n_batches * a.repeat, a.batch, out))
     run(items, a.batch, out, fake=a.fake, timeout=a.timeout, resume=a.resume,
-        meta={"set": a.set, "seed": a.seed}, replies=a.replies)
+        meta={"set": a.set, "seed": a.seed}, replies=a.replies, repeat=a.repeat)
     print("score it: python3 %s %s" % (os.path.relpath(os.path.join(HERE, "score.py")), out))
 
 
