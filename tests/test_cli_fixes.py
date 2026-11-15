@@ -11,6 +11,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -75,6 +76,25 @@ class BusyPortTest(Cmd):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("Port %d is already in use" % self.port, r.stderr)
         self.assertFalse(os.path.exists(vault), "no half-made vault")
+
+
+class FirstRunTest(Cmd):
+    """What a stranger (or the agent setting it up for them) reads on the first run."""
+
+    def test_serve_says_where_it_runs_even_when_its_output_goes_to_a_file(self):
+        # an agent starts serve in the background with its output in a log; the URL must be in there at once
+        vault = self.make_vault()
+        p = subprocess.Popen([sys.executable, CLI, "serve", "--vault", vault, "--port", str(self.free)], env=self.env,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8")
+        got = []
+        reader = threading.Thread(target=lambda: got.append(p.stdout.readline()), daemon=True)
+        reader.start()
+        reader.join(10)
+        p.kill()
+        p.wait()
+        p.stdout.close()
+        self.assertTrue(got, "serve printed nothing within 10 s")
+        self.assertIn("http://127.0.0.1:%d/" % self.free, got[0])
 
 
 class SetupTwiceTest(Cmd):

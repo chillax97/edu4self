@@ -245,7 +245,8 @@ def cmd_serve(args):
     except OSError as exc:
         sys.exit(port_taken_message(port, exc))
     url = "http://127.0.0.1:%d/" % port
-    print("edu4self %s on %s (vault %s). Ctrl-C stops it." % (server.VERSION, url, vault))
+    # flush: with output going to a log or pipe (an agent in the background, launchd) it would sit in the buffer
+    print("edu4self %s on %s (vault %s). Ctrl-C stops it." % (server.VERSION, url, vault), flush=True)
     if args.open:
         webbrowser.open(url)
     try:
