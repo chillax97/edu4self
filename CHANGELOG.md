@@ -28,6 +28,10 @@ versions follow [Semantic Versioning](https://semver.org).
 - The honesty test knows the follow-up: `run.py` records it as a verdict of its own (with the question),
   `--replies good|bad` answers each question with a scripted reply and grades it in a second run, and `score.py`
   reports over-asked, under-called and the follow-up rate, and scores against policy labels with `--labels`.
+- The honesty test's `run.py --repeat N` grades every answer N times, each time in a fresh vault, and `score.py`
+  reports the flip rate: the share of answers whose pass / not-pass verdict changed across repeats (a follow-up
+  counts as not pass), and the 3-way flip rate (pass / follow-up / not yet). Rows get a `repeat` field only with
+  N above 1, so older run folders score as before; `--resume` goes by answer and repeat.
   A run without follow-ups scores exactly as before.
 
 ## 1.5.1 - 2026-11-14

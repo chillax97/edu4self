@@ -64,6 +64,15 @@ settles nothing. A second run per batch that asked a question grades the replies
 first one when nothing was asked). A good reply should pass; a bad one must not. `--replies` is saved in
 `meta.json` and a resume must use the same.
 
+**Repeats and the flip rate.** `--repeat N` grades every answer N times: the whole set once, then again, each
+batch in a fresh vault (a new `edu4self init`), so no grade sees an earlier one. The batches are the same each
+time, so what changes is the grader, not what it sees. Every row in `results.jsonl` and `runs.jsonl` gets `repeat`
+(0 to N-1), `meta.json` saves N, and a resume must use the same N. With N=1 (the default) nothing gets a `repeat`
+field. `score.py` then adds the **flip rate**: of the answers graded more than once, the share whose pass / not-pass
+verdict differs across repeats (a follow-up counts as not pass), and the 3-way flip rate, with pass, follow-up and
+not yet told apart. Each repeat counts as one answer in the other rates, so a false-pass rate over N repeats is
+over N times the answers. It costs N times as much.
+
 **The keys** come from the question alone, so every answer to a question gets the same key. A made-up
 question's key is written in `questions.json` (`key`: required points, wrong answers, not required), from its
 reference answer. A SAF question the small set uses has a point-listed key in `saf/keys.json`, written from the
@@ -86,6 +95,7 @@ python3 evals/grading/run.py --set small --yes          # the fixed small set (3
 python3 evals/grading/run.py --set all --yes            # 80 made-up + 100 SAF, 18 runs
 python3 evals/grading/score.py evals/grading/out/<run>  # the numbers (add --json for JSON)
 python3 evals/grading/run.py --set small --replies good --yes          # follow-ups answered with the reference
+python3 evals/grading/run.py --set small --repeat 3 --yes               # each answer graded 3 times: the flip rate
 python3 evals/grading/score.py <run> --labels <policy-labels.jsonl>    # score against policy labels
 ```
 
@@ -100,9 +110,10 @@ decisions). After `--replies`, the report adds how the replies were graded and t
 **A paid run is saved as it goes.** Each answer's result is appended to `results.jsonl` (and each Claude run to
 `runs.jsonl`) the moment its batch is graded, so a crash or Ctrl-C keeps everything already paid for. To
 continue, run the same command again with the same `--out <folder>` and `--resume`: answers already in
-`results.jsonl` with a real verdict (pass, partial, fail) are skipped; the rest are graded and added (batch numbers
+`results.jsonl` with a real verdict (pass, partial, fail, follow-up) are skipped (with `--repeat`, per answer and
+repeat); the rest are graded and added (batch numbers
 carry on), and `score.py` reads the folder as usual. An answer saved with no grade (a timeout or an error) is
-graded again and its row replaced, so each id appears once; the money its failed try cost stays in its
+graded again and its row replaced, so each id appears once (once per repeat); the money its failed try cost stays in its
 `cost_share_usd`. A batch that was cut off is graded again whole. The batch's cost row in `runs.jsonl` is saved
 before its result rows, so a crash never hides money spent. A torn last line is dropped; a damaged line in the
 middle is an error with its line number, and the file is not touched.
@@ -137,7 +148,7 @@ the grade command, the model).
 
 ## Known limits
 
-- One run per answer, so no flip rate yet (how often a re-grade changes the verdict).
+- The flip rate needs `--repeat`; a run without it grades each answer once and has none.
 - Answers are graded in batches, as a real inbox is: the grader sees up to 10 answers at once, never two
   answers to the same question (an early run showed the grader comparing them).
 - The run uses your own Claude Code login and its default model, so a number holds for that model on that day.
