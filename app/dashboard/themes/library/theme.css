@@ -20,7 +20,7 @@
 .room .lb-shelf i:nth-child(7n+5) { height: 86px; background: #6a3d8f; } .room .lb-shelf i:nth-child(7n+6) { height: 60px; background: #d9b44a; }
 .room .lb-shelf i:nth-child(7n) { height: 78px; background: #2f4a36; }
 
-.room .lb-desk { display: grid; grid-template-columns: 250px minmax(0, 1fr) 290px; gap: 22px; padding-top: 22px; }
+.room .lb-desk { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 22px; padding-top: 22px; }
 .room .lb-cat { align-self: start; background: var(--lb-wood); border-radius: 10px; padding: 12px; display: grid; gap: 12px; align-content: start; box-shadow: inset 0 0 0 2px #3a2614; }
 .room .lb-drawer { background: linear-gradient(#7a5532, #5f4126); border-radius: 6px; padding: 12px 12px 22px; box-shadow: 0 3px 0 #3a2614; position: relative; }
 .room .lb-drawer::after { content: ""; position: absolute; left: 50%; bottom: 8px; width: 34px; height: 6px; margin-left: -17px; border-radius: 3px; background: var(--lb-brass); }
@@ -70,4 +70,6 @@
 .room .bx-juke .blk-start { background: var(--lb-brass); }
 
 @media (max-width: 1100px) { .room .lb-desk { grid-template-columns: minmax(0, 1fr); } .room .lb-cat { order: 3; } }
-@media (max-width: 700px) { .room .lb-book { grid-template-columns: 1fr; background-image: none; } .room .lb-shelf { overflow: hidden; } .room .lb-page { padding: 22px 20px; } }
+@media (max-width: 700px) { .room .lb-book { grid-template-columns: 1fr; background-image: none; } .room .lb-shelf { display: none; }   /* a phone: the book first, the shelf strip is decoration */ .room .lb-page { padding: 22px 20px; } }
+@media (max-width: 560px) { .room .lb-head > .lb-plaque { display: none; } }   /* a phone: the book on the first screen; the top bar shows the block */
+@media (max-width: 560px) { .room .lb-head { padding-bottom: 6px; } .room .lb-book .bx-job h2 { font-size: 26px; } }

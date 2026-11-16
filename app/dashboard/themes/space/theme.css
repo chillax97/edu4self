@@ -27,7 +27,8 @@
   background: radial-gradient(1px 1px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 20%, #fff, transparent), radial-gradient(1px 1px at 40% 75%, #dde, transparent), #020610; }
 .room .sp-planet { position: absolute; left: 22%; top: 30%; width: 64%; height: 64%; border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #6fb2ff, #2a4d8f 45%, #0b1a33 75%); box-shadow: inset -18px -12px 30px rgba(0,0,0,.6), 0 0 40px rgba(41,182,255,.25);
-  animation: sp-turn 120s linear infinite; }
+  }
+.room.is-running .sp-planet { animation: sp-turn 120s linear infinite; }   /* the planet turns while a block runs */
 .room .sp-ring { position: absolute; left: 8%; top: 56%; width: 92%; height: 14%; border-radius: 50%; border: 3px solid rgba(255,200,140,.45); transform: rotate(-12deg); }
 @keyframes sp-turn { to { filter: hue-rotate(40deg); } }
 .room .sp-panel { border: 1px solid var(--bx-line); border-radius: 6px; padding: 12px 14px; background: rgba(6,12,22,.7); }
@@ -56,5 +57,11 @@
 .room .bx-music { border-radius: 6px; }
 
 @media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } .room .sp-mid { order: -1; } }
-@media (max-width: 560px) { .room .sp-bar { grid-template-columns: minmax(0, 1fr); } }
-@media (prefers-reduced-motion: reduce) { .room .sp-planet { animation: none; } }
+@media (max-width: 560px) {   /* a phone: the sign, then the mission, then the gauges */
+  .room .sp-bar { display: contents; }
+  .room .sp-bar > * { order: 2; }
+  .room .sp-bar > [data-slot="name"] { order: 0; }
+  .room .sp-main { order: 1; }
+  .room .sp-left { order: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .room.is-running .sp-planet { animation: none; } }

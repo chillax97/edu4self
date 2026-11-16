@@ -18,7 +18,8 @@
     radial-gradient(1px 1px at 82% 40%, #dde, transparent), linear-gradient(#1b2350, #0b0f26 75%); }
 .room .tr-win::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255,255,255,.07), transparent 40%); pointer-events: none; }
 .room .tr-moon { position: absolute; right: 22px; top: 18px; width: 22px; height: 22px; border-radius: 50%; background: #fff6d8; box-shadow: 0 0 22px 6px rgba(255,240,200,.25); }
-.room .tr-hills { position: absolute; left: -50%; right: -50%; bottom: 0; height: 42%; animation: tr-roll 26s linear infinite;
+.room.is-running .tr-hills { animation-name: tr-roll; }   /* the train moves while a block runs */
+.room .tr-hills { position: absolute; left: -50%; right: -50%; bottom: 0; height: 42%; animation: 26s linear infinite;
   background: radial-gradient(ellipse 14% 80% at 8% 100%, #161b3a 98%, transparent), radial-gradient(ellipse 20% 95% at 30% 100%, #1b2146 98%, transparent),
     radial-gradient(ellipse 15% 70% at 55% 100%, #161b3a 98%, transparent), radial-gradient(ellipse 22% 90% at 80% 100%, #1b2146 98%, transparent); }
 .room .tr-hills-2 { animation-duration: 31s; animation-delay: -9s; }
@@ -69,6 +70,8 @@
 
 @media (max-width: 900px) {
   .room .tr-windows, .room .tr-row, .room .tr-bottom { grid-template-columns: 1fr; }
+  .room .tr-windows { order: 2; }   /* a narrow screen: the ticket before the windows */
   .room .tr-win { min-height: 150px; }
 }
-@media (prefers-reduced-motion: reduce) { .room .tr-hills { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .room .tr-hills, .room.is-running .tr-hills { animation: none; } }
+@media (max-width: 560px) { .room .tr-lamp { display: none; } }   /* a phone: the ticket on the first screen; the top bar shows the block */

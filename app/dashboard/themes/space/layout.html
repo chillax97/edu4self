@@ -1,5 +1,6 @@
 <!-- Space station: a console bar across the top with the gauges, a round viewport with a planet and
-     the comms log beside the mission, and the control panel on the right. -->
+     the mission above the comms log, and the control panel on the right. The flight plan, sealed tasks and the
+     cargo bay of trophies are in the back room (THEMES.md, the front-room budget). -->
 <div class="sp">
   <header class="sp-bar">
     <div data-slot="name"></div>
@@ -10,21 +11,17 @@
   </header>
   <div class="sp-main">
     <section class="sp-left">
-      <div class="sp-port" aria-hidden="true"><div class="sp-planet"></div><div class="sp-ring"></div></div>
-      <div class="sp-panel" data-slot="finish"></div>
-      <div class="sp-panel" data-slot="doors"></div>
-      <div class="sp-panel"><p class="sp-k">Cargo bay · trophies</p><div data-slot="shelf"></div></div>
+      <div class="sp-port" aria-hidden="true"><div class="sp-planet" data-part="running"></div><div class="sp-ring"></div></div>
       <div class="sp-pouch" data-slot="water"></div>
     </section>
     <section class="sp-mid">
       <div data-slot="rooms"></div>
-      <div data-slot="timer"></div>
-      <div class="sp-comms"><p class="sp-k">Comms log</p><div class="bx-log" data-slot="voices"></div></div>
       <div class="sp-mission">
         <div data-slot="job"></div>
         <ol class="bx-replies" data-slot="replies"></ol>
         <p class="bx-keys" data-slot="keys"></p>
       </div>
+      <div class="sp-comms"><p class="sp-k">Comms log</p><div class="bx-log" data-slot="voices"></div></div>
     </section>
     <aside class="sp-right">
       <div class="bx-juke"><p class="sp-k">Focus control</p><div data-slot="block"></div></div>
