@@ -118,15 +118,35 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 | `tonight` | yes | today's minutes against the goal |
 | `week` | yes | this week's days against the goal |
 | `die` | yes | the die being filled and the finished ones |
-| `timer` | no | the running block's countdown |
-| `finish` | no | how far the topic is and when it ends |
-| `doors` | no | tasks that are still locked |
-| `clock` | no | the time, or the block's time left |
+| `timer` | no | left empty (the front-room budget): the block's countdown is in `block` |
+| `finish` | no | left empty: how far the topic is and when it ends is in the back room |
+| `doors` | no | left empty: tasks that are still locked are in the back room |
+| `clock` | no | the time of day; empty while a block runs |
 | `sign` | no | the open / busy sign |
 | `water` | no | the water glass |
 | `keys` | no | the keyboard hint |
-| `shelf` | no | the learner's trophies; without it they are only in the back room |
+| `shelf` | no | left empty: the learner's trophies are in the back room |
 | `streak` | no | the streak: days in a row with at least one finished block, and the best run. The bar draws it as a chalk tally board. Without it, the streak is a Willpower line |
+
+#### The front-room budget
+
+The front room is for what a learner needs now. Every room, and the classic view, keeps to this:
+
+- **The next step and its one action on the first screen**, at desktop (1440×900) and phone (390×844)
+  width: the `job` title, and under it the follow-up reply box or the first reply. Put `job` and `replies`
+  before `voices` in the layout, and on a phone put them before `tonight`, `week` and `die` (with `order`).
+- **The countdown once.** It is in `block`. The top bar shows it only while `block` is off screen, so
+  don't draw another.
+- **The record at a glance:** `tonight`, `week` and `die`.
+- **The host and two voices.** The rest wait behind "Show N more", in place.
+- **One thing moves forever during a block:** the room's "a block is running" signal. Mark it
+  `data-part="running"` (the bar's record, the train's hills, the station's planet) and key it on
+  `.room.is-running`, which is set while a block runs. Every other endless animation plays once and stops.
+
+The finish line, locked tasks and trophies are one click away, in the back room. The engine leaves
+`finish`, `doors`, `shelf` and `timer` empty, and hides a wrapper whose only slots are those, so a label
+such as "Trophies" around `shelf` in an older room disappears with it. A new room needs none of them.
+`tests/e2e/budget.test.js` checks every built-in room against this budget.
 
 The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sign, `.bx-replies`,
 `.bx-log`, `.bx-k` for small labels, `.bx-cab` for the die). Restyle them under `.room`.

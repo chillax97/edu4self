@@ -5,6 +5,16 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Changed
+
+- The front-room budget: every room and the classic view shows the next step and its action on the first
+  screen (desktop and phone), the block's countdown once, and tonight, the week and the die. The finish line,
+  locked tasks and trophies are in the back room. Past the host and two voices, the rest wait behind
+  "Show N more". During a block only the room's running signal moves (the bar's record, the train's hills,
+  the station's planet). The rule for room authors is in `docs/THEMES.md`.
+- The bar has two columns, the job and the jukebox. The back bar scene left the front room.
+- Classic puts Up next first, then Claude's note and the finish line.
+
 ### Fixed
 
 - `serve` prints its URL at once when its output goes to a file or pipe (an agent running it in the background,
