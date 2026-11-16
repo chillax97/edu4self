@@ -124,6 +124,9 @@ h1, h2, h3 { margin: 0; }
 .gate-GREEN { background: var(--green); }
 
 /* ------------------------------------------------ top bar */
+/* the top bar is sticky: whatever is scrolled into view (a focused button, the #block link, a tab) stops below it */
+html { scroll-padding-top: 84px; }
+@media (max-width: 700px) { html { scroll-padding-top: 132px; } }   /* two rows of top bar on a phone */
 .topbar {
   position: sticky; top: 0; z-index: 20;
   backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);

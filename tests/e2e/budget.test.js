@@ -109,6 +109,16 @@ for (const followUp of [true, false]) {
   }
 }
 
+// Click as a person would: bring the control into view, make sure nothing (the sticky top bar) covers it, click.
+// page.click alone only checks the viewport, so it can press the top bar sitting over a control.
+async function clickInSight(page, sel) {
+  await page.$eval(sel, (e) => e.scrollIntoView({ block: "nearest" }));
+  const covered = await page.$eval(sel, (e) => { const r = e.getBoundingClientRect(), h = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return e.contains(h) ? "" : (h ? h.id || h.className || h.tagName : "nothing"); });
+  assert.equal(covered, "", `${sel} is covered by ${covered} once scrolled into view`);
+  await page.click(sel);
+}
+
 for (const id of ROOMS) {
   test(`${id}: what left the front room is one click away (back room: finish line, locked task, trophies) and every voice is there on "more"`, async () => {
     const task = seed({ followUp: true });
@@ -121,10 +131,10 @@ for (const id of ROOMS) {
     assert.ok(shown <= 3, `${id}: at most the host and two voices before "more" (${shown})`);
     const all = await page.$$eval(".room .bx-log .bx-line", (l) => l.length);
     if (all > 3) {
-      await page.click(".room .bx-log [data-voices-more]");
+      await clickInSight(page, ".room .bx-log [data-voices-more]");
       assert.equal(await page.$$eval(".room .bx-log .bx-line", (l) => l.filter((e) => e.getBoundingClientRect().height > 0).length), all, "more shows every voice");
     }
-    await page.click('.room [data-slot="rooms"] [data-room="back"]');
+    await clickInSight(page, '.room [data-slot="rooms"] [data-room="back"]');
     await page.waitForSelector(".room.is-back");
     const back = await page.$eval(".room", (e) => e.innerText.toLowerCase());
     assert.match(back, /finish line/, "the finish line is in the back room");
