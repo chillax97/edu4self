@@ -72,4 +72,4 @@
 @media (max-width: 1100px) { .room .lb-desk { grid-template-columns: minmax(0, 1fr); } .room .lb-cat { order: 3; } }
 @media (max-width: 700px) { .room .lb-book { grid-template-columns: 1fr; background-image: none; } .room .lb-shelf { display: none; }   /* a phone: the book first, the shelf strip is decoration */ .room .lb-page { padding: 22px 20px; } }
 @media (max-width: 560px) { .room .lb-head > .lb-plaque { display: none; } }   /* a phone: the book on the first screen; the top bar shows the block */
-@media (max-width: 560px) { .room .lb-head { padding-bottom: 6px; } .room .lb-book .bx-job h2 { font-size: 26px; } }
+@media (max-width: 560px) { .room .lb-head { padding-bottom: 6px; } .room .bx-neon { font-size: 26px; } .room .lb-book .bx-job h2 { font-size: 26px; } }
