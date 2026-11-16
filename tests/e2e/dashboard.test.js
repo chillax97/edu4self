@@ -192,9 +192,13 @@ test("a focus block starts, shows its clock, and stops", async () => {
   const page = await openPage(browser, server.url, { view: "classic" });
   await page.click('#block [data-min="25"]');
   await page.click("#block [data-blk-start]");
+  await page.waitForFunction(() => /^2[45]:\d\d$/.test(document.querySelector("[data-clock]")?.textContent || ""));
+  // one countdown on screen: the card's while it is in view, the top bar's once it scrolls away
+  assert.equal(await page.$eval("#blk-pill", (e) => e.hidden), true, "the card's clock is in view, so no pill");
+  await page.setViewport({ width: 1440, height: 300 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForSelector("#blk-pill:not([hidden])");
   assert.match(await page.$eval("#blk-pill", (e) => e.textContent), /Lessons/);
-  assert.match(await page.$eval("[data-clock]", (e) => e.textContent), /^2[45]:\d\d$/);
   await page.click("#block [data-blk-stop]");   // confirm() is auto-accepted
   await page.waitForSelector("#blk-pill", { hidden: true });
   assert.deepEqual(page.errors, []);

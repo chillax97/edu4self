@@ -1,5 +1,5 @@
 // The job comes first: a long grade note, six chatty voices and a full night of stats must not push the
-// next task down the page, in any room, while every voice stays on screen and opens in place.
+// next task down the page, in any room, while every voice is there behind "Show N more" and opens in place.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -63,6 +63,8 @@ async function openRoom(id, w, h) {
   await page.evaluate(() => document.fonts.ready);
   // the lines fade in one after another; measure once they've all landed
   await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running" || !a.effect?.target?.closest?.(".bx-log")), { timeout: 5000 });
+  // past the host and two voices the rest wait behind "Show N more" (the front-room budget, budget.test.js); open them
+  await page.click('.room [data-slot="voices"] [data-voices-more]');
   return page;
 }
 
@@ -77,7 +79,7 @@ for (const id of ROOMS) {
       const log = await page.$$eval('.room [data-slot="voices"] .bx-line:not([data-fold="coach"]):not([data-fold^="claude-"])', (ls) => ls.map((l) => l.textContent).join("\n"));
       for (const re of ECHOES) assert.doesNotMatch(log, re, `${id}: a line repeats what's on screen (${re})`);
       assert.doesNotMatch(log, /\?\./, "no stray full stop after a question mark");
-      // the host's note and all six voices: the name is on screen, not folded away
+      // the host's note and all six voices, once "more" is open: the name is on screen, not folded away
       const names = await page.$$eval('.room [data-fold="coach"], .room [data-fold^="claude-"]', (ls) => ls.map((l) => {
         const who = l.querySelector(".bx-who"), box = (l.querySelector(".fold:not(.fold-2)") || l).getBoundingClientRect(), r = who.getBoundingClientRect();
         return { name: who.textContent, shown: r.width > 0 && r.height > 0 && r.top >= box.top - 1 && r.bottom <= box.bottom + 1 && getComputedStyle(who).visibility !== "hidden" };

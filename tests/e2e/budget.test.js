@@ -57,10 +57,10 @@ after(async () => {
   fs.rmSync(v.dir, { recursive: true, force: true });
 });
 
-// a block running on `task`, 17 minutes in
+// a block running on `task`, 17 minutes in, in the front room
 async function open(view, w, h, task) {
   const page = await openPage(browser, server.url, { view, width: w, height: h });
-  await page.evaluate((id) => { const n = Date.now(); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 17 * 60000, end: n + 33 * 60000, water: 15, served: 1, drunk: 0, task: id })); }, task);
+  await page.evaluate((id) => { const n = Date.now(); localStorage.setItem("edu.bar.room.v1", "front"); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 17 * 60000, end: n + 33 * 60000, water: 15, served: 1, drunk: 0, task: id })); }, task);
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForSelector("#app > :not(#loading)");
   await page.waitForFunction(() => document.body.classList.contains("blk-on"));

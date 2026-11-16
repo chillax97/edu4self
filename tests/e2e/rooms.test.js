@@ -91,10 +91,10 @@ for (const id of ROOMS) {
       for (const slot of REQUIRED) {
         assert.ok(await page.$(`.room [data-slot="${slot}"]`), `${id} has its ${slot} slot`);
       }
-      assert.ok(await page.$('.room [data-slot="shelf"] .ks-pile'), `${id} shows its shelf of trophies`);
+      assert.equal(await page.$('.room [data-slot="shelf"] .ks-pile'), null, `${id}: the trophies are in the back room, not the front (budget.test.js)`);
       const job = await page.$eval('.room [data-slot="job"]', (e) => e.innerText.trim());
       assert.ok(job.length > 0, "the job line says something");
-      assert.ok(await page.$('.room [data-slot="timer"] .bx-clock'), "the running block shows its timer");
+      assert.ok(await page.$('.room [data-slot="block"] [data-clock]'), "the running block shows its countdown, in the block card");
       assert.deepEqual(await page.evaluate(lowContrast), [], `${id}: text too faint to read (contrast below 3:1)`);
       const spill = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       assert.ok(spill <= 0, `${id} spills ${spill}px sideways at ${w}px`);

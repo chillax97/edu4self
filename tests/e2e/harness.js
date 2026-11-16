@@ -116,7 +116,7 @@ export async function pinClock(page, hour, ymd) {
 }
 
 // A page that records console errors and uncaught exceptions.
-export async function openPage(browser, url, { width = 1440, height = 1000, view, block = false, hour, date } = {}) {
+export async function openPage(browser, url, { width = 1440, height = 1000, view, room, block = false, hour, date } = {}) {
   const page = await browser.newPage();
   page.errors = [];
   page.on("pageerror", (e) => page.errors.push(String(e)));
@@ -129,12 +129,13 @@ export async function openPage(browser, url, { width = 1440, height = 1000, view
   // motion, which stops every animation, the neon blink included); E2E_MOTION=reduce runs a file the other way
   await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: process.env.E2E_MOTION || "no-preference" }]);
   if (hour !== undefined) await pinClock(page, hour, date);
-  await page.evaluateOnNewDocument((v, blk) => {
+  await page.evaluateOnNewDocument((v, blk, r) => {
     localStorage.setItem("edu.onboarded.v1", "1"); sessionStorage.setItem("edu.giftask.later", "1");
     if (v) localStorage.setItem("edu.view.v1", v);
+    if (r) localStorage.setItem("edu.bar.room.v1", r);   // "front" or "back": a room's back room holds the finish line, locked tasks and trophies
     // a focus block already running: the top bar is at its most crowded
     if (blk) { const n = Date.now(); localStorage.setItem("edu.block.v1", JSON.stringify({ block: "lessons", minutes: 50, start: n - 60000, end: n + 49 * 60000, water: 15, served: 0, drunk: 0 })); }
-  }, view || "", block);
+  }, view || "", block, room || "");
   await page.goto(url, { waitUntil: "networkidle0" });
   await page.waitForSelector("#app > :not(#loading)");
   return page;

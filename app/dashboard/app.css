@@ -159,6 +159,7 @@ main { padding-top: 28px; padding-bottom: 40px; }
 .greeting h1 { font: 600 clamp(28px, 3.4vw, 40px)/1.08 var(--serif); letter-spacing: -.02em; }
 .greeting h1 em { font-style: italic; color: var(--coral); }
 .greeting p { margin: .45rem 0 0; color: var(--ink-2); max-width: 60ch; }
+@media (max-width: 760px) { .greeting { margin-bottom: 14px; gap: 10px; } .greeting p { display: none; } }   /* a phone: Up next on the first screen */
 
 .today {
   display: flex; align-items: center; gap: .9rem; padding: .7rem 1rem .7rem .75rem;
@@ -774,7 +775,20 @@ body.v-bar .brand-word { font-family: var(--bx-head); font-weight: 700; letter-s
 body.v-bar code { background: var(--surface-2); }
 
 .room [data-slot]:empty { display: none; }
-.bx { display: grid; grid-template-columns: 300px minmax(0, 1fr) 290px; margin-top: 22px; border: 1px solid var(--bx-line); border-radius: 12px; overflow: hidden; background: var(--bx-frame); }
+/* The front-room budget (THEMES.md): a wrapper around only budget slots the front room leaves empty
+   (finish, doors, shelf, timer), such as a "trophies" label in a room made before the budget, goes too. */
+.room :is(div, section, aside):has(> [data-slot="finish"]:empty, > [data-slot="doors"]:empty, > [data-slot="shelf"]:empty, > [data-slot="timer"]:empty):not(:has([data-slot]:not(:empty))) { display: none; }
+/* During a block only the room's "a block is running" signal (data-part="running") moves forever;
+   every other endless animation plays once and stops. */
+body.blk-on :not([data-part~="running"], [data-part~="running"] *),
+body.blk-on :not([data-part~="running"], [data-part~="running"] *)::before,
+body.blk-on :not([data-part~="running"], [data-part~="running"] *)::after { animation-iteration-count: 1 !important; }
+/* the voices past the host and two others, opened in place */
+.bx-more { all: unset; cursor: pointer; align-self: flex-start; width: max-content; padding: 2px 0; font: 600 12.5px/1.5 var(--sans); color: inherit; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+.bx-more:hover, .bx-more:focus-visible { opacity: 1; }
+.bx-more:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.bx-line[hidden] { display: none; }
+.bx { display: grid; grid-template-columns: minmax(0, 1fr) 330px; margin-top: 22px; border: 1px solid var(--bx-line); border-radius: 12px; overflow: hidden; background: var(--bx-frame); }
 .bx-k { font: 600 12.5px/1.3 var(--bx-head); letter-spacing: .16em; text-transform: uppercase; color: var(--bx-k); }
 .bx-mono { font: 400 12.5px/1.45 var(--bx-mono); color: var(--bx-text); margin-top: 4px; }
 .bx-chk { font: 400 12.5px var(--bx-mono); color: var(--bx-dim); }
@@ -926,19 +940,14 @@ body.v-bar .card { background: rgba(26,20,17,.92); }
 body.v-bar .card-title { font-family: var(--bx-head); letter-spacing: .14em; }
 body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-head); text-transform: uppercase; letter-spacing: .02em; }
 
-@media (max-width: 1180px) { .bx { grid-template-columns: 280px minmax(0, 1fr); } .bx-right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--bx-line2); } .bx-juke { max-width: 420px; margin: 0 auto; } }
-@media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-left { border-right: 0; } .bx-mid { padding: 16px; } }
-/* one column on a phone: the sign and tonight's numbers first, then the talk and the job, and the
-   back bar, finish line, doors and trophies after them, so the job isn't four screens down */
-@media (max-width: 760px) {
-  .bx-left { display: contents; }
-  .bx-left > * { margin: 16px 18px 0; }
-  .bx-left > :first-child { margin-top: 20px; }
-  .bx-left > :nth-child(n+4) { order: 2; }
-  .bx-left > :last-child { margin-bottom: 22px; }
-  .bx-mid { order: 1; }
-  .bx-right { order: 3; }
-}
+.bx-right { display: flex; flex-direction: column; gap: 14px; }
+.bx-right > .bx-music, .bx-right [data-slot="music"] > * { margin-top: 0; }
+.bx-right .bx-board { position: relative; height: 40px; }   /* the streak's chalk board, beside the record */
+.bx-right .bx-chalk { left: 0; bottom: 0; width: 100%; }
+@media (max-width: 1180px) { .bx { grid-template-columns: minmax(0, 1fr) 290px; } }
+/* one column on a phone: the sign, the job and its replies, then the jukebox (its record still, the
+   top-bar countdown stands in while the jukebox is off screen), the record, the talk after them */
+@media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-mid { padding: 16px; } .bx-right { border-left: 0; border-top: 1px solid var(--bx-line2); } .bx-vinyl { display: none; } }
 
 /* bar view: the jukebox's music player */
 .bx-music { margin-top: 16px; padding: 12px; border: 1px solid var(--bx-line); background: var(--bx-music-bg); display: grid; gap: 8px; }

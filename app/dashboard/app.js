@@ -208,12 +208,12 @@
             '<p>One thing at a time. Do it, submit it, then tell Claude to check your inbox.</p>') + '</div>' +
         renderToday() +
       '</section>' +
-      renderFinishLine(topics[0]) +
       '<div class="grid">' +
-        '<div class="col">' +
-          renderCoach(st.coach) +
-          recallCard(false) +
+        '<div class="col">' +   // the front-room budget: Up next first, then Claude's note and the finish line
+          recallCard(false) +   // a recall check that is due comes first: it is the next step
           renderHero(hero) +
+          renderCoach(st.coach) +
+          renderFinishLine(topics[0]) +
           renderQueue(all, hero) +
           shelfCard("Your shelf") +
           topics.map(renderTopic).join("") +
@@ -1004,6 +1004,14 @@
   var blockEl = document.createElement("section");
   blockEl.className = "card blk-card";
   blockEl.id = "block";
+  // the countdown shows once per screen: the top-bar pill only while the block card's own clock is off screen
+  function blockClockInView() {
+    var c = blockEl.isConnected && blockEl.querySelector("[data-clock]");
+    if (!c) return false;
+    var r = c.getBoundingClientRect();
+    return r.height > 0 && r.top >= 0 && r.bottom <= window.innerHeight && !c.closest("[hidden]");
+  }
+  window.addEventListener("scroll", function () { if (active) $("#blk-pill").hidden = blockClockInView(); }, { passive: true });
 
   function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function writeJSON(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -1253,12 +1261,12 @@
     var bar = blockEl.querySelector("[data-bar]");
     if (bar) bar.style.width = (100 * (1 - left / (active.end - active.start))).toFixed(2) + "%";
     var pill = $("#blk-pill");
-    pill.hidden = false;
+    pill.hidden = blockClockInView();
     pill.style.setProperty("--c", blockColor(active.block));
     pill.innerHTML = '<span class="blk-sw"></span>' + esc(label) + ' <b>' + t + '</b>';
     document.title = t + " · " + label + " · edu4self";
     var hc = $("[data-hero-clock]");
-    if (hc) hc.textContent = "◷ " + t + " left on this · ends " + hhmm(active.end);
+    if (hc) hc.textContent = "◷ The clock is running on this one · ends " + hhmm(active.end);
     document.body.style.setProperty("--blk", blockColor(active.block));
     waterCheck();
     paintWater();
@@ -1272,6 +1280,7 @@
     endTimer = setTimeout(finishBlock, Math.max(0, active.end - Date.now()));
     tickTimer = setInterval(tick, 500);
     document.body.classList.add("blk-on");
+    var rm = $(".room"); if (rm) rm.classList.add("is-running");   /* a room's CSS keys its running signal on .room.is-running */
   }
 
   function idle() {
@@ -1280,6 +1289,7 @@
     $("#blk-pill").hidden = true;
     document.title = BASE_TITLE;
     document.body.classList.remove("blk-on");
+    var rm = $(".room"); if (rm) rm.classList.remove("is-running");
     paintControls();
     barTick();
   }
@@ -1663,7 +1673,7 @@
     if (!active.water) return "💧 Water rounds are off for this block.";
     var served = active.served || 0, drunk = active.drunk || 0, nextAt = active.start + (served + 1) * active.water * 60000;
     return "💧 " + (served > drunk ? "A glass is waiting. " : "") +
-      (nextAt < active.end ? "Next glass in " + clock(nextAt - Date.now()) : "No more glasses this block") +
+      (nextAt < active.end ? "Next glass in " + Math.max(1, Math.ceil((nextAt - Date.now()) / 60000)) + " min" : "No more glasses this block") +
       (served ? " · " + drunk + " of " + served + " drunk" : "");
   }
 
@@ -2076,18 +2086,31 @@
   // Each line folds to one line (the host's note: its headline and two lines of the rest) so the job
   // stays near the top. A folded line opens in place on a click, a tap or Enter; markFolds() decides
   // which ones are actually cut off, after the room is drawn.
+  // the front-room budget: the host's note and two voices; the rest wait behind "Show N more" (one click)
+  var VOICES_SHOWN = 3, voicesOpen = false;
   function barLines2HTML(hero) {
-    var k = 0;
-    return barLines(hero).map(function (l) {
+    var k = 0, lines = barLines(hero), extra = lines.length - VOICES_SHOWN;
+    return lines.map(function (l, i) {
       var v = VOICES[l[0]], key = l[3] || l[0] + "|" + l[1], fresh = !barSeen[key];
       barSeen[key] = true;
       var chk = l[2] ? ' <span class="bx-chk">' + esc(l[2]) + "</span>" : "", who = '<span class="bx-who">' + esc(v.name) + "</span>";
       var inner = l[4] != null ? who + l[1] + '<span class="fold fold-2">' + l[4] + chk + '</span><button class="fold-more" type="button" aria-expanded="false" hidden>more</button>'
         : '<span class="fold">' + who + l[1] + chk + "</span>";
-      return '<p class="bx-line' + (fresh ? " is-new" : "") + (foldOpen[key] ? " is-open" : "") + '" data-fold="' + esc(key) + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
+      var more = i >= VOICES_SHOWN;
+      if (more && !voicesOpen) fresh = false;   // a hidden line doesn't play its entrance
+      return '<p class="bx-line' + (fresh ? " is-new" : "") + (foldOpen[key] ? " is-open" : "") + (more ? " is-more" : "") + '"' + (more && !voicesOpen ? " hidden" : "") + ' data-fold="' + esc(key) + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
         inner + "</p>";
-    }).join("");
+    }).join("") + (extra > 0 ? '<button class="bx-more" type="button" data-voices-more aria-expanded="' + voicesOpen + '">' + (voicesOpen ? "Show fewer" : "Show " + extra + " more") + "</button>" : "");
   }
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-voices-more]");
+    if (!b) return;
+    voicesOpen = !voicesOpen;
+    b.closest("[data-slot]").querySelectorAll(".bx-line.is-more").forEach(function (p) { p.hidden = !voicesOpen; });
+    b.textContent = voicesOpen ? "Show fewer" : "Show " + b.closest("[data-slot]").querySelectorAll(".bx-line.is-more").length + " more";
+    b.setAttribute("aria-expanded", String(voicesOpen));
+    markFolds();
+  });
 
   var foldOpen = {};
   function markFolds() {
@@ -2258,6 +2281,14 @@
     return '<section class="card ks-card"><div class="card-head"><h2 class="card-title">' + esc(title) + "</h2></div>" + shelfHTML() + "</section>";
   }
 
+  // tasks that are still locked, with when they open (the back room)
+  function doorsHTML() {
+    var locked = actionableTasks().filter(function (e) { return e.task.status === "locked"; });
+    return locked.length ? '<section class="card bx-doors"><div class="bx-k">' + esc(W("doors")) + " · " + locked.length + "</div><ul>" +
+      locked.map(function (e) { return "<li><b>" + esc(e.task.label ? e.task.label + ": " : "") + esc(e.task.title) + '</b><span class="bx-chk">' + esc(e.task.unlock || "Locked") + "</span></li>"; }).join("") +
+      "</ul></section>" : "";
+  }
+
   function renderBar(hero, topics, live) {
     var nm = barName(), room = barRoom();
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
@@ -2266,38 +2297,33 @@
     var neon = '<button class="bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
     if (room === "back") {
       var list = allBlocks();
-      return '<div class="room t-' + esc(THEME.meta.id) + ' is-back"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
-        '<div class="bx-back">' + shelfCard("The shelf") +
+      return '<div class="room t-' + esc(THEME.meta.id) + ' is-back' + (active ? " is-running" : "") + '"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
+        '<div class="bx-back">' + (topics[0] ? '<section class="card bx-finish">' + renderFinishLine(topics[0]) + "</section>" : "") + doorsHTML() + shelfCard("The shelf") +
           (list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "") +
           live.map(renderMilestones).join("") + renderGates(live) +
           live.map(renderEvidence).join("") + renderCalibration() + live.map(renderSkills).join("") +
           topics.map(renderTopic).join("") + renderLinked() +
         '</div></div></div>';
     }
-    var locked = actionableTasks().filter(function (e) { return e.task.status === "locked"; });
     var fill = {
       name: neon, rooms: tabs,
       tonight: tonightHTML(), week: weekHTML(), die: cabinetHTML(),
       sign: esc(W(active ? "sign_busy" : "sign_open")),
-      clock: esc(active ? clock(active.end - Date.now()) : hhmm(Date.now())),
+      clock: active ? "" : esc(hhmm(Date.now())),   // during a block the block card is the one countdown
       water: glassHTML(),
-      finish: renderFinishLine(topics[0]),
-      doors: locked.length ? '<div class="bx-doors"><div class="bx-k">' + esc(W("doors")) + " · " + locked.length + "</div><ul>" +
-        locked.map(function (e) { return "<li><b>" + esc(e.task.label ? e.task.label + ": " : "") + esc(e.task.title) + '</b><span class="bx-chk">' + esc(e.task.unlock || "Locked") + "</span></li>"; }).join("") +
-        "</ul></div>" : "",
-      timer: active ? '<div class="bx-clock" id="bx-clock" style="--c:' + blockColor(active.block) + '"><b data-bx-time>' + esc(clock(active.end - Date.now())) + "</b>" +
-        '<div><div class="bx-mono">' + esc(blockLabel(active.block)) + (active.task && findTask(active.task) ? " · " + esc(findTask(active.task).task.label || findTask(active.task).task.title) : "") + " · ends " + esc(hhmm(active.end)) + "</div>" +
-        (active.water ? '<div class="bx-wbar"><i data-bx-wbar></i></div>' : "") + '<div class="bx-mono" data-water-text>' + esc(waterText()) + "</div></div></div>" : "",
+      // the front-room budget (THEMES.md): the next step, the countdown once, the record at a glance. The finish
+      // line, locked tasks and trophies live in the back room, one click away; a second timer is never drawn.
+      finish: "", doors: "", shelf: "", timer: "",
       voices: barLines2HTML(hero), job: recallCard(true) + barJob(hero), replies: barReplies(hero),
       keys: "Press <kbd>1</kbd>–<kbd>9</kbd> to reply.",
-      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', shelf: shelfHTML(), streak: streakFill()
+      block: '<div id="blk-slot"></div>', music: '<div id="bx-music-slot"></div>', streak: streakFill()
     };
     var tpl = document.createElement("template");
     tpl.innerHTML = THEME.layout;   // cleaned by the server: no scripts, handlers, links or ids
     tpl.content.querySelectorAll("[data-slot]").forEach(function (el) { el.innerHTML = fill[el.dataset.slot] || ""; });
     var box = document.createElement("div");
     box.appendChild(tpl.content);
-    return '<div class="room t-' + esc(THEME.meta.id) + '">' + box.innerHTML + "</div>";
+    return '<div class="room t-' + esc(THEME.meta.id) + (active ? " is-running" : "") + '">' + box.innerHTML + "</div>";
   }
 
   // cheap refresh of the parts that change between polls, without redrawing the room
@@ -2596,9 +2622,7 @@
       }
       return;
     }
-    var t = clock(active.end - Date.now());
-    if (wc) wc.textContent = t;
-    var bt = $("[data-bx-time]"); if (bt) bt.textContent = t;
+    if (wc) wc.textContent = "";   // during a block the one countdown is the block card's (front-room budget)
   }
 
   function paintViewButton() {
