@@ -53,14 +53,119 @@
     var h = new Date().getHours();
     return h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   }
+  // The toaster: every notice goes through toast(html, ms). Toasts stack bottom right, newest in front, three
+  // in sight. Pointing at the stack (or tabbing into it) opens it and stops every clock; a hidden tab stops them too.
+  // Returns the toast, with .close(). #toast is the list, hidden while empty.
+  var TOAST_GAP = 10, TOAST_PEEK = 14, TOAST_SHOWN = 3;
   function toast(html, ms) {
-    if (!$("#onboarding").hidden) return;   // the first try shows its own result, and a toast would cover its buttons
-    var t = $("#toast");
-    t.innerHTML = html;
-    t.hidden = false;
-    clearTimeout(toast._t);
-    toast._t = setTimeout(function () { t.hidden = true; }, ms || 5200);
+    if (!$("#onboarding").hidden) return { close: function () {} };   // the first try shows its own result, and a toast would cover its buttons
+    var list = $("#toast"), li = document.createElement("li");
+    li.className = "toast";
+    li.innerHTML = '<div class="toast-body"></div><button class="toast-x" type="button" aria-label="Close">×</button>';
+    li.firstChild.innerHTML = html;
+    var t = { el: li, left: ms || 5200, since: 0, timer: 0 };
+    t.close = function () {
+      if (li.dataset.removed) return;
+      clearTimeout(t.timer);
+      li.dataset.removed = "true";
+      toasts.splice(toasts.indexOf(t), 1);
+      layoutToasts();
+      setTimeout(function () {
+        li.remove();
+        if (!list.children.length) { list.hidden = true; document.documentElement.style.scrollPaddingBottom = ""; }
+      }, 200);
+    };
+    li.lastChild.addEventListener("click", t.close);
+    toasts.push(t);
+    list.hidden = false;
+    list.appendChild(li);
+    layoutToasts();
+    requestAnimationFrame(function () { requestAnimationFrame(function () { li.dataset.mounted = "true"; }); });
+    runToast(t);
+    return t;
   }
+  var toasts = [];
+  function toastsPaused() { var l = $("#toast"); return document.hidden || l.dataset.expanded === "true"; }
+  function runToast(t) {
+    clearTimeout(t.timer);
+    if (toastsPaused()) return;
+    t.since = Date.now();
+    t.timer = setTimeout(t.close, Math.max(0, t.left));
+  }
+  function pauseToasts() {
+    toasts.forEach(function (t) { if (t.timer) { clearTimeout(t.timer); t.timer = 0; t.left -= Date.now() - t.since; } });
+  }
+  function resumeToasts() { if (!toastsPaused()) toasts.forEach(runToast); }
+  // Where each toast sits: collapsed, the ones behind peek out above the front one, smaller; opened, they stand in a column.
+  function layoutToasts() {
+    var list = $("#toast"), open = list.dataset.expanded === "true", y = 0, n = toasts.length;
+    var frontH = n ? toasts[n - 1].el.offsetHeight : 0;
+    list.style.setProperty("--front-h", frontH + "px");
+    for (var i = n - 1; i >= 0; i--) {
+      var t = toasts[i], k = n - 1 - i, el = t.el;   // k: 0 is the front
+      el.dataset.front = k === 0 ? "true" : "false";
+      el.dataset.behind = k >= TOAST_SHOWN ? "true" : "false";
+      el.style.setProperty("--y", (open ? -y : -k * TOAST_PEEK) + "px");
+      el.style.setProperty("--s", open ? 1 : Math.max(0, 1 - k * 0.05));
+      y += el.offsetHeight + TOAST_GAP;
+    }
+    list.style.height = (open ? Math.max(0, y - TOAST_GAP) : frontH) + "px";
+    if (!open) dodgeToasts(frontH + Math.min(n - 1, TOAST_SHOWN - 1) * TOAST_PEEK);
+  }
+  // The stack never sits on the page's own controls (the bar's jukebox, a Save button at the fold): it lifts
+  // itself just above any it would cover, up to half the screen. Rechecked as the page scrolls.
+  var TOAST_EDGE = 24, toastH = 0, dodgeFrame = 0;
+  function dodgeToasts(h) {
+    var list = $("#toast");
+    if (h !== undefined) toastH = h;
+    if (!toasts.length || list.dataset.expanded === "true") return;
+    var box = list.getBoundingClientRect(), left = box.left, right = box.right, bottom = TOAST_EDGE;
+    var scope = document.querySelector(".overlay:not([hidden])") || document;   // under an open drawer, only its controls can be pressed
+    var ctl = Array.prototype.slice.call(scope.querySelectorAll("button, a[href], input:not([type=hidden]), select, textarea, [role=button]"))
+      .filter(function (e) { return !list.contains(e); })
+      .map(function (e) { return e.getBoundingClientRect(); })
+      .filter(function (r) { return r.width && r.height && r.right > left && r.left < right; });
+    for (var tries = 0; tries < 8; tries++) {
+      var top = innerHeight - bottom - toastH, low = innerHeight, hit = null;   // down to the edge: a control peeking in below scrolls up into the stack
+      ctl.forEach(function (r) { if (r.bottom > top && r.top < low && (!hit || r.top < hit.top)) hit = r; });
+      if (!hit) break;
+      bottom = innerHeight - hit.top + 8;
+      if (bottom + toastH > innerHeight / 2) { bottom = TOAST_EDGE; break; }   // nowhere clear low down: back to the corner
+    }
+    list.style.bottom = bottom + "px";
+    // and whatever is scrolled into view (a click, Tab, find in page) stops above the stack, as it does below the top bar
+    document.documentElement.style.scrollPaddingBottom = (bottom + toastH + 8) + "px";
+  }
+  function redodge() {
+    if (!toasts.length || dodgeFrame) return;
+    dodgeFrame = requestAnimationFrame(function () { dodgeFrame = 0; dodgeToasts(); });
+  }
+  window.addEventListener("scroll", function () { if (toasts.length) dodgeToasts(); }, { passive: true });   // at once, before a click can land
+  // the page redraws under a toast (Settings saved, then the dashboard reloads): check again once it settles
+  new MutationObserver(redodge).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  window.addEventListener("resize", function () { if (toasts.length) layoutToasts(); });
+  (function () {
+    var list = $("#toast");
+    function setOpen(on) {
+      if ((list.dataset.expanded === "true") === on) return;
+      if (on) { pauseToasts(); list.dataset.expanded = "true"; } else { delete list.dataset.expanded; resumeToasts(); }
+      layoutToasts();
+    }
+    // Only a pointer that moves onto the stack opens it: a toast that appears under a resting cursor (Save sits in
+    // the same corner of the drawer) is not being pointed at, and must not stay open and paused.
+    var px = -1, py = -1;
+    document.addEventListener("pointermove", function (ev) {
+      var moved = ev.clientX !== px || ev.clientY !== py;
+      px = ev.clientX; py = ev.clientY;
+      if (moved && toasts.length && list.contains(ev.target)) setOpen(true);
+    }, { passive: true });
+    list.addEventListener("pointerleave", function () { if (!list.contains(document.activeElement)) setOpen(false); });
+    list.addEventListener("focusin", function () { setOpen(true); });
+    list.addEventListener("focusout", function (ev) { if (!list.contains(ev.relatedTarget) && !list.matches(":hover")) setOpen(false); });
+    document.addEventListener("visibilitychange", function () { if (document.hidden) pauseToasts(); else resumeToasts(); });
+  })();
+  window.edu4self = window.edu4self || {};
+  window.edu4self.toast = toast;   // one place to call it from, for the tests and the console too
   // The learner's settings (_system/config.json, edited in Settings). The server fills in defaults.
   function cfg() { return (DATA && DATA.config) || {}; }
   function learnerName() { return cfg().name || (DATA && DATA.state && DATA.state.learner) || "there"; }
@@ -1655,15 +1760,16 @@
       barSay("bartender", "slides a glass of water down the bar. <span class=\"bx-chk\">" + mins + " min in · click the glass once you've drunk it</span>", true);
       setTimeout(function () { barSay("physical", esc(waterLine((active && active.served) || 1))); }, 900);
     } else {
-      toast('<span>💧</span><span><b>Water.</b> ' + mins + ' minutes in. Take a sip, then back to it. <button class="btn btn-soft btn-sm" type="button" data-drink>Drank it</button></span>', 12000);
+      waterToast = toast('<span>💧</span><span><b>Water.</b> ' + mins + ' minutes in. Take a sip, then back to it. <button class="btn btn-soft btn-sm" type="button" data-drink>Drank it</button></span>', 12000);
     }
   }
 
+  var waterToast = null;
   function drinkWater() {
     if (!active || (active.served || 0) <= (active.drunk || 0)) return;
     active.drunk = (active.drunk || 0) + 1;
     writeJSON(BLOCK_KEY, active);
-    $("#toast").hidden = true;
+    if (waterToast) { waterToast.close(); waterToast = null; }
     paintWater();
     if (isBar()) barSay("you", ["drink it. Cold.", "drink it. Better.", "drink it, and get back to it."][(active.drunk - 1) % 3]);
   }
