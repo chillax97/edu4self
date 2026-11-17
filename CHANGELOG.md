@@ -5,10 +5,22 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Added
+
+- Tokens: one set of colour names (`--primary`, `--primary-ink`, `--destructive`, `--ring`, `--popover`,
+  `--border`, …) that every view and room maps onto. A room's palette accent is its primary, so its tabs,
+  Start buttons and focus rings follow the palette with no CSS. The table is in `docs/THEMES.md`.
+- The toaster: every notice (saved, water, gifts, trophies, Claude is done) stacks bottom right, newest in
+  front, three in sight. Pointing at the stack opens it and holds every notice; each one has a close button.
+  It never sits on the page's own controls: it lifts itself above any it would cover (the bar's jukebox at
+  the fold), and anything scrolled into view stops above it. While a drawer is open the stack moves to the
+  left, clear of the drawer's buttons.
+
 ### Changed
 
 - The front-room budget: every room and the classic view shows the next step and its action on the first
-  screen (desktop and phone), the block's countdown once, and tonight, the week and the die. The finish line,
+  screen (desktop 1440×900 and a half-screen window 720×900, beside the terminal; the dashboard is local, so
+  phone widths are not a target), the block's countdown once, and tonight, the week and the die. The finish line,
   locked tasks and trophies are in the back room. Past the host and two voices, the rest wait behind
   "Show N more". During a block only the room's running signal moves (the bar's record, the train's hills,
   the station's planet). The rule for room authors is in `docs/THEMES.md`.

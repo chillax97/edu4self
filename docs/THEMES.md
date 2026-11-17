@@ -133,9 +133,10 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 
 The front room is for what a learner needs now. Every room, and the classic view, keeps to this:
 
-- **The next step and its one action on the first screen**, at desktop (1440×900) and phone (390×844)
-  width: the `job` title, and under it the follow-up reply box or the first reply. Put `job` and `replies`
-  before `voices` in the layout, and on a phone put them before `tonight`, `week` and `die` (with `order`).
+- **The next step and its one action on the first screen**, at desktop (1440×900) and in a half-screen
+  window (720×900): the `job` title, and under it the follow-up reply box or the first reply. Put `job` and
+  `replies` before `voices` in the layout, and in a narrow window put them before `tonight`, `week` and `die`
+  (with `order`). The dashboard is served on 127.0.0.1, so a phone never sees it: spend nothing on phone widths.
 - **The countdown once.** It is in `block`. The top bar shows it only while `block` is off screen, so
   don't draw another.
 - **The record at a glance:** `tonight`, `week` and `die`.
@@ -246,6 +247,28 @@ room sets these colour tokens on `.room`, and the engine's markup uses them:
 `--bx-line`, `--bx-line2` (borders), `--bx-k` (small labels), `--bx-text`, `--bx-dim`, `--bx-faint`,
 `--bx-bright`, `--bx-soft`, `--bx-label` (text, strongest to softest), `--bx-edge`, `--bx-panel`,
 `--bx-frame`, `--bx-music-bg` (surfaces), `--bx-sign` (the sign's font).
+
+#### Tokens
+
+The whole dashboard (buttons, focus rings, toasts, errors) reads one small set of shadcn-style tokens,
+worked out on `body` in `app.css`. A room doesn't set them: it maps onto them through its `palette`.
+
+| Token | What it is | In classic | In a room |
+| --- | --- | --- | --- |
+| `--bg`, `--surface` | page, card | the cream page, white cards | `palette.bg`, `palette.surface` |
+| `--ink`, `--muted` | text, quiet text | near black, grey | `palette.ink`, `palette.muted` |
+| `--border`, `--border-strong` | lines | `--line`, `--line-2` | `palette.line`, `palette.line2` |
+| `--radius`, `--radius-sm` | corners | 18 px, 11 px | the same |
+| `--primary`, `--primary-ink` | the one action that matters, and the text on it | ink, with the page colour on it | `palette.accent`, with `palette.accent_ink` on it (dark ink by default, white in a room with `"dark": false`) |
+| `--destructive`, `--destructive-ink` | delete, errors | red, white | the same |
+| `--ring` | the keyboard focus outline | ink, faded | the accent, faded |
+| `--popover`, `--popover-ink` | toasts and menus | `--surface`, `--ink` | `palette.surface2`, `palette.ink` |
+| `--brand` | the coral mark | coral | coral |
+
+So a room gets its pressed tabs, Start buttons, play button and focus rings in its own accent with no CSS.
+Restyle a button in `theme.css` only when the room needs a different shape, not a different colour; if
+the accent is too light or too dark for its text, set `accent_ink` instead. Dark mode in classic is the
+same tokens over darker base colours.
 
 ### lesson.css
 
