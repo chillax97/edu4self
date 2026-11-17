@@ -755,7 +755,8 @@ body:has(.overlay-drawer:not([hidden])) .toaster { right: auto; left: 24px; }   
 .toast[data-behind="true"] { opacity: 0; pointer-events: none; }
 .toaster:not([data-expanded]) .toast[data-front="false"] { height: var(--front-h); overflow: hidden; }   /* behind the front one, only an edge shows */
 .toaster:not([data-expanded]) .toast[data-front="false"] > * { opacity: 0; }
-.toast-body { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; min-width: 0; transition: opacity .2s ease; }
+.toast-body { display: flex; gap: .6rem; align-items: center; min-width: 0; transition: opacity .2s ease; }
+.toast-body > :last-child { min-width: 0; }   /* the text wraps beside its icon */
 .toast b { color: var(--popover-ink); }
 .toast-x {
   position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; display: grid; place-items: center;

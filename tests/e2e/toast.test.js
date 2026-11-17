@@ -90,3 +90,13 @@ test("a toast never sits on the page's own controls (the bar's jukebox at the bo
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });
+
+test("a long toast keeps its icon beside the text, not on a line of its own", async () => {
+  const page = await openPage(browser, server.url, { view: "classic" });
+  await page.evaluate(() => window.edu4self.toast("<span>✓</span><span><b>Saved to your inbox.</b> Press ✦ Grade it now when you're ready, or tell Claude to check your inbox.</span>", 20000));
+  await page.waitForSelector("#toast > li[data-mounted]");
+  const [icon, text] = await page.$$eval("#toast > li .toast-body > span", (s) => s.map((e) => e.getBoundingClientRect().toJSON()));
+  assert.ok(icon.right <= text.left, `the icon (${icon.left}-${icon.right}) is left of the text (from ${text.left})`);
+  assert.ok(icon.top < text.top + 24, "on the text's first line");
+  await closePage(page);
+});
