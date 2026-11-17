@@ -80,7 +80,8 @@ Each step ends with how you know it's done.
      (From the dashboard's Claude panel there is no shell: the server runs this check after your
      reply and shows the result. Say so, and set the room anyway; a failing room falls back to the bar.)
    - Set `"theme": "<id>"` in `_system/config.json` (or pick it in Settings), open the dashboard, and
-     look at it at full width and at phone width (390 px): every slot shows, nothing scrolls sideways,
+     look at it at full width and in a half-screen window (about 720 px, the dashboard beside the
+     terminal): every slot shows, nothing scrolls sideways,
      all text is readable against its background, the replies and the timer still click, and the
      shelf shows (with history, or after one block that meets a small daily goal).
    - Open a lesson: it wears the room, and the quiz is readable.
