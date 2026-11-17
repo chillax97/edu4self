@@ -10,7 +10,6 @@
 .room .lb-plaque { margin-left: auto; font: 600 12px var(--bx-mono); letter-spacing: .24em; color: var(--lb-brass); border: 1px solid var(--lb-brass); padding: 3px 9px; }
 .room .lb-time { font: 600 13px var(--bx-mono); color: var(--lb-paper); font-variant-numeric: tabular-nums; }
 .room .bx-tabs { background: rgba(0,0,0,.3); }
-.room .bx-tabs button[aria-pressed="true"] { background: var(--lb-brass); }
 .room .bx-k { font-style: italic; text-transform: none; letter-spacing: .04em; font-size: 15px; font-family: var(--serif); color: var(--lb-brass); }
 
 .room .lb-shelf { height: 92px; display: flex; align-items: flex-end; gap: 4px; padding: 0 18px; border-bottom: 10px solid var(--lb-wood); }
@@ -67,7 +66,6 @@
 .room .lb-side .bx-juke { border-radius: 12px; background: linear-gradient(#1d2a20, #121a14); border: 1px solid #8a6d36; padding: 14px; }
 .room .lb-side .bx-juke::before, .room .lb-side .bx-juke::after { display: none; }
 .room .lb-k { margin: 0 0 10px; font: italic 15px var(--serif); color: var(--lb-brass); }
-.room .bx-juke .blk-start { background: var(--lb-brass); }
 
 @media (max-width: 1100px) { .room .lb-desk { grid-template-columns: minmax(0, 1fr); } .room .lb-cat { order: 3; } }
 @media (max-width: 900px) { .room .lb-book { grid-template-columns: 1fr; background-image: none; } }   /* a half-screen window: one page, the job on it, the margin notes under it */

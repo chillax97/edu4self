@@ -1738,6 +1738,7 @@
     if (f.body) decl.push("--serif:" + FONT[f.body]);
     if (f.sign) decl.push("--bx-sign:" + FONT[f.sign]);
     decl.push("color-scheme:" + (m.dark === false ? "light" : "dark"));
+    if (m.dark === false && !p.accent_ink) decl.push("--accent-ink:#fff");   // the --primary-ink token on a light room's accent
     // the bar's kind colours are bright for a dark room; a light room gets the classic view's deeper ones
     if (m.dark === false) decl.push("--lesson:#5b5bd6;--probe:#b0650a;--checkpoint:#d6336c;--reading:#0e7f6c;--project:#8e4ec6;--mock:#0b6fb8");
     if (m.backdrop) decl.push("background:" + m.backdrop);

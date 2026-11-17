@@ -14,5 +14,3 @@
 .room .bx-bottles-2 i:nth-child(2) { height: 28px; background: #3c8d5a; }
 .room .bx-bottles-2 i:nth-child(3) { height: 36px; background: #d9b44a; }
 .room .bx-bottles-2 i:nth-child(4) { height: 24px; background: #7b2d3f; }
-/* the job's one primary action wears the bar's amber, not the topic's colour */
-.room .bx-job .btn-topic:not(:disabled):not(.is-off) { background: var(--bar-amber); color: #1a110a; box-shadow: none; }

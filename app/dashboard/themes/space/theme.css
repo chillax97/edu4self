@@ -38,7 +38,6 @@
 
 .room .sp-mid { display: flex; flex-direction: column; gap: 14px; min-width: 0; font: 16.5px/1.6 var(--sans); }
 .room .bx-tabs { background: rgba(4,9,18,.9); border: 1px solid var(--bx-line); }
-.room .bx-tabs button[aria-pressed="true"] { background: var(--sp-orange); }
 .room .sp-comms { border: 1px solid var(--bx-line); border-radius: 6px; padding: 14px 16px; background: rgba(4,9,18,.75); }
 .room .sp-k { margin: 0 0 10px; font: 600 12px var(--bx-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--sp-cyan); }
 .room .sp-comms .bx-line { color: #d2ecf8; font-family: var(--sans); }
@@ -53,7 +52,6 @@
 .room .sp-right { display: grid; gap: 14px; align-content: start; }
 .room .sp-right .bx-juke { border-radius: 12px; background: linear-gradient(#0b1730, #060c18); border: 1px solid var(--sp-cyan); padding: 14px; box-shadow: 0 0 24px -10px var(--sp-cyan); }
 .room .sp-right .bx-juke::before, .room .sp-right .bx-juke::after { display: none; }
-.room .bx-juke .blk-start { background: var(--sp-orange); }
 .room .bx-music { border-radius: 6px; }
 
 @media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } .room .sp-mid { order: -1; } }
