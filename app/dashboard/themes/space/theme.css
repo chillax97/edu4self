@@ -57,11 +57,5 @@
 .room .bx-music { border-radius: 6px; }
 
 @media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } .room .sp-mid { order: -1; } }
-@media (max-width: 560px) {   /* a phone: the sign, then the mission, then the gauges */
-  .room .sp-bar { display: contents; }
-  .room .sp-bar > * { order: 2; }
-  .room .sp-bar > [data-slot="name"] { order: 0; }
-  .room .sp-main { order: 1; }
-  .room .sp-left { order: 3; }
-}
+@media (max-width: 560px) { .room .sp-bar { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .room.is-running .sp-planet { animation: none; } }

@@ -9,7 +9,7 @@ import { ENGINE, makeVault, freePort, startServer, stopServer, launch, openPage,
 
 const ROOMS = fs.readdirSync(path.join(ENGINE, "app", "dashboard", "themes")).sort();
 const VIEWS = [["classic", "classic"], ...ROOMS.map((id) => [id, "bar"])];
-const SIZES = [[1440, 900, "desktop"], [390, 844, "phone"]];
+const SIZES = [[1440, 900, "desktop"], [720, 900, "half"]];   // a full screen, and half a screen beside the terminal (D17: no phones, the server is local)
 let v, server, browser, cfgPath;
 const sys = (...p) => path.join(v.vault, "_system", ...p);
 const day = (n, h = 19) => { const d = new Date(); d.setDate(d.getDate() - n); d.setHours(h, 0, 0, 0); return d; };

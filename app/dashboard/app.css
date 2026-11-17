@@ -126,7 +126,6 @@ h1, h2, h3 { margin: 0; }
 /* ------------------------------------------------ top bar */
 /* the top bar is sticky: whatever is scrolled into view (a focused button, the #block link, a tab) stops below it */
 html { scroll-padding-top: 84px; }
-@media (max-width: 700px) { html { scroll-padding-top: 132px; } }   /* two rows of top bar on a phone */
 .topbar {
   position: sticky; top: 0; z-index: 20;
   backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
@@ -162,11 +161,6 @@ main { padding-top: 28px; padding-bottom: 40px; }
 .greeting h1 { font: 600 clamp(28px, 3.4vw, 40px)/1.08 var(--serif); letter-spacing: -.02em; }
 .greeting h1 em { font-style: italic; color: var(--coral); }
 .greeting p { margin: .45rem 0 0; color: var(--ink-2); max-width: 60ch; }
-@media (max-width: 760px) {   /* a phone: Up next on the first screen; Today in one line, the week's dots on a wider screen */
-  .greeting { margin-bottom: 14px; gap: 10px; } .greeting h1 { font-size: 24px; } .greeting p { display: none; }
-  .greeting .today { padding: .4rem .9rem .4rem .45rem; gap: .6rem; } .greeting .today svg { width: 34px; height: 34px; }
-  .greeting .today .week { display: none; } .greeting .today .week + span::before { content: " · "; }
-}
 
 .today {
   display: flex; align-items: center; gap: .9rem; padding: .7rem 1rem .7rem .75rem;
@@ -738,7 +732,7 @@ body.v-bar .bx-meta .calc-chip { color: inherit; background: transparent; border
 
 .footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-top: 18px; padding-bottom: 36px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); }
 .footer a { color: var(--muted); }
-@media (max-width: 700px) { .hero-eyebrow { margin-bottom: 10px; row-gap: 4px; } .hero-meta { gap: .25rem 1rem; margin-top: 12px; } .hero-why { margin-top: 8px; font-size: 15px; } .hide-sm { display: none; } .topbar-status { display: none; } .blk-pill { margin-left: auto; } .hero { padding: 24px 20px; } .hero::before { inset: auto -200px -260px auto; opacity: .6; } .card { padding: 18px; } }
+@media (max-width: 700px) { .hide-sm { display: none; } .topbar-status { display: none; } .blk-pill { margin-left: auto; } .hero { padding: 24px 20px; } .hero::before { inset: auto -200px -260px auto; opacity: .6; } .card { padding: 18px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 /* ================================================================ water rounds (both views) */
@@ -954,7 +948,7 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 @media (max-width: 1180px) { .bx { grid-template-columns: minmax(0, 1fr) 290px; } }
 /* one column on a phone: the sign, the job and its replies, then the jukebox (its record still, the
    top-bar countdown stands in while the jukebox is off screen), the record, the talk after them */
-@media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-mid { padding: 16px; } .bx-neon { font-size: 26px; } .bx-right { border-left: 0; border-top: 1px solid var(--bx-line2); } .bx-vinyl { display: none; } }
+@media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-mid { padding: 16px; } .bx-right { border-left: 0; border-top: 1px solid var(--bx-line2); } }
 
 /* bar view: the jukebox's music player */
 .bx-music { margin-top: 16px; padding: 12px; border: 1px solid var(--bx-line); background: var(--bx-music-bg); display: grid; gap: 8px; }
@@ -1062,8 +1056,7 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 /* phones: the action buttons get their own row, so all of them stay reachable */
 @media (max-width: 700px) {
   .topbar-inner { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; row-gap: 8px; }   /* .topbar-inner is also .wrap: keep its side gutter */
-  .topbar-actions { order: 3; flex: 1 0 calc(100% - 44px - 1rem - 1px); }   /* the actions and "+" share the second row, so Up next starts higher */
-  #btn-topic { order: 4; width: 44px; justify-content: center; }
+  .topbar-actions { order: 3; width: 100%; }
   .topbar-actions .btn { flex: 1; justify-content: center; padding-left: .4rem; padding-right: .4rem; }
 }
 
