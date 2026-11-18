@@ -72,7 +72,7 @@
       layoutToasts();
       setTimeout(function () {
         li.remove();
-        if (!list.children.length) { list.hidden = true; document.documentElement.style.scrollPaddingBottom = ""; }
+        if (!list.children.length) { list.hidden = true; document.documentElement.style.removeProperty("--toast-clear"); }
       }, 200);
     };
     li.lastChild.addEventListener("click", t.close);
@@ -134,7 +134,7 @@
     }
     list.style.bottom = bottom + "px";
     // and whatever is scrolled into view (a click, Tab, find in page) stops above the stack, as it does below the top bar
-    document.documentElement.style.scrollPaddingBottom = (bottom + toastH + 8) + "px";
+    document.documentElement.style.setProperty("--toast-clear", (bottom + toastH + 8) + "px");
   }
   function redodge() {
     if (!toasts.length || dodgeFrame) return;
@@ -2396,6 +2396,7 @@
       "</ul></section>" : "";
   }
 
+  var BUDGET_SLOTS = ["finish", "doors", "shelf", "timer"];
   function renderBar(hero, topics, live) {
     var nm = barName(), room = barRoom();
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
@@ -2427,7 +2428,14 @@
     };
     var tpl = document.createElement("template");
     tpl.innerHTML = THEME.layout;   // cleaned by the server: no scripts, handlers, links or ids
-    tpl.content.querySelectorAll("[data-slot]").forEach(function (el) { el.innerHTML = fill[el.dataset.slot] || ""; });
+    tpl.content.querySelectorAll("[data-slot]").forEach(function (el) {
+      var k = el.dataset.slot;
+      if (BUDGET_SLOTS.indexOf(k) < 0) { el.innerHTML = fill[k] || ""; return; }
+      // the front-room budget (THEMES.md): these stay out, and so does a wrapper that held nothing else, such as a
+      // "trophies" label in a room made before the budget
+      var up = el.parentNode; el.remove();
+      if (up.nodeType === 1 && !up.querySelector("[data-slot]")) up.remove();
+    });
     var box = document.createElement("div");
     box.appendChild(tpl.content);
     return '<div class="room t-' + esc(THEME.meta.id) + (active ? " is-running" : "") + '">' + box.innerHTML + "</div>";

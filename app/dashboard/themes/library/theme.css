@@ -53,7 +53,7 @@
 .room .lb-book .bx-wbar { background: rgba(42,33,22,.15); }
 .room .lb-margin .bx-line { color: #3a2e1e; font-style: italic; padding-left: var(--s-3); border-left: 2px solid var(--lb-brass); }
 .room .lb-margin .bx-line::before, .room .lb-margin .bx-line::after { display: none; }
-.room .lb-margin .bx-who { display: block; font: 600 var(--t-xs) var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }
+.room .lb-margin .bx-who { display: block; font: 600 var(--t-xs) var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a; }
 .room .lb-margin .bx-line b { color: #2a2116; }
 .room .lb-margin .fold { --fold: 2; }
 .room .lb-margin .bx-chk { color: #8a7a5e; }

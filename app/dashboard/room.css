@@ -27,9 +27,6 @@ body.v-bar .brand-word { font-family: var(--bx-head); font-weight: 700; letter-s
 body.v-bar code { background: var(--surface-2); }
 
 .room [data-slot]:empty { display: none; }
-/* The front-room budget (THEMES.md): a wrapper around only budget slots the front room leaves empty
-   (finish, doors, shelf, timer), such as a "trophies" label in a room made before the budget, goes too. */
-.room :is(div, section, aside):has(> [data-slot="finish"]:empty, > [data-slot="doors"]:empty, > [data-slot="shelf"]:empty, > [data-slot="timer"]:empty):not(:has([data-slot]:not(:empty))) { display: none; }
 /* the voices past the host and two others, opened in place */
 .bx-more { align-self: flex-start; width: max-content; padding: 2px 0; font: 600 var(--t-xs)/1.5 var(--sans); color: inherit; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
 .bx-more:hover, .bx-more:focus-visible { opacity: 1; }
@@ -38,7 +35,8 @@ body.v-bar code { background: var(--surface-2); }
 .bx-k { font: 600 var(--t-xs)/1.3 var(--bx-head); letter-spacing: .16em; text-transform: uppercase; color: var(--bx-k); }
 .bx-mono { font: 400 var(--t-xs)/1.45 var(--bx-mono); color: var(--bx-text); margin-top: var(--s-1); }
 .bx-chk { font: 400 var(--t-xs) var(--bx-mono); color: var(--bx-dim); }
-.bx-neon { display: block; font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--bx-head); color: var(--bar-cream); animation: bx-flicker 7s infinite; overflow-wrap: anywhere; }
+.bx-neon { display: block; font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--bx-head); color: var(--bar-cream);  overflow-wrap: anywhere; }
+body:not(.blk-on) .bx-neon { animation: bx-flicker 7s infinite; }
 .bx-neon small { display: block; font: 600 var(--t-xs) var(--bx-head); letter-spacing: .26em; text-transform: uppercase; color: var(--bar-amber); text-shadow: none; margin-top: var(--s-2); transition: opacity .6s ease; }
 .bx-neon:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 @keyframes bx-flicker { 0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; } 20%, 63% { opacity: .4; } }
@@ -46,7 +44,7 @@ body.v-bar code { background: var(--surface-2); }
 .bx-pips i { width: 14px; height: 22px; transform: skewX(-12deg); background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); font: 600 var(--t-xs)/20px var(--bx-mono); text-align: center; font-style: normal; color: transparent; }
 .bx-pips.h i.on { background: var(--c-red-55); border-color: var(--c-red-75); }
 .bx-pips.h i.half { background: linear-gradient(to top, var(--c-red-55) 50%, rgba(255,255,255,.1) 50%) border-box; }
-.bx-pips.h i.on:last-child { animation: bx-beat 1.6s ease-in-out infinite; }
+body:not(.blk-on) .bx-pips.h i.on:last-child { animation: bx-beat 1.6s ease-in-out infinite; }
 .bx-pips.m i { width: 15px; color: var(--bx-dim); }
 .bx-pips.m i.on { background: var(--c-blue-55); border-color: var(--c-blue-80-2); color: var(--c-grey-100); }
 .bx-pips.m i.is-today { outline: 1px solid var(--bar-cream); outline-offset: 1px; }
@@ -59,7 +57,8 @@ body.v-bar code { background: var(--surface-2); }
 .bx-cab .die::before, .bx-cab .die-foot { display: none; }
 .bx-cab .die i { width: 13px; height: 13px; border-radius: 0; transform: rotate(45deg) scale(.74); background: transparent; border: 1.5px solid rgba(255,233,207,.38); }
 .bx-cab .die i.on { background: var(--c); border-color: color-mix(in srgb, var(--c) 50%, var(--c-grey-100)); box-shadow: 0 0 6px -1px var(--c); }
-.bx-cab .die i.part { background: linear-gradient(to top, var(--c) var(--p), transparent var(--p)); animation: bx-shimmer 2.4s ease-in-out infinite; }
+.bx-cab .die i.part { background: linear-gradient(to top, var(--c) var(--p), transparent var(--p)); }
+body:not(.blk-on) .bx-cab .die i.part { animation: bx-shimmer 2.4s ease-in-out infinite; }
 @keyframes bx-shimmer { 50% { box-shadow: 0 0 10px 2px color-mix(in srgb, var(--c) 80%, transparent); } }
 .bx-sign { position: absolute; right: 12px; top: 12px; font: 600 var(--t-xs) var(--bx-head); letter-spacing: .2em; color: var(--bar-cream);  border: 1.5px solid currentColor; padding: 1px var(--s-2);   }
 .blk-on .bx-sign { color: var(--bar-amber); }
@@ -67,7 +66,8 @@ body.v-bar code { background: var(--surface-2); }
 .bx-glass::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(var(--c-blue-80), var(--c-blue-60)); transition: height .9s ease-out; }
 .bx-glass.full { cursor: pointer; }
 .bx-glass.full::after { height: 78%; }
-.bx-glass.full::before { content: ""; position: absolute; z-index: 1; left: -10px; right: -10px; bottom: calc(78% - 4px); height: 8px; border-radius: 50%; background: rgba(255,255,255,.35); animation: bx-slosh 1.4s ease-in-out infinite; }
+.bx-glass.full::before { content: ""; position: absolute; z-index: 1; left: -10px; right: -10px; bottom: calc(78% - 4px); height: 8px; border-radius: 50%; background: rgba(255,255,255,.35); }
+body:not(.blk-on) .bx-glass.full::before { animation: bx-slosh 1.4s ease-in-out infinite; }
 .bx-glass.serve { animation: bx-slide .9s cubic-bezier(.2,.8,.3,1); }
 .bx-glass:focus-visible { outline: 2px solid var(--c-blue-80); outline-offset: 3px; }
 @keyframes bx-slide { from { transform: translateX(-220px) rotate(-6deg); } 70% { transform: translateX(6px); } }
@@ -124,14 +124,14 @@ body.v-bar .bx-tabs button[aria-pressed="true"] { background: var(--primary); co
 .bx-juke-k { text-align: center; margin: var(--s-1) 0 var(--s-2); }
 body.v-bar .bx-juke .blk-card { background: none; border: 0; box-shadow: none; padding: 0; }
 body.v-bar .bx-juke .blk-card > .card-head, body.v-bar .bx-juke [data-die] { display: none; }
-body.v-bar .bx-juke .blk-opt { border-radius: var(--r-sm); font-family: var(--bx-mono); font-size: var(--t-xs); background: rgba(0,0,0,.25); color: var(--bx-bright); }
-body.v-bar .bx-juke .blk-opt[aria-pressed="true"] { background: var(--bar-cream); color: var(--c-orange-5); border-color: var(--bar-cream); }
-body.v-bar .bx-juke .blk-opt[aria-pressed="true"] .blk-sw { box-shadow: 0 0 0 1.5px var(--c-orange-5); }
-body.v-bar .bx-juke .blk-custom input { color: inherit; font-family: var(--bx-mono); }
-body.v-bar .bx-juke .blk-lab { width: 100%; color: var(--bx-soft); }
-body.v-bar .bx-juke .blk-start { border-radius: var(--r-sm); font: 700 var(--t-sm) var(--bx-head); letter-spacing: .08em; text-transform: uppercase; background: var(--primary); color: var(--primary-ink); box-shadow: none; }
-body.v-bar .bx-juke .blk-clock { font-family: var(--bx-mono); font-size: var(--t-2xl); color: var(--bar-cream); }
-body.v-bar .bx-juke .blk-water { color: var(--c-blue-90); }
+.bx-juke .blk-opt { border-radius: var(--r-sm); font-family: var(--bx-mono); font-size: var(--t-xs); background: rgba(0,0,0,.25); color: var(--bx-bright); }
+.bx-juke .blk-opt[aria-pressed="true"] { background: var(--bar-cream); color: var(--c-orange-5); border-color: var(--bar-cream); }
+.bx-juke .blk-opt[aria-pressed="true"] .blk-sw { box-shadow: 0 0 0 1.5px var(--c-orange-5); }
+.bx-juke .blk-custom input { color: inherit; font-family: var(--bx-mono); }
+.bx-juke .blk-lab { width: 100%; color: var(--bx-soft); }
+.bx-juke .blk-start { border-radius: var(--r-sm); font: 700 var(--t-sm) var(--bx-head); letter-spacing: .08em; text-transform: uppercase; background: var(--primary); color: var(--primary-ink); box-shadow: none; }
+.bx-juke .blk-clock { font-family: var(--bx-mono); font-size: var(--t-2xl); color: var(--bar-cream); }
+.bx-juke .blk-water { color: var(--c-blue-90); }
 
 /* back room: the classic cards, on the bar's dark wood */
 .bx-backroom { margin-top: var(--s-6); }
@@ -157,7 +157,7 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .bx-mu-title small { font: 400 var(--t-xs) var(--bx-mono); color: var(--bx-dim); }
 .bx-eq { display: flex; gap: 2px; align-items: flex-end; height: 16px; }
 .bx-eq i { width: 3px; height: 4px; background: var(--bar-amber); }
-.bx-music.is-playing .bx-eq i { animation: bx-eq .9s ease-in-out infinite alternate; }
+body:not(.blk-on) .bx-music.is-playing .bx-eq i { animation: bx-eq .9s ease-in-out infinite alternate; }
 .bx-music.is-playing .bx-eq i:nth-child(2) { animation-delay: -.3s; } .bx-music.is-playing .bx-eq i:nth-child(3) { animation-delay: -.6s; } .bx-music.is-playing .bx-eq i:nth-child(4) { animation-delay: -.15s; }
 @keyframes bx-eq { to { height: 16px; } }
 .bx-mu-seek, .bx-mu-vol input { width: 100%; accent-color: var(--primary); }
@@ -245,7 +245,6 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .room[data-event~="goal"] .bx-cap { animation: rm-cap-drop 1.4s cubic-bezier(.3,.8,.3,1) .5s; }
 @keyframes rm-cap-drop { 0% { opacity: 0; transform: translateY(-40px) rotate(-20deg); } 30% { opacity: 1; transform: translateY(0) rotate(0); } 38% { transform: translateY(-4px); } 46%, 80% { transform: translateY(0); opacity: 1; } 100% { opacity: 0; transform: translateX(20px); } }
 .blk-on .room .bx-tender .rag, .blk-on .room .bx-bottles i, .blk-on .room .bx-neon,
-.blk-on .room .bx-pips.h i.on:last-child, .blk-on .room .bx-cab .die i.part { animation-play-state: paused; }
 .blk-on .room .bx-sign { color: var(--c-red-90); border-color: var(--c-red-90); text-shadow: 0 0 8px var(--c-red-60); box-shadow: 0 0 10px var(--c-red-60), inset 0 0 6px var(--c-red-60); animation: none; }
 
 /* ---------- voices: a new line arrives like someone leaning in */
