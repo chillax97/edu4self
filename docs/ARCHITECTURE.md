@@ -15,7 +15,7 @@ edu4self is three small programs around one folder of plain files.
 | part | file(s) | job |
 |---|---|---|
 | server | `app/server.py` | serves the page, a JSON API, vault files and music; validates everything it writes |
-| page | `app/dashboard/index.html`, `app.js`, `app.css`, `fonts/` | renders state; submissions, blocks, Settings |
+| page | `app/dashboard/index.html`, `app.js`, `app.css` (page, classic), `room.css` (room base), `fonts/` | renders state; submissions, blocks, Settings |
 | rooms | `app/themes.py`, `app/dashboard/themes/<id>/` | load, check and clean rooms (built-in and the vault's own) |
 | MCP | `app/mcp_server.py` | `edu4self mcp`: progress for any AI tool over MCP (stdio); reads `/api/state`, notes go through `/api/inbox` |
 | Claude command | `app/claude_cli.py` | the command that runs Claude Code, as a list (no shell); on Windows it turns npm's `claude.cmd` into the program or `node` script behind it |
