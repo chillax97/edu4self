@@ -5,6 +5,11 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+### Fixed
+
+- A room saved in a vault before the shared room base keeps its layout. Rooms without `"format": 2` load the old
+  room rules (`room-compat.css`); no other room does.
+
 ### Added
 
 - The bar is rebuilt as a place: you look down at the counter. The job lies in an open book with your reply on

@@ -190,7 +190,8 @@ def check_themes(vault, quiet=False):
     for tid, path in themes.folders(server.THEMES_DIR, vault).items():
         if not path.startswith(os.path.join(mine, "")):
             continue
-        errs = themes.load(path, tid)["errors"]
+        loaded = themes.load(path, tid)
+        errs = loaded["errors"]
         if errs:
             ok = False
             print("themes/%s: FAILED" % tid)
@@ -198,6 +199,9 @@ def check_themes(vault, quiet=False):
                 print("  - %s" % e)
         elif not quiet:
             print("themes/%s: OK" % tid)
+            if loaded["meta"]["format"] == 1:
+                print('  older room format: it keeps working, with the old room styles. Nothing needs doing. '
+                      'To move it to the shared base, see "Older rooms" in docs/THEMES.md')
     try:
         chosen = server.clean_config(json.loads(server.read_text(server.CONFIG) or "{}")).get("theme", "bar")
     except ValueError:

@@ -62,6 +62,37 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(server.DEFAULT_CONFIG["goals"], {"day_minutes": 60, "week_days": 4})
 
 
+class FormatTest(unittest.TestCase):
+    def test_built_in_rooms_are_on_the_shared_base(self):
+        for tid, path in themes.folders(BUILTIN, None).items():
+            self.assertEqual(themes.load(path, tid)["meta"]["format"], 2, tid)
+
+    def test_a_room_that_says_nothing_is_an_older_room(self):
+        with tempfile.TemporaryDirectory() as base:
+            d = make_theme(base, "old")
+            t = themes.load(d, "old")
+            self.assertEqual((t["errors"], t["meta"]["format"]), ([], 1))
+
+    def test_an_unknown_format_is_refused(self):
+        for bad in (3, "2", True):
+            with tempfile.TemporaryDirectory() as base:
+                d = make_theme(base, "odd", meta={"name": "Odd", "format": bad})
+                self.assertTrue(any("format" in e for e in themes.load(d, "odd")["errors"]), bad)
+
+
+    def test_check_says_an_older_room_keeps_working(self):
+        cli = os.path.join(os.path.dirname(APP), "edu4self")
+        with tempfile.TemporaryDirectory() as base:
+            env = dict(os.environ, EDU4SELF_CONFIG_HOME=os.path.join(base, "cfg"))
+            vault = os.path.join(base, "v")
+            subprocess.run([sys.executable, cli, "init", vault, "--name", "Kim", "--port", "4811"], env=env, check=True, stdout=subprocess.DEVNULL)
+            shutil.copytree(os.path.join(os.path.dirname(APP), "tests", "fixtures", "old-rooms", "bar"), os.path.join(vault, "themes", "bar"))
+            r = subprocess.run([sys.executable, cli, "check", "--vault", vault], env=env, stdout=subprocess.PIPE, encoding="utf-8")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("themes/bar: OK", r.stdout)
+        self.assertIn("older room format", r.stdout)
+
+
 class FrameTest(unittest.TestCase):
     PANEL = {k: "#123456" for k in themes.PANEL}
 

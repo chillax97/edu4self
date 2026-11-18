@@ -1,0 +1,100 @@
+{
+  "name": "The bar",
+  "icon": "🍸",
+  "about": "A dim bar where your skills talk about tonight's work. A jukebox, a bartender, a neon sign.",
+  "dark": true,
+  "scape": "night",
+  "fonts": {
+    "head": "head",
+    "body": "serif",
+    "sign": "neon"
+  },
+  "words": {},
+  "voices": {},
+  "names": [
+    [
+      "The Rubber Duck",
+      "tell it everything"
+    ],
+    [
+      "Cram & Tonic",
+      "served until the exam"
+    ],
+    [
+      "Off by One",
+      "close, every single night"
+    ],
+    [
+      "The Open Tab",
+      "nobody closes it either"
+    ],
+    [
+      "Last Call",
+      "one more block, then home"
+    ]
+  ],
+  "gags": [
+    [
+      "regular",
+      "A regular at the end of the bar has highlighted his whole textbook yellow. He says it's all important."
+    ],
+    [
+      "regular",
+      "Someone scratched O(n²) into the counter. Underneath, smaller: \"but n is small\"."
+    ],
+    [
+      "bartender",
+      "polishes a glass that's already clean. Like rereading a problem you already solved."
+    ],
+    [
+      "regular",
+      "A coaster reads: SLEEP IS PART OF THE SYLLABUS."
+    ],
+    [
+      "jukebox",
+      "The jukebox plays one song on loop. Nobody has ever complained."
+    ],
+    [
+      "regular",
+      "A man in the corner has been on chapter one since spring. He says this time he's really starting."
+    ],
+    [
+      "bartender",
+      "Behind the bar hangs a framed library fine, paid in full, eleven years late."
+    ],
+    [
+      "regular",
+      "Someone left a napkin covered in flashcards. The hard one is circled three times."
+    ],
+    [
+      "regular",
+      "House rule by the door: no new topics after midnight. Ignored nightly."
+    ],
+    [
+      "bartender",
+      "says the secret ingredient is a good night's sleep. He says that about everything."
+    ],
+    [
+      "jukebox",
+      "The neon sign buzzes in B-flat. Everyone in here is in B-flat."
+    ],
+    [
+      "regular",
+      "Two regulars argue about tabs versus spaces. The bartender serves them both water."
+    ],
+    [
+      "regular",
+      "A patron asks if you've tried turning it off and on again. You have. It was a cache problem."
+    ],
+    [
+      "bartender",
+      "keeps a jar labelled DROPPED FACTORS OF TWO. It's nearly full."
+    ]
+  ],
+  "keepsakes": {
+    "day": { "stamp": "bottled","name": "bottle cap", "plural": "bottle caps", "stack": "pile", "art": "<svg viewBox=\"0 0 40 12\"><path d=\"M3 3 H37 L35 10 H5 Z\" fill=\"#c0392b\" stroke=\"#7d1f16\"/><rect x=\"2\" y=\"1\" width=\"36\" height=\"3\" rx=\"1.5\" fill=\"#e74c3c\"/><path d=\"M6 10 L8 7 L10 10 L12 7 L14 10 L16 7 L18 10 L20 7 L22 10 L24 7 L26 10 L28 7 L30 10 L32 7 L34 10\" stroke=\"#7d1f16\" fill=\"none\"/></svg>"},
+    "week": { "stamp": "lit","name": "neon sign", "plural": "neon signs", "art": "<svg viewBox=\"0 0 56 44\"><rect x=\"2\" y=\"2\" width=\"52\" height=\"40\" rx=\"6\" fill=\"#1a0f14\" stroke=\"#ff4fb4\" stroke-width=\"2\"/><path d=\"M12 30 L20 12 L28 30 M15 24 H25\" stroke=\"#ffd6f0\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M34 12 V30 H44\" stroke=\"#6fe3ff\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/></svg>"},
+    "die": { "stamp": "rolled","name": "die", "plural": "dies", "stack": "pile", "art": "<svg viewBox=\"0 0 44 17\"><path d=\"M2 12 V15 M6 12 V16 M10 12 V16 M14 12 V16 M18 12 V16 M22 12 V16 M26 12 V16 M30 12 V16 M34 12 V16 M38 12 V16 M42 12 V15\" stroke=\"#d9a441\" stroke-width=\"1.6\"/><path d=\"M7 1 H37 L43 7 H1 Z\" fill=\"#3a302a\" stroke=\"#ffb36b\" stroke-width=\".8\"/><path d=\"M15 2.5 H29 L31 5.5 H13 Z\" fill=\"#8b8bf5\"/><path d=\"M17 3.2 H21 M23 3.2 H27\" stroke=\"#2fc9ad\" stroke-width=\".9\"/><rect x=\"1\" y=\"7\" width=\"42\" height=\"5\" fill=\"#171210\" stroke=\"#ffb36b\" stroke-width=\".8\"/><path d=\"M9 2 L12 2\" stroke=\"#fff\" stroke-opacity=\".5\" stroke-width=\".8\"/></svg>"},
+    "lines": {"day": "Another cap for the jar. The bartender doesn't say anything. He doesn't have to.", "week": "A week won. A new sign goes up behind the bar.", "die": "A die, finished. It goes in the case with the others.", "gift": "The bartender slid something across the counter. It's on your shelf."}
+  }
+}

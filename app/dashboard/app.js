@@ -1851,6 +1851,14 @@
     if (!css) { css = document.createElement("style"); css.id = "theme-css"; document.head.appendChild(css); }
     if (!vars) { vars = document.createElement("style"); vars.id = "theme-vars"; document.head.appendChild(vars); }
     css.textContent = t.css;
+    // a room made for the engine before the shared room base brings that engine's room rules with it
+    var compat = $("#room-compat");
+    if (t.meta.format === 2) { if (compat) compat.remove(); }
+    else if (!compat) {
+      compat = document.createElement("link");
+      compat.id = "room-compat"; compat.rel = "stylesheet"; compat.href = "room-compat.css";
+      document.head.insertBefore(compat, css);
+    }
     var m = t.meta, p = m.palette || {}, f = m.fonts || {}, decl = [];
     Object.keys(p).forEach(function (k) { if (PALETTE_VARS[k]) decl.push(PALETTE_VARS[k] + ":" + p[k]); });
     if (f.head) decl.push("--bx-head:" + FONT[f.head]);

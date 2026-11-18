@@ -1,0 +1,12 @@
+/* Lessons in the bar: low amber light on dark wood, a cream napkin for quizzes. */
+:root { --ink: #f1e8da; --ink-soft: #ddd0bd; --faint: #b3a690; --rule: #3a2e26; --bg: #120e0c; --panel: #1f1915;
+  --accent: #ffb36b; --good: #9be0a8; --bad: #ff9a8a; --code: #231b16; }
+body { background: radial-gradient(ellipse 60% 30% at 20% 0%, rgba(255,179,107,.10), transparent 70%), #120e0c; }
+a { border-bottom-color: rgba(255,179,107,.35); }
+.quiz { background: #ffe9cf; color: #2a1a10; border-color: #c9a07a; }
+.quiz .prompt, .quiz p { color: #2a1a10; }
+.quiz button { background: #7a3a1a; color: #ffe9cf; border-color: #7a3a1a; }
+.quiz button.opt { background: #fff4e4; color: #2a1a10; border-color: #c9a07a; }
+.quiz textarea, .quiz input[type=text] { background: #fff4e4; color: #2a1a10; }
+.quiz .verdict.ok { color: #1f6b3a; } .quiz .verdict.no { color: #a3241a; }
+.quiz .explain { color: #4a3420; }

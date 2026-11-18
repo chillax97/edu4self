@@ -1,0 +1,5 @@
+/* Lessons in the tea house: rice paper, ink, a green seal for what matters. */
+:root { --ink: #2d261d; --ink-soft: #4b4033; --faint: #7a6c58; --rule: #d9ccb4; --bg: #fbf6ec; --panel: #f3ecdf;
+  --accent: #5d7a2e; --good: #2f7a3a; --bad: #a8321e; --code: #efe6d4; }
+body { background: repeating-linear-gradient(90deg, rgba(138,106,68,.035) 0 1px, transparent 1px 80px), #fbf6ec; }
+.kicker { color: #a8321e; }

@@ -55,6 +55,7 @@ VOICES = ("bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "
 FONTS = {"sans", "serif", "mono", "head", "neon"}   # bundled families, see app.css
 SCAPES = ("night", "rain", "noise")
 PALETTE = ("bg", "bg2", "surface", "surface2", "ink", "ink2", "muted", "line", "line2", "accent", "accent2", "accent_ink")
+FORMATS = (1, 2)   # 1: made before the shared room base, runs with room-compat.css. 2: uses room.css and the tokens.
 PANEL = ("surface", "surface2", "ink", "ink2", "muted", "line", "line2", "accent", "accent_ink")
 COLOR = re.compile(r"^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\))$")
 # a CSS background built from colours and gradients only: no url(), no functions beyond these
@@ -509,6 +510,10 @@ def clean_meta(raw, tid):
     if raw.get("scape", "night") not in SCAPES:
         errors.append("scape must be one of %s" % ", ".join(SCAPES))
     meta["scape"] = raw.get("scape", "night") if raw.get("scape", "night") in SCAPES else "night"
+    meta["format"] = raw.get("format", 1)
+    if meta["format"] not in FORMATS or isinstance(meta["format"], bool):
+        errors.append("format must be one of %s" % ", ".join(map(str, FORMATS)))
+        meta["format"] = 1
     meta["frame"] = clean_frame(raw.get("frame"), errors)
     meta["replies"] = raw.get("replies", "script")
     if meta["replies"] not in REPLIES:

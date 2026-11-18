@@ -160,6 +160,7 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 {
   "name": "The library", "icon": "📚", "dark": true, "scape": "rain",
   "about": "A reading room after hours. Finished dies stand on the shelf.",
+  "format": 2,
   "palette": { "bg": "#0d140f", "surface": "#14201a", "ink": "#f3e6c4", "muted": "#b8a888", "line": "#2f4536", "accent": "#d8b26a" },
   "backdrop": "radial-gradient(ellipse 40% 45% at 50% 30%, rgba(255,214,140,.12), transparent 70%), #0b120d",
   "fonts": { "head": "serif", "body": "serif", "sign": "serif" },
@@ -187,6 +188,8 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 - **voices**: rename or recolour a character by id: `bartender` (the host), `logic`, `volition`, `gpu`,
   `encyclopedia`, `physical`, `nostalgia`, `critic`, `regular`, `jukebox` (the music box), `you`. The
   learner's own voice settings still win.
+- **format**: `2` for a room built on the shared base (`room.css` and the tokens). Every new room says so. See
+  "Older rooms".
 - **names**: `[name, tagline]` pairs for the sign.
 - **replies**: `"script"` (numbered lines in brackets, all shown; the default) or `"short"` (plain words, the
   job's own first, the rest behind one button).
@@ -239,6 +242,16 @@ and die has a printable card at `/card?id=…`, in the colours of the room it wa
 links the gift. Clicking any trophy on the shelf, days too, opens a small card: the drawing, its
 stamped date, what it stands for, the numbers behind it, arrows to the others of its kind (piles
 overlap, so not every one can be clicked), and for weeks and dice the printable card.
+
+### Older rooms
+
+A room without `"format": 2` was made before rooms shared a base, and it may rely on the engine's old room rules.
+It keeps working with nothing to edit: the dashboard loads those rules, frozen in `room-compat.css`, for that room
+only, and `./edu4self check` notes the older format. The new theme options still work there, but its look stays
+as it was.
+
+To move a room over: add `"format": 2`, then give it the parts it took from the old rules. Lay out its columns in
+its own `theme.css` and use the size tokens. Check it at 1440x900, front room and back room, with a block running.
 
 ### layout.html
 
