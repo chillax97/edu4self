@@ -468,7 +468,7 @@
     if (!coach) return "";
     return '<div class="coach' + (foldOpen.coach ? " is-open" : "") + '" data-fold="coach"><div class="coach-avatar" aria-hidden="true">C</div><div>' +
       '<strong>' + esc(coach.headline) + '</strong><p class="fold fold-2">' + esc(coach.body) + '</p>' +
-      '<button class="fold-more" type="button" aria-expanded="false" hidden>more</button>' +
+      '<button class="btn btn-link fold-more" type="button" aria-expanded="false" hidden>more</button>' +
       '<small>Note from Claude · ' + esc(coach.date || "") + '</small></div></div>';
   }
 
@@ -2165,12 +2165,12 @@
     function chk(s) { return ' <span class="bx-chk">' + s + "</span>"; }
     if (hero) {
       var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), fu = !pend && followUpFor(t);
-      if (t.href) { var href = resolveHref(t.href); act('<a class="bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>"); }
-      if (pend) act('<button class="bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the ' + (pend.kind === "follow-up" ? "reply" : "submission") + ".]" + chk("only before Claude grades it") + "</button>");
+      if (t.href) { var href = resolveHref(t.href); act('<a class="btn btn-link bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>"); }
+      if (pend) act('<button class="btn btn-link bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the ' + (pend.kind === "follow-up" ? "reply" : "submission") + ".]" + chk("only before Claude grades it") + "</button>");
       else {
-        if (t.submit && !fu) act('<button class="bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
-        if (t.exercise) act('<button class="bx-r" type="button" data-hints="' + esc(t.id) + '">[Ask for a hint.]' + chk("each one is noted for Claude") + "</button>");
-        if (!active) act('<button class="bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + taskMinutes(hero.topic) + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
+        if (t.submit && !fu) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
+        if (t.exercise) act('<button class="btn btn-link bx-r" type="button" data-hints="' + esc(t.id) + '">[Ask for a hint.]' + chk("each one is noted for Claude") + "</button>");
+        if (!active) act('<button class="btn btn-link bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + taskMinutes(hero.topic) + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
         else if (active.task === t.id) quiet("The clock is running on this one.");
       }
     }
@@ -2179,14 +2179,14 @@
       if (x.status !== "todo" || (hero && x.id === hero.task.id)) return;
       var m = kindMeta(x.kind), name = x.label || x.title;
       if (pendingFor(x.id)) return quiet(esc(name) + chk("submitted, waiting for Claude"));
-      if (x.href) { var h2 = resolveHref(x.href); act('<a class="bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>"); }
-      if (followUpFor(x)) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[Answer the question: ' + esc(name) + ".]" + chk("one question before the pass") + "</button>");
-      else if (x.submit) act('<button class="bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
+      if (x.href) { var h2 = resolveHref(x.href); act('<a class="btn btn-link bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>"); }
+      if (followUpFor(x)) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[Answer the question: ' + esc(name) + ".]" + chk("one question before the pass") + "</button>");
+      else if (x.submit) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
     });
-    if (claudeOK()) act('<button class="bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
-    else act('<button class="bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
-    act('<button class="bx-r" type="button" data-help="all">"' + esc(W("how")) + '"</button>');
-    act('<button class="bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, " + W("collection").toLowerCase()) + "</button>");
+    if (claudeOK()) act('<button class="btn btn-link bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
+    else act('<button class="btn btn-link bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
+    act('<button class="btn btn-link bx-r" type="button" data-help="all">"' + esc(W("how")) + '"</button>');
+    act('<button class="btn btn-link bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, " + W("collection").toLowerCase()) + "</button>");
     return R.join("");
   }
 
@@ -2201,13 +2201,13 @@
       var v = VOICES[l[0]], key = l[3] || l[0] + "|" + l[1], fresh = !barSeen[key];
       barSeen[key] = true;
       var chk = l[2] ? ' <span class="bx-chk">' + esc(l[2]) + "</span>" : "", who = '<span class="bx-who">' + esc(v.name) + "</span>";
-      var inner = l[4] != null ? who + l[1] + '<span class="fold fold-2">' + l[4] + chk + '</span><button class="fold-more" type="button" aria-expanded="false" hidden>more</button>'
+      var inner = l[4] != null ? who + l[1] + '<span class="fold fold-2">' + l[4] + chk + '</span><button class="btn btn-link fold-more" type="button" aria-expanded="false" hidden>more</button>'
         : '<span class="fold">' + who + l[1] + chk + "</span>";
       var more = i >= VOICES_SHOWN;
       if (more && !voicesOpen) fresh = false;   // a hidden line doesn't play its entrance
       return '<p class="bx-line' + (fresh ? " is-new" : "") + (foldOpen[key] ? " is-open" : "") + (more ? " is-more" : "") + '"' + (more && !voicesOpen ? " hidden" : "") + ' data-fold="' + esc(key) + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
         inner + "</p>";
-    }).join("") + (extra > 0 ? '<button class="bx-more" type="button" data-voices-more aria-expanded="' + voicesOpen + '">' + (voicesOpen ? "Show fewer" : "Show " + extra + " more") + "</button>" : "");
+    }).join("") + (extra > 0 ? '<button class="btn btn-link bx-more" type="button" data-voices-more aria-expanded="' + voicesOpen + '">' + (voicesOpen ? "Show fewer" : "Show " + extra + " more") + "</button>" : "");
   }
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("[data-voices-more]");
@@ -2325,7 +2325,7 @@
     // piles overlap, so a click can only reach the top one: step through every trophy of this kind instead
     var same = (K.items || []).filter(function (x) { return x.kind === it.kind; }).sort(function (a, b) { return (a.ts || "") < (b.ts || "") ? -1 : 1; });
     var i = same.indexOf(it), nav = function (j, label, sym) {
-      return same[j] ? '<button class="icon-btn" type="button" data-ks="' + esc(same[j].id) + '" aria-label="' + label + '">' + sym + "</button>" : '<span class="icon-btn" aria-hidden="true"></span>';
+      return same[j] ? '<button class="btn icon-btn" type="button" data-ks="' + esc(same[j].id) + '" aria-label="' + label + '">' + sym + "</button>" : '<span class="btn icon-btn" aria-hidden="true"></span>';
     };
     box.querySelector(".ks-d-nav").innerHTML = same.length > 1 ? nav(i - 1, "Earlier", "‹") + "<span>" + (i + 1) + " of " + same.length + "</span>" + nav(i + 1, "Later", "›") : "";
     if ($("#ks-detail").hidden) openOverlay("ks-detail");
@@ -2401,7 +2401,7 @@
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
       '<button type="button" data-room="front" aria-pressed="' + (room === "front") + '">' + esc(W("front_icon")) + " " + esc(W("front")) + "</button>" +
       '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">' + esc(W("back_icon")) + " " + esc(W("back")) + "</button></div>";
-    var neon = '<button class="bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
+    var neon = '<button class="btn btn-link bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
     if (room === "back") {
       var list = allBlocks();
       return '<div class="room t-' + esc(THEME.meta.id) + ' is-back' + (active ? " is-running" : "") + '"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
@@ -2944,7 +2944,7 @@
     musicEl.dataset.file = musicKey();
     if (!musicPlayable()) {
       musicEl.innerHTML = '<div class="bx-mu-empty"><b>No tape loaded.</b><span>The jukebox plays your own songs in turn, and remembers where it stopped.</span>' +
-        '<button class="bx-mu-add" type="button" data-settings="music">Add music in Settings</button></div>';
+        '<button class="btn btn-link bx-mu-add" type="button" data-settings="music">Add music in Settings</button></div>';
       return;
     }
     musicEl.innerHTML =
@@ -2965,7 +2965,7 @@
           return '<button type="button" data-scape="' + id + '" aria-pressed="' + (id === musicScape()) + '">' + esc(SCAPES[id].name) + "</button>";
         }).join("") + "</div>"
       : "") +
-      '<button class="bx-mu-change" type="button" data-settings="music">' + (musicSrc() === "file" ? "change songs" : musicSrc() === "radio" ? "change station" : "radio or your own music") + "</button>" +
+      '<button class="btn btn-link bx-mu-change" type="button" data-settings="music">' + (musicSrc() === "file" ? "change songs" : musicSrc() === "radio" ? "change station" : "radio or your own music") + "</button>" +
       '<label class="bx-mu-vol"><span>vol</span><input type="range" min="0" max="1" step="0.05" data-mu-vol aria-label="Music volume"></label>' +
       '<p class="bx-mu-hint" data-mu-hint hidden>Click anywhere to start the music. Browsers need one click first.</p>';
   }
@@ -3395,7 +3395,7 @@
         '<input type="text" maxlength="24" value="' + esc(k.label) + '" data-k="label" aria-label="Block name">' +
         '<input type="number" min="1" max="240" value="' + (k.minutes || "") + '" placeholder="min" data-k="minutes" aria-label="Default minutes" title="Minutes this kind starts with (blank = whatever duration is picked)">' +
         colorSelect(k.color, 'data-k="color"') +
-        '<button class="icon-btn" type="button" data-kind-del aria-label="Remove ' + esc(k.label) + '"' + (c.blocks.kinds.length < 2 ? " disabled" : "") + ">✕</button></div>";
+        '<button class="btn icon-btn" type="button" data-kind-del aria-label="Remove ' + esc(k.label) + '"' + (c.blocks.kinds.length < 2 ? " disabled" : "") + ">✕</button></div>";
     }).join("");
     var presets = [0, 1, 2, 3].map(function (i) {
       return '<input type="number" min="1" max="240" data-preset="' + i + '" value="' + (c.blocks.presets[i] || "") + '" aria-label="Duration ' + (i + 1) + '" placeholder="–">';
@@ -3414,9 +3414,9 @@
       return '<div class="set-track" data-track="' + i + '" data-file="' + esc(t.file) + '"><span class="set-tr-n">' + (i + 1) + "</span>" +
         '<input type="text" maxlength="80" data-tr-title value="' + esc(t.title) + '" placeholder="' + esc(t.file.replace(/\.[^.]+$/, "")) + '" aria-label="Title of song ' + (i + 1) + '">' +
         "<code>" + esc(t.file) + "</code>" +
-        '<button class="icon-btn" type="button" data-tr-move="-1" aria-label="Move ' + esc(t.title || t.file) + ' up"' + (i ? "" : " disabled") + ">▲</button>" +
-        '<button class="icon-btn" type="button" data-tr-move="1" aria-label="Move ' + esc(t.title || t.file) + ' down"' + (i < all.length - 1 ? "" : " disabled") + ">▼</button>" +
-        '<button class="icon-btn" type="button" data-tr-del aria-label="Take ' + esc(t.title || t.file) + ' off the list">✕</button></div>';
+        '<button class="btn icon-btn" type="button" data-tr-move="-1" aria-label="Move ' + esc(t.title || t.file) + ' up"' + (i ? "" : " disabled") + ">▲</button>" +
+        '<button class="btn icon-btn" type="button" data-tr-move="1" aria-label="Move ' + esc(t.title || t.file) + ' down"' + (i < all.length - 1 ? "" : " disabled") + ">▼</button>" +
+        '<button class="btn icon-btn" type="button" data-tr-del aria-label="Take ' + esc(t.title || t.file) + ' off the list">✕</button></div>';
     }).join("");
     var station = m.stream.url ? STATIONS.map(function (st) { return st.url; }).indexOf(m.stream.url) : -1;
     if (station < 0 && m.stream.url) station = "other";

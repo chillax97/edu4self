@@ -31,14 +31,14 @@ body.v-bar code { background: var(--surface-2); }
    (finish, doors, shelf, timer), such as a "trophies" label in a room made before the budget, goes too. */
 .room :is(div, section, aside):has(> [data-slot="finish"]:empty, > [data-slot="doors"]:empty, > [data-slot="shelf"]:empty, > [data-slot="timer"]:empty):not(:has([data-slot]:not(:empty))) { display: none; }
 /* the voices past the host and two others, opened in place */
-.bx-more { all: unset; cursor: pointer; align-self: flex-start; width: max-content; padding: 2px 0; font: 600 var(--t-xs)/1.5 var(--sans); color: inherit; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+.bx-more { align-self: flex-start; width: max-content; padding: 2px 0; font: 600 var(--t-xs)/1.5 var(--sans); color: inherit; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
 .bx-more:hover, .bx-more:focus-visible { opacity: 1; }
 .bx-more:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .bx-line[hidden] { display: none; }
 .bx-k { font: 600 var(--t-xs)/1.3 var(--bx-head); letter-spacing: .16em; text-transform: uppercase; color: var(--bx-k); }
 .bx-mono { font: 400 var(--t-xs)/1.45 var(--bx-mono); color: var(--bx-text); margin-top: var(--s-1); }
 .bx-chk { font: 400 var(--t-xs) var(--bx-mono); color: var(--bx-dim); }
-.bx-neon { all: unset; cursor: pointer; display: block; font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--bx-head); color: var(--bar-cream); animation: bx-flicker 7s infinite; overflow-wrap: anywhere; }
+.bx-neon { display: block; font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--bx-head); color: var(--bar-cream); animation: bx-flicker 7s infinite; overflow-wrap: anywhere; }
 .bx-neon small { display: block; font: 600 var(--t-xs) var(--bx-head); letter-spacing: .26em; text-transform: uppercase; color: var(--bar-amber); text-shadow: none; margin-top: var(--s-2); transition: opacity .6s ease; }
 .bx-neon:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 @keyframes bx-flicker { 0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; } 20%, 63% { opacity: .4; } }
@@ -112,7 +112,7 @@ body.v-bar .bx-tabs button[aria-pressed="true"] { background: var(--primary); co
 .bx-replies { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .bx-replies li { display: grid; grid-template-columns: 30px 1fr; align-items: baseline; }
 .bx-n { font: 600 var(--t-sm) var(--bx-mono); color: var(--bar-amber); }
-.bx-r { all: unset; cursor: pointer; display: block; padding: var(--s-1) var(--s-2) var(--s-1) var(--s-1); border-radius: var(--r-sm); color: var(--bar-amber); font: var(--t-md)/1.5 var(--serif); transition: transform .15s ease-out, background .15s ease-out, color .15s; }
+.bx-r { display: block; padding: var(--s-1) var(--s-2) var(--s-1) var(--s-1); border-radius: var(--r-sm); color: var(--bar-amber); font: var(--t-md)/1.5 var(--serif); transition: transform .15s ease-out, background .15s ease-out, color .15s; }
 .bx-r:hover, .bx-r:focus-visible { color: var(--c-grey-100); background: rgba(255,179,107,.1); transform: translateX(4px); }
 .bx-r:focus-visible { outline: 2px solid var(--bar-amber); }
 .bx-replies li.is-quiet { color: var(--c-orange-75-2); font: var(--t-md)/1.5 var(--serif); }
@@ -171,11 +171,11 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 
 /* jukebox with no track yet */
 .bx-mu-scapes button[aria-pressed=true] { border-color: var(--bar-amber); color: var(--bar-amber); }
-.bx-mu-change { all: unset; cursor: pointer; justify-self: start; margin-top: var(--s-1); color: var(--bar-amber); font: 400 var(--t-xs)/1 var(--bx-mono); text-decoration: underline; text-underline-offset: 3px; }
+.bx-mu-change { justify-self: start; margin-top: var(--s-1); color: var(--bar-amber); font: 400 var(--t-xs)/1 var(--bx-mono); text-decoration: underline; text-underline-offset: 3px; }
 .bx-mu-change:hover, .bx-mu-change:focus-visible { color: var(--bar-amber); }
 .bx-mu-empty { display: grid; gap: var(--s-1); font: 400 var(--t-xs)/1.45 var(--bx-mono); color: var(--bx-text); }
 .bx-mu-empty b { font: 600 var(--t-sm)/1.2 var(--bx-head); letter-spacing: .14em; text-transform: uppercase; color: var(--bx-k); }
-.bx-mu-add { all: unset; cursor: pointer; justify-self: start; margin-top: var(--s-1); padding: var(--s-1) var(--s-2); border: 1px dashed var(--bar-amber); color: var(--bar-amber); font: 600 var(--t-xs)/1 var(--bx-mono); }
+.bx-mu-add { justify-self: start; margin-top: var(--s-1); padding: var(--s-1) var(--s-2); border: 1px dashed var(--bar-amber); color: var(--bar-amber); font: 600 var(--t-xs)/1 var(--bx-mono); }
 .bx-mu-add:hover, .bx-mu-add:focus-visible { background: color-mix(in srgb, var(--bar-amber) 12%, transparent); }
 .room { --ks-wood: var(--bx-edge); }
 .room .ks-sum { font: 400 var(--t-xs)/1.45 var(--bx-mono); color: var(--bx-dim); }

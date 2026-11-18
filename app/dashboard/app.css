@@ -118,7 +118,11 @@ h1, h2, h3 { margin: 0; }
 .btn-sm { padding: var(--s-2) var(--s-3); font-size: var(--t-sm); }
 .btn-block { width: 100%; margin-top: var(--s-6); }
 .btn[disabled] { opacity: .55; cursor: not-allowed; }
-.icon-btn { border: 0; background: transparent; color: var(--muted); font-size: var(--t-md); cursor: pointer; padding: var(--s-1) var(--s-2); border-radius: var(--r-md); }
+/* the text weight: a button that reads as words. Its size and colour come from where it sits */
+.btn-link { display: inline-block; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: inherit; text-transform: inherit; white-space: normal; transition: none; }
+.btn-link:active { transform: none; }
+/* the icon weight */
+.icon-btn { border: 0; background: transparent; color: var(--muted); font: 400 var(--t-md)/normal var(--sans); padding: var(--s-1) var(--s-2); border-radius: var(--r-md); }
 .icon-btn:hover { background: var(--bg-2); color: var(--ink); }
 
 .chip {
@@ -796,7 +800,7 @@ body.blk-on :not([data-part~="running"], [data-part~="running"] *)::after { anim
 .is-open > .fold, .is-open .fold { display: block; overflow: visible; }
 [data-clip] { cursor: pointer; }
 [data-clip][role="button"]:focus-visible { outline: 2px solid var(--vc, var(--accent, currentColor)); outline-offset: 3px; }
-.fold-more { all: unset; display: block; width: max-content; cursor: pointer; font: 600 var(--t-xs)/1.5 var(--sans); text-decoration: underline; text-underline-offset: 3px; opacity: .85; }
+.fold-more { display: block; width: max-content; cursor: pointer; font: 600 var(--t-xs)/1.5 var(--sans); text-decoration: underline; text-underline-offset: 3px; opacity: .85; }
 .fold-more:hover, .fold-more:focus-visible { opacity: 1; }
 .fold-more:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
