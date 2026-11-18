@@ -207,4 +207,6 @@
 .room .bx-back > .card .bx-chk, .room .bx-back > .card .ks-sum { font: 400 var(--t-sm)/1.45 var(--f-ui); color: var(--pen3); }
 .room .bx-back > .card .btn-ghost { color: var(--pen); border-color: rgba(75,52,30,.45); background: transparent; border-radius: var(--r-sm); }
 
+/* on paper, the engine's own parts (a disabled Grade, its reason, a chip) use the book's ink */
+.room .bq-pages, .room .bx-back > .card { --ink: var(--pen); --ink-2: var(--pen2); --muted: var(--pen3); --off-ink: var(--pen2); --line: rgba(75,52,30,.26); --line-2: rgba(75,52,30,.46); }
 .room .bx-back > .topic-dormant { opacity: 1; }   /* the paper stays readable; its label says it has not started */
