@@ -7,6 +7,13 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ### Added
 
+- The bar is rebuilt as a place: you look down at the counter. The job lies in an open book with your reply on
+  the right page, the voices talk on the mat, and by your hand stand the jukebox, your glass and this week's
+  bottle caps. The neon sign stays dim until tonight's goal is met.
+- One shared scale for type, spacing and corners across the classic view and every room, one button component,
+  and a neutral room base (`room.css`). The classic view and the rooms now draw the job from the same data.
+- Themes can arrange the back room (`back.html`), set the page around the room (`frame`), show short replies
+  (`replies`), and lay this week's trophies in the front room (`keepsakes.day.top`, the `round` slot).
 - Tokens: one set of colour names (`--primary`, `--primary-ink`, `--destructive`, `--ring`, `--popover`,
   `--border`, …) that every view and room maps onto. A room's palette accent is its primary, so its tabs,
   Start buttons and focus rings follow the palette with no CSS. The table is in `docs/THEMES.md`.

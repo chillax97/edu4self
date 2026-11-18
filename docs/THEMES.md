@@ -125,6 +125,7 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 | `clock` | no | the time of day; empty while a block runs |
 | `sign` | no | the open / busy sign |
 | `water` | no | the water glass |
+| `round` | no | the glass together with its water line and "Drank it". With it, the line leaves the block card |
 | `keys` | no | the keyboard hint |
 | `shelf` | no | left empty: the learner's trophies are in the back room |
 | `streak` | no | the streak: days in a row with at least one finished block, and the best run. The bar draws it as a chalk tally board. Without it, the streak is a Willpower line |
@@ -138,13 +139,14 @@ The front room is for what a learner needs now. Every room, and the classic view
   desktop page: a smaller window scrolls, and rooms carry no narrow-window layouts.
 - **The countdown once.** It is in `block`. The top bar shows it only while `block` is off screen, so
   don't draw another.
-- **The record at a glance:** `tonight`, `week` and `die`.
+- **The record at a glance:** `tonight`, `week` and `die`. This week's day trophies may lie here, in `week`, if
+  the room draws them from above (`keepsakes.day.top`). Every other trophy stays in the back room.
 - **The host and two voices.** The rest wait behind "Show N more", in place.
 - **One thing moves forever during a block:** the room's "a block is running" signal. Mark it
   `data-part="running"` (the bar's record, the train's hills, the station's planet) and key it on
   `.room.is-running`, which is set while a block runs. Every other endless animation plays once and stops.
 
-The finish line, locked tasks and trophies are one click away, in the back room. The engine leaves
+The finish line, locked tasks and the other trophies are one click away, in the back room. The engine leaves
 `finish`, `doors`, `shelf` and `timer` empty, and hides a wrapper whose only slots are those, so a label
 such as "Trophies" around `shelf` in an older room disappears with it. A new room needs none of them.
 `tests/e2e/budget.test.js` checks every built-in room against this budget.
@@ -179,21 +181,27 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 - **words** a room may rename, with the bar's defaults: `front` "The bar", `front_icon`, `back` "The
   back room", `back_icon`, `view` "Bar view", `place`, `counter`, `host`, `music_box`, `tonight`, `week`,
   `nights`, `die_case`, `die`, `dies`, `tile`, `tiles`, `shipped`, `doors`, `job`, `note`, `how`,
-  `back_q`, `glass`, `glasses`, `sign_open`, `sign_busy`, and for the back room, where finished dies are
+  `back_q`, `glass`, `glasses`, `sign_open`, `sign_busy`, `voices_more` ("Show {n} more"), and for the back room, where finished dies are
   counted, `collection` "The die case", `row`/`rows` (8 dies) and `tray`/`trays` (4 rows). Anything
   else is refused.
 - **voices**: rename or recolour a character by id: `bartender` (the host), `logic`, `volition`, `gpu`,
   `encyclopedia`, `physical`, `nostalgia`, `critic`, `regular`, `jukebox` (the music box), `you`. The
   learner's own voice settings still win.
 - **names**: `[name, tagline]` pairs for the sign.
+- **replies**: `"script"` (numbered lines in brackets, all shown; the default) or `"short"` (plain words, the
+  job's own first, the rest behind one button).
+- **frame**: the page around the room. `"topbar": "quiet"` takes the fill off the top bar's buttons, for a room
+  whose one primary action is on the page. `"panel"` colours Settings and dialogs: `surface`, `surface2`, `ink`,
+  `ink2`, `muted`, `line`, `line2`, `accent`, `accent_ink`, all required. Check their contrast yourself.
 - **gags**: `[voice, text]` jokes, one every 40 minutes when jokes are on.
 - **lines**: the room's own words for `play`, `evening`, `friday`, `silent` (`{days}` is replaced with
   the number), `newyear`, `nye`, `halloween`, `valentine`, `music_quiet`, `music_none`, `water` (one of
   the lines when a glass arrives), `hydrated` (four or more glasses: `{n}`, `{glasses}`), and the card
   when a block finishes a die or a row: `row_full` (the title, `{n}` the row's number, `{Row}` the word
   capitalised), `row_full_body` (`{count}` dies, `{dies}`, `{hours}`, `{row}`) and `die_full_body`
-  (`{tiles}`, `{hours}`, `{die}`, `{pos}` of `{count}`, `{row}` `{n}`). A `{name}` it doesn't know
-  stays as written.
+  (`{tiles}`, `{hours}`, `{die}`, `{pos}` of `{count}`, `{row}` `{n}`). `goal_met` is the host's line
+  beside the sign once tonight's goal is met (the sign also gets `.is-lit`), and `die_next` is said under the
+  die (`{time}`, in plain words). A `{name}` it doesn't know stays as written.
 
 ### keepsakes (trophies)
 
@@ -207,6 +215,8 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
 }
 ```
 
+- **top** (`day` only, optional): the same trophy seen from above, the same rules as `art`. With it, this
+  week's trophies lie in the `week` slot, each on its day, as `.bx-daycap` buttons that open the trophy's card.
 - **art**: one `<svg>` with a `viewBox`, shapes only (`path`, `rect`, `circle`, `ellipse`, `line`,
   `polygon`, `polyline`, `g`), up to 4 KB. No text, no `id`, no `url(#…)`: the drawing is copied into
   the learner's vault and drawn many times next to other rooms' trophies, so it must stand alone.
@@ -247,7 +257,9 @@ locked tasks, say) leaves nothing behind. Wrap them in whatever the room needs.
 
 ### theme.css
 
-Every selector starts with `.room`; `@media`, `@supports`, `@container` and `@keyframes` are fine. The
+Sizes come from the shared scale, so a room reads like the rest of the product: type `--t-xs` to `--t-2xl`
+(12, 14, 17, 22, 32, 48), space `--s-1` to `--s-20` (steps of 4 and 8), corners `--r-sm`, `--r-md`, `--r-lg`,
+`--r-full`. Every selector starts with `.room`; `@media`, `@supports`, `@container` and `@keyframes` are fine. The
 room sets these colour tokens on `.room`, and the engine's markup uses them:
 
 `--bx-line`, `--bx-line2` (borders), `--bx-k` (small labels), `--bx-text`, `--bx-dim`, `--bx-faint`,
