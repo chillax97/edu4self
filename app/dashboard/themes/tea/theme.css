@@ -4,14 +4,14 @@
   --bx-music-bg: #f6efe2; --te-green: #5d7a2e; --te-wood: #8a6a44; --te-paper: #fbf6ec; --te-red: #a8321e; color: #2d261d; }
 .room .te { margin-top: 22px; display: grid; gap: 18px; }
 .room .te-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.room .bx-neon { font: italic 400 36px/1.05 var(--serif); color: #2d261d; text-shadow: none; animation: none; }
-.room .bx-neon small { font: 600 12.5px var(--sans); color: var(--te-green); letter-spacing: .2em; }
+.room .bx-neon { font: italic 400 var(--t-xl)/1.05 var(--serif); color: #2d261d; text-shadow: none; animation: none; }
+.room .bx-neon small { font: 600 var(--t-xs) var(--sans); color: var(--te-green); letter-spacing: .2em; }
 .room .bx-neon:focus-visible { outline-color: var(--te-green); }
-.room .te-noren { margin-left: auto; font: 600 12px var(--sans); letter-spacing: .2em; color: var(--te-paper); background: var(--te-red); padding: 4px 10px; border-radius: 2px; }
-.room .te-time { font: 600 13px var(--bx-mono); color: #2d261d; font-variant-numeric: tabular-nums; }
+.room .te-noren { margin-left: auto; font: 600 var(--t-xs) var(--sans); letter-spacing: .2em; color: var(--te-paper); background: var(--te-red); padding: 4px 10px; border-radius: 2px; }
+.room .te-time { font: 600 var(--t-sm) var(--bx-mono); color: #2d261d; font-variant-numeric: tabular-nums; }
 .room .bx-tabs { background: #e9dfcd; }
 .room .bx-tabs button { color: #4b4033; }
-.room .bx-k { font: italic 600 15px var(--serif); letter-spacing: .03em; text-transform: none; color: var(--te-green); }
+.room .bx-k { font: italic 600 var(--t-sm) var(--serif); letter-spacing: .03em; text-transform: none; color: var(--te-green); }
 .room .bx-mono, .room .bx-chk { color: #5e5242; }
 
 .room .te-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 16px; border-bottom: 8px solid var(--te-wood);
@@ -28,10 +28,10 @@
 
 .room .te-room { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 290px; gap: 22px; }
 .room .te-scroll { align-self: start; background: var(--te-paper); border-left: 1px solid #e3d8c4; border-right: 1px solid #e3d8c4; padding: 0 28px; display: flex; flex-direction: column; gap: 12px;
-  box-shadow: 0 18px 40px -26px rgba(60,40,20,.5); font: 17px/1.6 var(--serif); }
+  box-shadow: 0 18px 40px -26px rgba(60,40,20,.5); font: var(--t-md)/1.6 var(--serif); }
 .room .te-rod { height: 14px; margin: 0 -40px; border-radius: 7px; background: linear-gradient(#a07a4c, #6e4f2c); }
 .room .te-scroll .bx-job { border-left: 0; background: none; padding: 10px 0 0; }
-.room .te-scroll .bx-job h2 { font: 400 32px/1.15 var(--serif); text-transform: none; color: #2d261d; }
+.room .te-scroll .bx-job h2 { font: 400 var(--t-xl)/1.15 var(--serif); text-transform: none; color: #2d261d; }
 .room .te-scroll .bx-job p, .room .te-scroll .bx-meta { color: #4b4033; }
 .room .te-scroll { --off-ink: #4b4033; }   /* a greyed Grade and its reason, on the scroll */
 .room .te-scroll .bx-sent { color: #3f5a1e; }   /* the Submitted line: dark green on the scroll */
@@ -44,7 +44,7 @@
 .room .bx-clock { background: color-mix(in srgb, var(--c) 14%, transparent); border-color: color-mix(in srgb, var(--c) 55%, #2d261d); }
 .room .bx-clock, .room .bx-clock > b, .room .bx-clock .bx-mono { color: #2d261d; }
 .room .bx-wbar { background: rgba(45,38,29,.15); }
-.room .te-guests { display: flex; flex-direction: column; gap: 14px; font: 16.5px/1.6 var(--serif); }
+.room .te-guests { display: flex; flex-direction: column; gap: 14px; font: var(--t-md)/1.6 var(--serif); }
 .room .bx-line { color: #2d261d; }
 .room .bx-line b { color: #000; }
 .room .bx-line::before { border-radius: 50%; transform: none; box-shadow: 0 0 0 3px #f3ecdf; }
@@ -54,7 +54,7 @@
 .room .te-side { display: grid; gap: 14px; align-content: start; }
 .room .te-side .bx-juke { border-radius: 14px; background: #f6efe2; border: 1px solid #c9b998; padding: 14px; }
 .room .te-side .bx-juke::before, .room .te-side .bx-juke::after { display: none; }
-.room .te-k { margin: 0 0 10px; font: italic 600 15px var(--serif); color: var(--te-green); }
+.room .te-k { margin: 0 0 10px; font: italic 600 var(--t-sm) var(--serif); color: var(--te-green); }
 .room .bx-juke .blk-opt { background: #fbf6ec !important; color: #2d261d !important; border-color: #c9b998 !important; }
 .room .bx-juke .blk-opt[aria-pressed="true"] { background: var(--primary) !important; color: var(--primary-ink) !important; border-color: var(--primary) !important; }
 .room .bx-juke .blk-lab, .room .bx-juke .blk-water, .room .bx-juke .blk-custom input { color: #2d261d !important; }

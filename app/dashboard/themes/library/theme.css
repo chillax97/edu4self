@@ -4,13 +4,13 @@
   --lb-paper: #f6ecd2; --lb-ink: #2a2116; --lb-wood: #5a3d22; --lb-brass: #d8b26a; }
 .room .lb { margin-top: 22px; display: grid; gap: 0; }
 .room .lb-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 4px 4px 14px; }
-.room .bx-neon { font: 600 32px/1.05 var(--serif); color: var(--lb-paper); text-shadow: 0 1px 0 #6b5428, 0 0 18px rgba(216,178,106,.3); animation: none;
+.room .bx-neon { font: 600 var(--t-xl)/1.05 var(--serif); color: var(--lb-paper); text-shadow: 0 1px 0 #6b5428, 0 0 18px rgba(216,178,106,.3); animation: none;
   border: 1px solid #8a6d36; padding: 10px 14px; background: linear-gradient(#2a2416, #1a160c); }
-.room .bx-neon small { font: italic 400 14px var(--serif); letter-spacing: .06em; text-transform: none; color: var(--lb-brass); }
-.room .lb-plaque { margin-left: auto; font: 600 12px var(--bx-mono); letter-spacing: .24em; color: var(--lb-brass); border: 1px solid var(--lb-brass); padding: 3px 9px; }
-.room .lb-time { font: 600 13px var(--bx-mono); color: var(--lb-paper); font-variant-numeric: tabular-nums; }
+.room .bx-neon small { font: italic 400 var(--t-sm) var(--serif); letter-spacing: .06em; text-transform: none; color: var(--lb-brass); }
+.room .lb-plaque { margin-left: auto; font: 600 var(--t-xs) var(--bx-mono); letter-spacing: .24em; color: var(--lb-brass); border: 1px solid var(--lb-brass); padding: 3px 9px; }
+.room .lb-time { font: 600 var(--t-sm) var(--bx-mono); color: var(--lb-paper); font-variant-numeric: tabular-nums; }
 .room .bx-tabs { background: rgba(0,0,0,.3); }
-.room .bx-k { font-style: italic; text-transform: none; letter-spacing: .04em; font-size: 15px; font-family: var(--serif); color: var(--lb-brass); }
+.room .bx-k { font-style: italic; text-transform: none; letter-spacing: .04em; font-size: var(--t-sm); font-family: var(--serif); color: var(--lb-brass); }
 
 .room .lb-shelf { height: 92px; display: flex; align-items: flex-end; gap: 4px; padding: 0 18px; border-bottom: 10px solid var(--lb-wood); }
 .room .lb-shelf i { width: 22px; border-radius: 2px 2px 0 0; box-shadow: inset -3px 0 0 rgba(0,0,0,.25); }
@@ -23,7 +23,7 @@
 .room .lb-cat { align-self: start; background: var(--lb-wood); border-radius: 10px; padding: 12px; display: grid; gap: 12px; align-content: start; box-shadow: inset 0 0 0 2px #3a2614; }
 .room .lb-drawer { background: linear-gradient(#7a5532, #5f4126); border-radius: 6px; padding: 12px 12px 22px; box-shadow: 0 3px 0 #3a2614; position: relative; }
 .room .lb-drawer::after { content: ""; position: absolute; left: 50%; bottom: 8px; width: 34px; height: 6px; margin-left: -17px; border-radius: 3px; background: var(--lb-brass); }
-.room .lb-card { background: var(--lb-paper); color: var(--lb-ink); border-radius: 3px; padding: 10px 12px; font: 13px/1.45 var(--bx-mono); }
+.room .lb-card { background: var(--lb-paper); color: var(--lb-ink); border-radius: 3px; padding: 10px 12px; font: var(--t-sm)/1.45 var(--bx-mono); }
 .room .lb-card .bx-k, .room .lb-card .card-title { color: #5a3d22; }
 .room .lb-card .card-sub, .room .lb-card .finish-eta, .room .lb-card .bx-chk, .room .lb-card li b { color: #4a3a26; }
 .room .lb-card .finish-eta b { color: var(--lb-ink); }
@@ -34,10 +34,10 @@
 .room .lb-book { display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: var(--lb-paper); color: var(--lb-ink); border-radius: 6px 6px 14px 14px;
   box-shadow: 0 30px 60px -20px #000, inset 0 0 60px rgba(120,90,40,.25); min-height: 540px;
   background-image: linear-gradient(90deg, transparent calc(50% - 1px), rgba(90,60,30,.35) 50%, transparent calc(50% + 1px)); }
-.room .lb-page { padding: 30px 34px; display: flex; flex-direction: column; gap: 12px; font: 17px/1.55 var(--serif); min-width: 0; }
+.room .lb-page { padding: 30px 34px; display: flex; flex-direction: column; gap: 12px; font: var(--t-md)/1.55 var(--serif); min-width: 0; }
 .room .lb-book .bx-job { border-left: 0; background: none; padding: 0; }
 .room .lb-book .bx-job .bx-k { color: #7a5a2a; }
-.room .lb-book .bx-job h2 { font: 400 32px/1.1 var(--serif); text-transform: none; color: var(--lb-ink); }
+.room .lb-book .bx-job h2 { font: 400 var(--t-xl)/1.1 var(--serif); text-transform: none; color: var(--lb-ink); }
 .room .lb-book .bx-label { color: #7a5a2a; }
 .room .lb-book .bx-job p, .room .lb-book .bx-meta { color: #4a3a26; }
 .room .lb-book { --off-ink: #4a3a26; }   /* a greyed Grade and its reason, on the paper */
@@ -53,7 +53,7 @@
 .room .lb-book .bx-wbar { background: rgba(42,33,22,.15); }
 .room .lb-margin .bx-line { color: #3a2e1e; font-style: italic; padding-left: 14px; border-left: 2px solid var(--lb-brass); }
 .room .lb-margin .bx-line::before, .room .lb-margin .bx-line::after { display: none; }
-.room .lb-margin .bx-who { display: block; font: 600 11.5px var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }
+.room .lb-margin .bx-who { display: block; font: 600 var(--t-xs) var(--bx-mono); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: #7a5a2a !important; }
 .room .lb-margin .bx-line b { color: #2a2116; }
 .room .lb-margin .fold { --fold: 2; }
 .room .lb-margin .bx-chk { color: #8a7a5e; }
@@ -65,5 +65,5 @@
 .room .bx-pips.h i.half { background: linear-gradient(to top, var(--lb-brass) 50%, rgba(255,255,255,.1) 50%) border-box; }
 .room .lb-side .bx-juke { border-radius: 12px; background: linear-gradient(#1d2a20, #121a14); border: 1px solid #8a6d36; padding: 14px; }
 .room .lb-side .bx-juke::before, .room .lb-side .bx-juke::after { display: none; }
-.room .lb-k { margin: 0 0 10px; font: italic 15px var(--serif); color: var(--lb-brass); }
+.room .lb-k { margin: 0 0 10px; font: italic var(--t-sm) var(--serif); color: var(--lb-brass); }
 
