@@ -757,7 +757,7 @@ body:has(.overlay-drawer:not([hidden])) .toaster { right: auto; left: 24px; }   
   transform-origin: 50% 100%; transform: translateY(var(--y, 0)) scale(var(--s, 1));
   transition: transform .4s cubic-bezier(0.23, 1, 0.32, 1), opacity .4s cubic-bezier(0.23, 1, 0.32, 1), height .4s cubic-bezier(0.23, 1, 0.32, 1);
 }
-.toast:not([data-mounted]) { opacity: 0; transform: translateY(100%); }
+.toast:not([data-mounted]) { opacity: 0; transform: translateY(var(--s-2)); }   /* rises only within the gap it keeps above a control, so it never crosses one */
 .toast[data-removed] { opacity: 0; transform: translateY(calc(var(--y, 0px) + 12px)) scale(var(--s, 1)); pointer-events: none; transition-duration: .2s; }
 .toast[data-behind="true"] { opacity: 0; pointer-events: none; }
 .toaster:not([data-expanded]) .toast[data-front="false"] { height: var(--front-h); overflow: hidden; }   /* behind the front one, only an edge shows */
