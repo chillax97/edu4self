@@ -464,6 +464,19 @@
       '<div class="gate-rows">' + rows + '</div></section>';
   }
 
+  // The job on screen, whichever view draws it: what it is, what state it's in and what can be done with it.
+  // renderHero (classic) and barJob / barReplies (rooms) are views of this.
+  function jobModel(entry) {
+    if (!entry) return null;
+    var t = entry.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), facts = [];
+    if (t.effort) facts.push("◷ " + esc(t.effort));
+    if (t.kind === "probe") facts.push("◎ Measures what you know. Nothing to study first.");
+    if (t.kind === "lesson") facts.push("✦ Ends with exercises");
+    return { task: t, topic: entry.topic, meta: meta, pend: pend, fu: !pend && followUpFor(t), color: "var(--" + (KIND[t.kind] ? t.kind : "lesson") + ")",
+      facts: facts.map(function (f) { return "<span>" + f + "</span>"; }).join("") + calcChip(t), running: !!(active && active.task === t.id),
+      canStart: !active, minutes: taskMinutes(entry.topic) };
+  }
+
   function renderCoach(coach) {
     if (!coach) return "";
     return '<div class="coach' + (foldOpen.coach ? " is-open" : "") + '" data-fold="coach"><div class="coach-avatar" aria-hidden="true">C</div><div>' +
@@ -479,19 +492,15 @@
         '<p class="hero-why">' + (claudeOK() && pendingCount() ? gradeButton() + " Claude grades what's in your inbox and lines up your next step."
           : 'Tell Claude <strong>"check my inbox"</strong> to get your work graded and your next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></section>";
     }
-    var t = entry.task, topic = entry.topic, meta = kindMeta(t.kind);
-    var pend = pendingFor(t.id), fu = !pend && followUpFor(t);
-    var color = "var(--" + (KIND[t.kind] ? t.kind : "lesson") + ")";
-    var html = '<section class="hero" style="--c:' + color + '" aria-labelledby="hero-title">' +
+    var job = jobModel(entry), t = job.task, topic = job.topic, meta = job.meta, pend = job.pend, fu = job.fu;
+    var html = '<section class="hero" style="--c:' + job.color + '" aria-labelledby="hero-title">' +
       '<div class="hero-eyebrow"><span class="kicker">Up next</span><span class="dot-sep"></span>' +
         '<span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span>' +
         '<span class="topic-name">' + esc(topic.title) + '</span></div>' +
       '<span class="label">' + esc(t.label || "") + '</span>' +
       '<h2 id="hero-title">' + esc(t.title) + '</h2>' +
       '<p class="hero-why">' + esc(t.why || "") + '</p>' +
-      '<div class="hero-meta">' + (t.effort ? '<span>◷ ' + esc(t.effort) + '</span>' : "") +
-        (t.kind === "probe" ? '<span>◎ Measures what you know. Nothing to study first.</span>' : "") +
-        (t.kind === "lesson" ? '<span>✦ Ends with exercises</span>' : "") + calcChip(t) + '</div>';
+      '<div class="hero-meta">' + job.facts + '</div>';
     if (t.rules) html += '<div class="hero-rules"><span aria-hidden="true">⚑</span><span><strong>Rules:</strong> ' + esc(t.rules) + '</span></div>';
     if (pend) {
       html += '<div class="hero-submitted"><span class="chip chip-wait">' + sentWord(pend) + '</span>' +
@@ -499,12 +508,11 @@
         '<button class="btn btn-ghost btn-sm" data-withdraw="' + esc(pend.id) + '">Withdraw</button></div>' +
         '<div class="hero-actions">' + openButton(t, "btn btn-ghost") + '</div>';
     } else {
-      var running = active && active.task === t.id;
-      html += (running ? '<div class="hero-live" data-hero-clock></div>' : "") + (fu ? followUpBox(t, fu) : "") +
+      html += (job.running ? '<div class="hero-live" data-hero-clock></div>' : "") + (fu ? followUpBox(t, fu) : "") +
         '<div class="hero-actions">' + openButton(t, fu ? "btn btn-ghost" : "btn btn-topic") +
         (t.submit && !fu ? '<button class="btn ' + (t.href ? "btn-ghost" : "btn-topic") + '" data-submit="' + esc(t.id) + '">' + esc(meta.submit) + '</button>' : "") +
         hintsButton(t, "btn btn-ghost") +
-        (!active ? '<button class="btn btn-ghost" data-start-task="' + esc(t.id) + '">▶ Start ' + taskMinutes(topic) + ' min on this</button>' : "") +
+        (job.canStart ? '<button class="btn btn-ghost" data-start-task="' + esc(t.id) + '">▶ Start ' + job.minutes + ' min on this</button>' : "") +
         '</div>' + stuckNudge(t);
     }
     return html + '</section>';
@@ -2145,14 +2153,12 @@
     if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">' + esc(W("job")) + '</div><h2>Nothing waiting on you.</h2><p>' +
       (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
         : 'Tell Claude <b>"check my inbox"</b> to get your work graded and the next step lined up.' + (pendingCount() ? " " + gradeButton() : "")) + "</p></div>";
-    var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), fu = !pend && followUpFor(t);
-    return '<div class="bx-job" style="--c:var(--' + (KIND[t.kind] ? t.kind : "lesson") + ')">' +
+    var job = jobModel(hero), t = job.task, meta = job.meta, pend = job.pend, fu = job.fu;
+    return '<div class="bx-job" style="--c:' + job.color + '">' +
       '<div class="bx-k">' + esc(W("job")) + " · " + esc(meta.label) + " · " + esc(hero.topic.title) + "</div>" +
       "<h2>" + (t.label ? '<span class="bx-label">' + esc(t.label) + "</span>" : "") + esc(t.title) + "</h2>" +
       (t.why ? "<p>" + esc(t.why) + "</p>" : "") +
-      '<div class="bx-meta">' + (t.effort ? "<span>◷ " + esc(t.effort) + "</span>" : "") +
-        (t.kind === "probe" ? "<span>◎ Measures what you know. Nothing to study first.</span>" : "") +
-        (t.kind === "lesson" ? "<span>✦ Ends with exercises</span>" : "") + calcChip(t) + "</div>" +
+      '<div class="bx-meta">' + job.facts + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
       (pend ? '<div class="bx-sent">' + sentWord(pend) + " " + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : fu ? followUpBox(t, fu, true) : stuckNudge(t, true)) +
       "</div>";
@@ -2164,14 +2170,14 @@
     function quiet(html) { R.push('<li class="is-quiet"><b class="bx-n">–</b><span>' + html + "</span></li>"); }
     function chk(s) { return ' <span class="bx-chk">' + s + "</span>"; }
     if (hero) {
-      var t = hero.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), fu = !pend && followUpFor(t);
+      var job = jobModel(hero), t = job.task, meta = job.meta, pend = job.pend, fu = job.fu;
       if (t.href) { var href = resolveHref(t.href); act('<a class="btn btn-link bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>"); }
       if (pend) act('<button class="btn btn-link bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the ' + (pend.kind === "follow-up" ? "reply" : "submission") + ".]" + chk("only before Claude grades it") + "</button>");
       else {
         if (t.submit && !fu) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
         if (t.exercise) act('<button class="btn btn-link bx-r" type="button" data-hints="' + esc(t.id) + '">[Ask for a hint.]' + chk("each one is noted for Claude") + "</button>");
-        if (!active) act('<button class="btn btn-link bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + taskMinutes(hero.topic) + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
-        else if (active.task === t.id) quiet("The clock is running on this one.");
+        if (job.canStart) act('<button class="btn btn-link bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + job.minutes + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
+        else if (job.running) quiet("The clock is running on this one.");
       }
     }
     actionableTasks().forEach(function (e) {
