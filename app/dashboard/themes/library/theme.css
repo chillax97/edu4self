@@ -67,6 +67,3 @@
 .room .lb-side .bx-juke::before, .room .lb-side .bx-juke::after { display: none; }
 .room .lb-k { margin: 0 0 10px; font: italic 15px var(--serif); color: var(--lb-brass); }
 
-@media (max-width: 1100px) { .room .lb-desk { grid-template-columns: minmax(0, 1fr); } .room .lb-cat { order: 3; } }
-@media (max-width: 900px) { .room .lb-book { grid-template-columns: 1fr; background-image: none; } }   /* a half-screen window: one page, the job on it, the margin notes under it */
-@media (max-width: 700px) { .room .lb-shelf { overflow: hidden; } .room .lb-page { padding: 22px 20px; } }

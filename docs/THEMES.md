@@ -80,8 +80,7 @@ Each step ends with how you know it's done.
      (From the dashboard's Claude panel there is no shell: the server runs this check after your
      reply and shows the result. Say so, and set the room anyway; a failing room falls back to the bar.)
    - Set `"theme": "<id>"` in `_system/config.json` (or pick it in Settings), open the dashboard, and
-     look at it at full width and in a half-screen window (about 720 px, the dashboard beside the
-     terminal): every slot shows, nothing scrolls sideways,
+     look at it at 1440×900: every slot shows, nothing scrolls sideways,
      all text is readable against its background, the replies and the timer still click, and the
      shelf shows (with history, or after one block that meets a small daily goal).
    - Open a lesson: it wears the room, and the quiz is readable.
@@ -133,10 +132,9 @@ replaced. Required slots appear exactly once; optional ones at most once. An emp
 
 The front room is for what a learner needs now. Every room, and the classic view, keeps to this:
 
-- **The next step and its one action on the first screen**, at desktop (1440×900) and in a half-screen
-  window (720×900): the `job` title, and under it the follow-up reply box or the first reply. Put `job` and
-  `replies` before `voices` in the layout, and in a narrow window put them before `tonight`, `week` and `die`
-  (with `order`). The dashboard is served on 127.0.0.1, so a phone never sees it: spend nothing on phone widths.
+- **The next step and its one action on the first screen**, at 1440×900: the `job` title, and under it the
+  follow-up reply box or the first reply. Put `job` and `replies` before `voices` in the layout. The dashboard is a
+  desktop page: a smaller window scrolls, and rooms carry no narrow-window layouts.
 - **The countdown once.** It is in `block`. The top bar shows it only while `block` is off screen, so
   don't draw another.
 - **The record at a glance:** `tonight`, `week` and `die`.

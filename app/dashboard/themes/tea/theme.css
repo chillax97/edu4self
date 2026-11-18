@@ -65,6 +65,3 @@
 .room .finish .card-title, .room .bx-doors .bx-k { color: var(--te-green); }
 .room .finish .card-sub, .room .finish-eta, .room .bx-doors li b, .room .bx-doors li .bx-chk { color: #4b4033; }
 
-@media (max-width: 1180px) { .room .te-room { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .room .te-side { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
-@media (max-width: 760px) { .room .te-shelf, .room .te-room { grid-template-columns: minmax(0, 1fr); } .room .te-shelf { order: 2; }   /* a narrow window: the scroll before the cups */
-  .room .te-scroll { padding: 0 18px; } .room .te-rod { margin: 0 -24px; } }

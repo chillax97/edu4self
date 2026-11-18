@@ -69,7 +69,7 @@ async function openRoom(id, w, h) {
 }
 
 for (const id of ROOMS) {
-  for (const [w, h, label, limit] of [[1440, 1000, "desktop", 700], [390, 844, "phone", 1266]]) {
+  for (const [w, h, label, limit] of [[1440, 1000, "desktop", 700]]) {
     test(`${id} on a ${label}: the job starts within ${limit}px under a long note, and every voice is still there`, async () => {
       const page = await openRoom(id, w, h);
       const top = await page.$eval('.room [data-slot="job"] .bx-job', (e) => Math.round(e.getBoundingClientRect().top + scrollY));

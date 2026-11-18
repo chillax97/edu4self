@@ -54,6 +54,4 @@
 .room .sp-right .bx-juke::before, .room .sp-right .bx-juke::after { display: none; }
 .room .bx-music { border-radius: 6px; }
 
-@media (max-width: 1180px) { .room .sp-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .room .sp-main { grid-template-columns: minmax(0, 1fr); } .room .sp-port { max-width: 260px; justify-self: center; width: 100%; } .room .sp-mid { order: -1; } }
-@media (max-width: 560px) { .room .sp-bar { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .room.is-running .sp-planet { animation: none; } }

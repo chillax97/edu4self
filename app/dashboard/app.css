@@ -141,6 +141,7 @@ h1, h2, h3 { margin: 0; }
 /* ------------------------------------------------ top bar */
 /* the top bar is sticky: whatever is scrolled into view (a focused button, the #block link, a tab) stops below it */
 html { scroll-padding-top: 84px; }
+body { min-width: 1280px; }   /* a desktop page: a smaller window scrolls, nothing reflows */
 .topbar {
   position: sticky; top: 0; z-index: 20;
   backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
@@ -187,7 +188,6 @@ main { padding-top: 28px; padding-bottom: 40px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 22px; align-items: start; }
 .col { display: grid; gap: 22px; min-width: 0; }
-@media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; min-width: 0; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 14px; }
@@ -282,7 +282,6 @@ main { padding-top: 28px; padding-bottom: 40px; }
 .q-item p { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
 .q-kind { display: flex; gap: .45rem; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
 .q-actions { display: flex; gap: .4rem; }
-@media (max-width: 620px) { .q-item { grid-template-columns: auto 1fr; } .q-actions { grid-column: 1 / -1; } }
 
 /* ------------------------------------------------ topics */
 .topic-card { position: relative; overflow: hidden; }
@@ -294,7 +293,7 @@ main { padding-top: 28px; padding-bottom: 40px; }
 .stat { padding: 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
 .stat b { display: block; font: 600 26px/1 var(--serif); }
 .stat span { font-size: 12px; color: var(--muted); }
-@media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
 .topic-links { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 16px; }
 
 .linked-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
@@ -322,7 +321,7 @@ button.add-topic:hover { border-color: var(--topic); background: color-mix(in sr
 
 /* ------------------------------------------------ library */
 .lib { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-@media (max-width: 620px) { .lib { grid-template-columns: 1fr; } }
+
 .lib h4 { margin: 0 0 8px; font: 700 11.5px/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .lib ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .lib a { display: flex; gap: .6rem; align-items: baseline; padding: 8px 10px; border-radius: 10px; text-decoration: none; font-size: 14px; }
@@ -614,7 +613,6 @@ body.ft-on #onboarding .dialog { animation: none; max-height: none; overflow: vi
 .ft-own-row { display: flex; gap: 8px; }
 .ft-own-row input { flex: 1; min-width: 0; font: 15px var(--sans); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 11px; padding: 10px 12px; }
 .ft .ob-footer { margin-top: 16px; }
-@media (max-width: 560px) { .ft { padding: 18px 18px 16px; } .ft-own-row { flex-direction: column; } .ft-face p { font-size: 16px !important; } }
 
 .submit { padding: 0; max-width: 640px; }
 .sub-head { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: start; padding: 22px 24px 0; }
@@ -734,7 +732,6 @@ body.v-bar .bx-meta .calc-chip { color: inherit; background: transparent; border
 .nt-dialog .form-error { margin: 0 0 10px; }
 .nt-dialog .sub-buttons { justify-content: flex-end; margin-top: 6px; }
 .nt-dialog pre { margin: 0 0 16px; }
-@media (max-width: 700px) { .cl-drawer { width: 100vw; padding: 16px 16px 12px; } .cl-actions { flex-wrap: wrap; } }
 
 /* toaster: one stack, bottom right, on the popover tokens. app.js sets each toast's --y and --s. */
 .toaster {
@@ -767,7 +764,7 @@ body:has(.overlay-drawer:not([hidden])) .toaster { right: auto; left: 24px; }   
 
 .footer { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-top: 18px; padding-bottom: 36px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); }
 .footer a { color: var(--muted); }
-@media (max-width: 700px) { .hide-sm { display: none; } .topbar-status { display: none; } .blk-pill { margin-left: auto; } .hero { padding: 24px 20px; } .hero::before { inset: auto -200px -260px auto; opacity: .6; } .card { padding: 18px; } }
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 /* ================================================================ water rounds (both views) */
@@ -980,10 +977,9 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .bx-right > .bx-music, .bx-right [data-slot="music"] > * { margin-top: 0; }
 .bx-right .bx-board { position: relative; height: 40px; }   /* the streak's chalk board, beside the record */
 .bx-right .bx-chalk { left: 0; bottom: 0; width: 100%; }
-@media (max-width: 1180px) { .bx { grid-template-columns: minmax(0, 1fr) 290px; } }
+
 /* one column on a phone: the sign, the job and its replies, then the jukebox (its record still, the
    top-bar countdown stands in while the jukebox is off screen), the record, the talk after them */
-@media (max-width: 760px) { .bx { grid-template-columns: 1fr; } .bx-mid { padding: 16px; } .bx-right { border-left: 0; border-top: 1px solid var(--bx-line2); } }
 
 /* bar view: the jukebox's music player */
 .bx-music { margin-top: 16px; padding: 12px; border: 1px solid var(--bx-line); background: var(--bx-music-bg); display: grid; gap: 8px; }
@@ -1075,25 +1071,6 @@ body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-hea
 .set-error { margin: 14px 0 0; }
 .set-foot { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
   margin: 22px -26px 0; padding: 14px 26px 18px; background: var(--surface); border-top: 1px solid var(--line); }
-@media (max-width: 560px) {
-  .set-two { grid-template-columns: 1fr; }
-  .set-src { grid-template-columns: 1fr; }
-  .set-pick { grid-template-columns: 16px 1fr; }
-  .set-pick small { grid-column: 2; }
-  .set-kind { grid-template-columns: 14px minmax(0, 1fr) 64px 34px; }
-  .set-kind .set-color { grid-column: 2 / 4; }
-  .set-voice { grid-template-columns: 14px minmax(0, 1fr) 44px; }
-  .set-voice code { display: none; }
-  .set-track { grid-template-columns: 22px minmax(0, 1fr) repeat(3, 34px); }
-  .set-track code { display: none; }
-}
-
-/* phones: the action buttons get their own row, so all of them stay reachable */
-@media (max-width: 700px) {
-  .topbar-inner { flex-wrap: wrap; height: auto; padding-top: 10px; padding-bottom: 10px; row-gap: 8px; }   /* .topbar-inner is also .wrap: keep its side gutter */
-  .topbar-actions { order: 3; width: 100%; }
-  .topbar-actions .btn { flex: 1; justify-content: center; padding-left: .4rem; padding-right: .4rem; }
-}
 
 /* ---------------------------------------------------------------- the shelf (trophies)
    Each trophy is the drawing of the room it was won in. Day trophies stack into piles (positions set
@@ -1122,7 +1099,6 @@ button.ks-i:hover, button.ks-i:focus-visible { translate: 0 -3px; z-index: 1; }
 .ks-i.is-new, .ks-one.is-new .ks-art { animation: ks-drop .7s cubic-bezier(.3,1.4,.5,1) both; }
 @keyframes ks-drop { from { translate: 0 -60px; opacity: 0; } 60% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ks-i.is-new, .ks-one.is-new .ks-art { animation: none; } }
-
 
 /* the one-time gifts question */
 .gift-ask { max-width: 440px; padding: 28px 28px 24px; }

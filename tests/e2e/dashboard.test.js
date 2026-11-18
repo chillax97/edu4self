@@ -457,9 +457,9 @@ async function postReset() {
   assert.equal(r.status, 200);
 }
 
-test("phone width: no sideways scrolling in either view or in Settings", async () => {
+test("no sideways scrolling in either view or in Settings", async () => {
   for (const view of ["bar", "classic"]) {
-    const page = await openPage(browser, server.url, { view, width: 390, height: 844, block: true });
+    const page = await openPage(browser, server.url, { view, width: 1440, height: 900, block: true });
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(over <= 0, view + " overflows by " + over + "px");
     // clipped is as bad as overflowing: every top-bar button must be fully on screen

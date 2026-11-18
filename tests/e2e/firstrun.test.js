@@ -108,7 +108,7 @@ test("first try with Claude: quick check at once, the answer in the inbox, Claud
 
 test("first try, own topic: what they type goes straight to New topic with Claude", async () => {
   const { server } = withClaude;
-  const page = await firstVisit(server.url, { width: 390, height: 844 });
+  const page = await firstVisit(server.url);
   await page.click("#ob-next");
   await page.click("#ob-next");   // I don't remember: nothing is saved, the idea comes back
   await page.waitForSelector('.ob-slide[data-step="2"]:not([hidden])');

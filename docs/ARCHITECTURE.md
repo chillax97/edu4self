@@ -182,5 +182,5 @@ A terminal `claude` session uses your own permissions, not these. Grade shared m
 - `python3 -m unittest discover -s tests`: server routes, validation, uploads, Range, config
   fallbacks, validators, CLI, repo consistency. No dependencies.
 - `cd tests/e2e && npm ci && npm test`: a real Chrome against a throwaway vault: first visit, both
-  views, submitting, a focus block, every Settings field, music upload/playback/removal, a server
-  restart, and phone width.
+  views, submitting, a focus block, every Settings field, music upload/playback/removal and a server
+  restart.

@@ -112,13 +112,13 @@ Rather click than type? Everything the agent changed is also in **⚙ Settings**
   *Classic* is calm and plain.
 
 <details>
-<summary>More screenshots: classic view, the back room, Settings, phone</summary>
+<summary>More screenshots: classic view, the back room, Settings</summary>
 
 | classic | the back room |
 |---|---|
 | ![Classic view](docs/images/classic.png) | ![The back room: the die case, milestones, evidence, skills](docs/images/backroom.png) |
-| **Settings** | **phone** |
-| ![Settings panel](docs/images/settings.png) | ![The bar on a phone](docs/images/phone.png) |
+| **Settings** | |
+| ![Settings panel](docs/images/settings.png) | |
 
 </details>
 

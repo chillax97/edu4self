@@ -2360,7 +2360,7 @@
         ": " + esc(KS_MEANS[kind]()) + "</span>";
     }).join("") + '<span class="ks-sum-hint">Click one to see the day you earned it.</span>';
     // three shelves, like a bookcase: the piles of days, then the weeks, then the piles of dice. Each object
-    // brings its own stretch of plank, so a shelf that wraps on a narrow screen still has wood under every row.
+    // brings its own stretch of plank, so a shelf that wraps still has wood under every row.
     var shelves = [piles("day"), standing("week"), dice].filter(Boolean).map(function (row) { return '<div class="ks-row">' + row + "</div>"; }).join("");
     return '<div class="ks-shelf">' + shelves + '<p class="ks-sum">' + sum + "</p></div>";
   }
@@ -2734,7 +2734,7 @@
 
   function paintViewButton() {
     var b = $("#btn-view");
-    if (b) b.innerHTML = isBar() ? '☰ <span class="hide-sm">Classic view</span>' : esc(THEME ? W("front_icon") : "🍸") + ' <span class="hide-sm">' + esc(THEME ? W("view") : "Room view") + "</span>";
+    if (b) b.innerHTML = isBar() ? '☰ <span>Classic view</span>' : esc(THEME ? W("front_icon") : "🍸") + ' <span>' + esc(THEME ? W("view") : "Room view") + "</span>";
   }
 
   document.addEventListener("keydown", function (ev) {
@@ -3251,7 +3251,7 @@
     g.disabled = CL.busy || !claudeOK();
     g.classList.toggle("is-off", !claudeOK());
     g.title = claudeOK() ? "" : claudeWhy();
-    g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + (claudeOK() ? " <span class=\"hide-sm\">waiting</span>" : "");   // greyed: the note button is wider than Claude's
+    g.innerHTML = CL.busy ? "✦ Claude is working…" : "✦ Grade " + n + (claudeOK() ? " <span>waiting</span>" : "");   // greyed: the note button is wider than Claude's
     paintGate();
     if (obStep === 2 && FT.text) paintFirstGrade();   // the first try shows Claude's grade in its card
   }

@@ -1,4 +1,4 @@
-// Rooms: every built-in room draws, fits a phone, keeps its controls working, and dresses the lessons.
+// Rooms: every built-in room draws, keeps its controls working, and dresses the lessons.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -82,7 +82,7 @@ test("there are five built-in rooms", () => {
 });
 
 for (const id of ROOMS) {
-  for (const [w, h, label] of [[1440, 1000, "desktop"], [390, 1400, "phone"]]) {
+  for (const [w, h, label] of [[1440, 1000, "desktop"]]) {
     test(`${id} on a ${label}: every slot drawn, readable, nothing spills sideways, no errors, the lesson opens`, async () => {
       setConfig({ theme: id });
       const page = await openPage(browser, server.url, { view: "bar", width: w, height: h, block: true });

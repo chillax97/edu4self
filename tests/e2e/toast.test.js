@@ -20,7 +20,7 @@ after(async () => {
 const live = (page) => page.$$eval("#toast > li:not([data-removed])", (l) => l.map((t) => ({
   text: t.innerText.replace(/\s+/g, " ").trim(), front: t.dataset.front === "true", r: t.getBoundingClientRect().toJSON() })));
 
-for (const [w, view] of [[1440, "classic"], [720, "bar"]]) {
+for (const [w, view] of [[1440, "classic"], [1440, "bar"]]) {
   test(`${view} at ${w}px: toasts stack bottom right, newest in front, three at most in sight`, async () => {
     const page = await openPage(browser, server.url, { view, width: w, height: 900 });
     for (const n of [1, 2, 3, 4]) await page.evaluate((n) => window.edu4self.toast("<b>Notice " + n + "</b>", 20000), n);

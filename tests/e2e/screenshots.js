@@ -105,7 +105,6 @@ if (!ONLY) {
   await shot("backroom.png", { room: "back", full: true });
   await shot("classic.png", { view: "classic", full: true });
   await shot("settings.png", { view: "classic", fn: async (p) => { await p.click("#btn-settings"); await p.waitForSelector("#set-name"); await new Promise((r) => setTimeout(r, 400)); } });
-  await shot("phone.png", { width: 390, height: 844, block: true });
 }
 // one picture per built-in room, for the README's room gallery
 const setRoom = async (id) => {

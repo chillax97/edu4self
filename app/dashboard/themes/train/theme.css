@@ -68,9 +68,4 @@
 .room .tr-radio .bx-juke::before, .room .tr-radio .bx-juke::after { display: none; }
 .room .bx-music { border-radius: 10px; }
 
-@media (max-width: 900px) {
-  .room .tr-windows, .room .tr-row, .room .tr-bottom { grid-template-columns: 1fr; }
-  .room .tr-windows { order: 2; }   /* a narrow screen: the ticket before the windows */
-  .room .tr-win { min-height: 150px; }
-}
 @media (prefers-reduced-motion: reduce) { .room .tr-hills, .room.is-running .tr-hills { animation: none; } }
