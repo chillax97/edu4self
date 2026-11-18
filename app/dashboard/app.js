@@ -716,9 +716,9 @@
       return '<li><span class="w-dot' + (h.evidence ? " ev" : "") + '"></span><div><b>' + esc(h.title) + '</b>' +
         '<small>' + esc(h.date) + (h.detail ? " · " + esc(h.detail) : "") + '</small></div></li>';
     }).join("");
-    return '<section class="card"><div class="card-head"><span class="card-title">Evidence log</span><button class="info" data-help="evidence" aria-label="What is the evidence log?">?</button></div>' +
-      '<div class="heat-wrap"><div class="heat" role="img" aria-label="' + total + ' things proven over ' + active + ' days">' + cells + '</div></div>' +
-      '<div class="heat-foot"><span><b>' + total + '</b> things proven, over <b>' + active + '</b> days</span><span>Squares only light up for proof, not for time spent</span></div>' +
+    return '<section class="card"><div class="card-head"><span class="card-title">Evidence log</span>' + ((DATA.state.topics || []).filter(function (t) { return !isDormant(t); }).length > 1 ? '<span class="card-sub">' + esc(topic.title) + "</span>" : "") + '<button class="info" data-help="evidence" aria-label="What is the evidence log?">?</button></div>' +
+      '<div class="heat-wrap"><div class="heat" role="img" aria-label="' + plural(total, "thing") + " proven over " + plural(active, "day") + '">' + cells + '</div></div>' +
+      '<div class="heat-foot"><span><b>' + total + "</b> " + (total === 1 ? "thing" : "things") + " proven, over <b>" + active + "</b> " + (active === 1 ? "day" : "days") + '</span><span>Squares only light up for proof, not for time spent</span></div>' +
       '<ul class="wins">' + wins + '</ul></section>';
   }
 
@@ -1154,6 +1154,7 @@
     if (!slot) return;
     var focused = blockEl.contains(document.activeElement) ? document.activeElement : null;
     if (!blockEl.firstChild) paintBlockCard();
+    else if (active && !blockEl.querySelector(".blk-water") !== roundHere()) paintControls();   // the room decides where the water line sits
     slot.replaceWith(blockEl);
     paintDie();
     if (focused) focused.focus();
@@ -1174,8 +1175,8 @@
         '<span class="card-sub">' + active.minutes + ' min · ends ' + esc(hhmm(active.end)) + '</span></div>' +
         '<div class="blk-clock" data-clock role="timer" aria-label="Time remaining"></div>' +
         '<div class="bar"><i data-bar></i></div>' +
-        '<div class="blk-water"><span data-water-text>' + esc(waterText()) + '</span>' +
-          '<button class="btn btn-soft btn-sm" type="button" data-drink' + ((active.served || 0) > (active.drunk || 0) ? "" : " hidden") + '>Drank it</button></div>' +
+        (roundHere() ? "" : '<div class="blk-water"><span data-water-text>' + esc(waterText()) + '</span>' +
+          '<button class="btn btn-soft btn-sm" type="button" data-drink' + ((active.served || 0) > (active.drunk || 0) ? "" : " hidden") + '>Drank it</button></div>') +
         '<button class="btn btn-ghost btn-sm" type="button" data-blk-stop>Stop early</button></div>';
       tick();
       return;
@@ -1782,19 +1783,22 @@
     if (isBar()) barSay("you", ["drink it. Cold.", "drink it. Better.", "drink it, and get back to it."][(active.drunk - 1) % 3]);
   }
 
-  function waterText() {
-    if (!active) return "";
-    if (!active.water) return "💧 Water rounds are off for this block.";
+  // plain: the short line beside a room's glass (the "round" slot), no drop, no second sentence about the glass
+  function waterText(plain) {
+    if (!active) return plain ? (waterEvery() ? "Your " + W("glass") + " comes with the next block" : "Water rounds are off") : "";
+    var drop = plain ? "" : "💧 ";
+    if (!active.water) return drop + (plain ? "Water rounds are off" : "Water rounds are off for this block.");
     var served = active.served || 0, drunk = active.drunk || 0, nextAt = active.start + (served + 1) * active.water * 60000;
-    return "💧 " + (served > drunk ? "A glass is waiting. " : "") +
-      (nextAt < active.end ? "Next glass in " + Math.max(1, Math.ceil((nextAt - Date.now()) / 60000)) + " min" : "No more glasses this block") +
+    return drop + (served > drunk ? "A " + (plain ? W("glass") : "glass") + " is waiting. " : "") +
+      (nextAt < active.end ? "Next " + (plain ? "in " : "glass in ") + Math.max(1, Math.ceil((nextAt - Date.now()) / 60000)) + " min" : plain ? "Last one this block" : "No more glasses this block") +
       (served ? " · " + drunk + " of " + served + " drunk" : "");
   }
 
   function paintWater() {
     var owed = active && (active.served || 0) > (active.drunk || 0);
-    document.querySelectorAll("[data-water-text]").forEach(function (el) { el.textContent = waterText(); });
+    document.querySelectorAll("[data-water-text]").forEach(function (el) { var t = waterText(el.dataset.waterText === "plain"); if (el.textContent !== t) el.textContent = t; });
     blockEl.querySelectorAll("[data-drink]").forEach(function (b) { b.hidden = !owed; });
+    document.querySelectorAll(".bx-round .btn[data-drink]").forEach(function (b) { b.hidden = !owed; });
     var g = $(".bx-glass");
     if (g) {
       g.classList.toggle("full", !!owed);
@@ -1813,6 +1817,7 @@
     head: '"Bar Oswald", "Avenir Next Condensed", sans-serif', neon: '"Bar Neon", "Bar Oswald", sans-serif' };
   var PALETTE_VARS = { bg: "--bg", bg2: "--bg-2", surface: "--surface", surface2: "--surface-2", ink: "--ink", ink2: "--ink-2",
     muted: "--muted", line: "--line", line2: "--line-2", accent: "--bar-amber", accent2: "--bar-cream", accent_ink: "--accent-ink" };
+  var PANEL_VARS = { surface: "--surface", surface2: "--surface-2", ink: "--ink", ink2: "--ink-2", muted: "--muted", line: "--line", line2: "--line-2" };
   function wantTheme() { return THEME_WANT || cfg().theme || "bar"; }
   function W(k) { return (THEME && THEME.meta.words[k]) || k; }
   function LINE(k, text) { return (THEME && THEME.meta.lines && THEME.meta.lines[k]) || text; }
@@ -1856,7 +1861,12 @@
     // the bar's kind colours are bright for a dark room; a light room gets the classic view's deeper ones
     if (m.dark === false) decl.push("--lesson:#5b5bd6;--probe:#b0650a;--checkpoint:#d6336c;--reading:#0e7f6c;--project:#8e4ec6;--mock:#0b6fb8");
     if (m.backdrop) decl.push("background:" + m.backdrop);
-    vars.textContent = "body.v-bar{" + decl.join(";") + "}";
+    // the page around the room: a theme gives colours for the panels and asks for a quiet top bar (theme.json "frame")
+    var frame = m.frame || {}, panel = frame.panel, side = "";
+    if (panel) side = "body.v-bar :is(.drawer,.dialog){color-scheme:light;color:" + panel.ink + ";--primary:" + panel.accent + ";--topic:" + panel.accent +
+      ";--primary-ink:" + panel.accent_ink + Object.keys(PANEL_VARS).map(function (k) { return ";" + PANEL_VARS[k] + ":" + panel[k]; }).join("") + "}";
+    document.body.classList.toggle("frame-quiet", frame.topbar === "quiet");
+    vars.textContent = "body.v-bar{" + decl.join(";") + "}" + side;
     document.body.dataset.theme = m.id;
     // the help panel names the room's things: <span data-w="row">, lowercased with data-w-lc
     document.querySelectorAll("[data-w]").forEach(function (el) { var w = W(el.dataset.w); el.textContent = el.hasAttribute("data-w-lc") ? w.toLowerCase() : w; });
@@ -1938,27 +1948,61 @@
     return '<div class="bx-k">' + esc(W("tonight")) + '</div><div class="bx-pips h">' + pips + '</div>' +
       '<div class="bx-mono">' + t.mins + " of " + DAY_GOAL_MIN + " min" + (t.mins >= DAY_GOAL_MIN ? " ✓" : "") + "</div>";
   }
+  // this week's day trophies, by date. A room that draws its trophy from above (keepsakes.day.top) lays them out
+  // in the week slot; a trophy won in another room keeps that room's own drawing.
+  function weekKeeps() {
+    var by = {};
+    (ksData().items || []).forEach(function (it) { if (it.kind === "day") by[it.date] = it; });
+    return by;
+  }
+  function weekSpot(k, letter, it, top) {
+    var art = it && (it.theme === THEME.meta.id ? top : ksData().art[it.art] || top), h = 0;
+    if (!it) return '<span class="bx-d">' + letter + "</span>";
+    for (var i = 0; i < it.id.length; i++) h = (h * 31 + it.id.charCodeAt(i)) % 360;
+    var say = cap(it.name) + " · " + ksWhen(it);
+    return '<button type="button" class="bx-daycap" data-ks="' + esc(it.id) + '" style="--r:' + h + 'deg" title="' + esc(say) + '" aria-label="' + esc(say) + '">' + art + "</button>" +
+      '<span class="bx-d" aria-hidden="true">' + letter + "</span>";
+  }
   function weekHTML() {
-    var t = tonight(), week = "";
+    var t = tonight(), week = "", top = ksLook("day").top, keeps = top ? weekKeeps() : {}, won = 0;
     for (var j = 0; j < 7; j++) {
       var d = new Date(t.monday); d.setDate(t.monday.getDate() + j);
-      var k = dayKey(d);
-      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : "") + '" title="' + k + '">' + "MTWTFSS"[j] + "</i>";
+      var k = dayKey(d), it = keeps[k];
+      if (it) won++;
+      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : "") + (it ? " has-cap" : "") + '" title="' + k + '" data-day="' + k + '">' +
+        (top ? weekSpot(k, "MTWTFSS"[j], it, top) : "MTWTFSS"[j]) + "</i>";
     }
+    var look = ksLook("day"), said = top ? (won ? plural(won, look.name, look.plural) : "No " + look.plural + " yet") + " · " : "";
     return '<div class="bx-k">' + esc(W("week")) + '</div><div class="bx-pips m">' + week + '</div>' +
-      '<div class="bx-mono">' + t.hit + " of " + WEEK_GOAL_DAYS + " " + esc(W("nights")) + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "") + "</div>";
+      '<div class="bx-mono">' + esc(said) + t.hit + " of " + WEEK_GOAL_DAYS + " " + esc(W("nights")) + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "") + "</div>";
   }
 
+  // "2½ hours", "1 hour", "25 minutes": how long is left, the way a person says it
+  function saidTime(m) {
+    if (m < 45) return plural(Math.max(5, Math.round(m / 5) * 5), "minute");
+    var h = Math.round(m / 30) / 2, whole = Math.floor(h);
+    return (whole || "") + (h > whole ? "½" : "") + (h === 1 ? " hour" : " hours");
+  }
   function cabinetHTML() {
-    var d = dieNow();
+    var d = dieNow(), next = THEME && THEME.meta.lines && THEME.meta.lines.die_next, left = 0;
+    if (next) { var total = 0; allBlocks().forEach(function (b) { total += b.minutes; }); left = (d.shipped + 1) * DIE_TILES * TILE_MIN - total; }
     return '<div class="bx-k">' + esc(W("die_case")) + " · " + esc(W("die")) + " #" + d.n + '</div>' +
       '<div class="bx-cab-row"><b class="bx-num">' + d.etched + "<small> / " + DIE_TILES + "</small></b>" + dieHTML(allBlocks(), false) + "</div>" +
-      '<div class="bx-mono">' + d.etched + " of " + DIE_TILES + " · a slot per " + TILE_MIN + " min · " + d.shipped + " " + esc(W(d.shipped === 1 ? "die" : "dies")) + " " + esc(W("shipped")) + "</div>";
+      '<div class="bx-mono">' + d.etched + " of " + DIE_TILES + " · a slot per " + TILE_MIN + " min · " + d.shipped + " " + esc(W(d.shipped === 1 ? "die" : "dies")) + " " + esc(W("shipped")) + "</div>" +
+      (next ? '<p class="bx-next">' + esc(fill(next, { time: saidTime(left) })) + "</p>" : "");
   }
 
   function glassHTML() {
     var owed = active && (active.served || 0) > (active.drunk || 0);
     return '<button class="bx-glass' + (owed ? " full" : "") + '" type="button" data-drink aria-label="' + (owed ? "A " + esc(W("glass")) + " of water. Click once you've drunk it." : "An empty " + esc(W("glass"))) + '"></button>';
+  }
+
+  // The "round" slot: the glass, what it means and the button that goes with it, in one place
+  function roundHere() { return !!(isBar() && THEME && /data-slot="round"/.test(THEME.layout)); }
+  function roundHTML() {
+    var owed = active && (active.served || 0) > (active.drunk || 0);
+    return '<div class="bx-round' + (owed ? " is-owed" : "") + '">' + glassHTML() + '<p data-water-text="plain">' + esc(waterText(true)) + "</p>" +
+      '<button class="btn btn-soft btn-sm" type="button" data-drink' + (owed ? "" : " hidden") + ">Drank it</button></div>";
   }
 
   // A past proof, a different one each day, from more than three days ago
@@ -2164,10 +2208,19 @@
       "</div>";
   }
 
+  var repliesOpen = false;
+  document.addEventListener("click", function (ev) {
+    if (!ev.target.closest("[data-replies-more]")) return;
+    repliesOpen = !repliesOpen;
+    render();
+  });
   function barReplies(hero) {
-    var R = [], n = 0;
-    function act(html) { n++; R.push('<li><b class="bx-n">' + n + ".</b>" + html.replace(/^<(a|button) /, '<$1 data-n="' + n + '" ') + "</li>"); }
-    function quiet(html) { R.push('<li class="is-quiet"><b class="bx-n">–</b><span>' + html + "</span></li>"); }
+    var R = [], n = 0, short = THEME && THEME.meta.replies === "short", rest = false, folded = 0;
+    function li(cls) { if (rest && short) { folded++; cls += " is-rest"; } return cls.trim() ? '<li class="' + cls.trim() + '">' : "<li>"; }
+    // short: the words without the script's [brackets] and "quotes"
+    function plainWords(html) { return short ? html.replace(/>\[(.+?)\.?\]/, ">$1").replace(/>"(.+?)"/, ">$1") : html; }
+    function act(html) { n++; R.push(li("") + '<b class="bx-n">' + n + ".</b>" + plainWords(html).replace(/^<(a|button) /, '<$1 data-n="' + n + '" ') + "</li>"); }
+    function quiet(html) { R.push(li("is-quiet") + '<b class="bx-n">–</b><span>' + html + "</span></li>"); }
     function chk(s) { return ' <span class="bx-chk">' + s + "</span>"; }
     if (hero) {
       var job = jobModel(hero), t = job.task, meta = job.meta, pend = job.pend, fu = job.fu;
@@ -2180,6 +2233,7 @@
         else if (job.running) quiet("The clock is running on this one.");
       }
     }
+    rest = !!hero;   // short replies: what belongs to the job stays out, everything after it folds
     actionableTasks().forEach(function (e) {
       var x = e.task;
       if (x.status !== "todo" || (hero && x.id === hero.task.id)) return;
@@ -2193,6 +2247,7 @@
     else act('<button class="btn btn-link bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
     act('<button class="btn btn-link bx-r" type="button" data-help="all">"' + esc(W("how")) + '"</button>');
     act('<button class="btn btn-link bx-r" type="button" data-room="back">"' + esc(W("back_q")) + '"' + chk("milestones, proof, skills, library, " + W("collection").toLowerCase()) + "</button>");
+    if (folded) R.push('<li class="bx-rest"><button class="btn btn-ghost btn-sm" type="button" data-replies-more aria-expanded="' + repliesOpen + '">' + (repliesOpen ? "Fewer" : plural(folded, "other thing") + " you can do") + "</button></li>");
     return R.join("");
   }
 
@@ -2201,6 +2256,7 @@
   // which ones are actually cut off, after the room is drawn.
   // the front-room budget: the host's note and two voices; the rest wait behind "Show N more" (one click)
   var VOICES_SHOWN = 3, voicesOpen = false;
+  function voicesMore(n) { return fill(W("voices_more"), { n: n }); }
   function barLines2HTML(hero) {
     var k = 0, lines = barLines(hero), extra = lines.length - VOICES_SHOWN;
     return lines.map(function (l, i) {
@@ -2213,14 +2269,14 @@
       if (more && !voicesOpen) fresh = false;   // a hidden line doesn't play its entrance
       return '<p class="bx-line' + (fresh ? " is-new" : "") + (foldOpen[key] ? " is-open" : "") + (more ? " is-more" : "") + '"' + (more && !voicesOpen ? " hidden" : "") + ' data-fold="' + esc(key) + '" style="--vc:' + v.c + (fresh ? ";--i:" + (k++) : "") + '" data-ini="' + v.name.replace(/^The /, "").charAt(0).toUpperCase() + '">' +
         inner + "</p>";
-    }).join("") + (extra > 0 ? '<button class="btn btn-link bx-more" type="button" data-voices-more aria-expanded="' + voicesOpen + '">' + (voicesOpen ? "Show fewer" : "Show " + extra + " more") + "</button>" : "");
+    }).join("") + (extra > 0 ? '<button class="btn btn-link bx-more" type="button" data-voices-more aria-expanded="' + voicesOpen + '">' + (voicesOpen ? "Show fewer" : voicesMore(extra)) + "</button>" : "");
   }
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest("[data-voices-more]");
     if (!b) return;
     voicesOpen = !voicesOpen;
     b.closest("[data-slot]").querySelectorAll(".bx-line.is-more").forEach(function (p) { p.hidden = !voicesOpen; });
-    b.textContent = voicesOpen ? "Show fewer" : "Show " + b.closest("[data-slot]").querySelectorAll(".bx-line.is-more").length + " more";
+    b.textContent = voicesOpen ? "Show fewer" : voicesMore(b.closest("[data-slot]").querySelectorAll(".bx-line.is-more").length);
     b.setAttribute("aria-expanded", String(voicesOpen));
     markFolds();
   });
@@ -2408,7 +2464,10 @@
     var tabs = '<div class="bx-tabs" role="group" aria-label="Rooms">' +
       '<button type="button" data-room="front" aria-pressed="' + (room === "front") + '">' + esc(W("front_icon")) + " " + esc(W("front")) + "</button>" +
       '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">' + esc(W("back_icon")) + " " + esc(W("back")) + "</button></div>";
-    var neon = '<button class="btn btn-link bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
+    // lit: tonight's goal is met. A room can style that, and give its host a line for it (lines.goal_met).
+    var met = tonight().mins >= DAY_GOAL_MIN, said = met && room === "front" && LINE("goal_met", "");
+    var neon = '<button class="btn btn-link bx-neon' + (met ? " is-lit" : "") + (subLines(nm).length > 1 ? " rotates" : "") + '" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>" +
+      (said ? '<p class="bx-lit-line"><span class="bx-who">' + esc(W("host")) + "</span> " + esc(said) + "</p>" : "");
     if (room === "back") {
       var list = allBlocks(), each = function (draw, from) { return (from || live).map(draw).join(""); };
       var records = {
@@ -2431,7 +2490,7 @@
       tonight: tonightHTML(), week: weekHTML(), die: cabinetHTML(),
       sign: esc(W(active ? "sign_busy" : "sign_open")),
       clock: active ? "" : esc(hhmm(Date.now())),   // during a block the block card is the one countdown
-      water: glassHTML(),
+      water: glassHTML(), round: roundHTML(),
       // the front-room budget (THEMES.md): the next step, the countdown once, the record at a glance. The finish
       // line, locked tasks and trophies live in the back room, one click away; a second timer is never drawn.
       finish: "", doors: "", shelf: "", timer: "",

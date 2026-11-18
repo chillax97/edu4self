@@ -23,7 +23,7 @@ THEME_ID = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
 # The engine draws these. Required ones must appear exactly once; optional ones at most once.
 SLOTS_REQUIRED = ("name", "rooms", "voices", "job", "replies", "block", "music", "tonight", "week", "die")
-SLOTS_OPTIONAL = ("timer", "finish", "doors", "clock", "sign", "water", "keys", "shelf", "streak")
+SLOTS_OPTIONAL = ("timer", "finish", "doors", "clock", "sign", "water", "round", "keys", "shelf", "streak")
 SLOTS = SLOTS_REQUIRED + SLOTS_OPTIONAL
 
 # The back room is a list of records, so a room arranges it but keeps all of it: every slot is required.
@@ -43,16 +43,19 @@ WORDS = {
     "doors": "Doors that won't open yet", "job": "The job", "note": "Leave a note for the bartender.",
     "how": "How does this place work?", "back_q": "What's in the back room?",
     "glass": "glass", "glasses": "glasses", "sign_open": "OPEN", "sign_busy": "ON AIR",
+    "voices_more": "Show {n} more",
     # the back room: finished dies fill a row, rows fill a tray, all of it kept in the collection
     "collection": "The die case", "row": "row", "rows": "rows", "tray": "tray", "trays": "trays",
 }
 # Lines a room may say its own way (the defaults are the bar's, in app.js occasionLines)
 LINES = ("play", "evening", "friday", "silent", "newyear", "nye", "halloween", "valentine", "music_quiet", "music_none",
-         "water", "hydrated", "row_full", "row_full_body", "die_full_body")
+         "water", "hydrated", "row_full", "row_full_body", "die_full_body", "goal_met", "die_next")
+REPLIES = ("script", "short")   # script: numbered [lines], all shown. short: plain words, the job's own first, the rest folded
 VOICES = ("bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia", "critic", "regular", "jukebox", "you")
 FONTS = {"sans", "serif", "mono", "head", "neon"}   # bundled families, see app.css
 SCAPES = ("night", "rain", "noise")
 PALETTE = ("bg", "bg2", "surface", "surface2", "ink", "ink2", "muted", "line", "line2", "accent", "accent2", "accent_ink")
+PANEL = ("surface", "surface2", "ink", "ink2", "muted", "line", "line2", "accent", "accent_ink")
 COLOR = re.compile(r"^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+\s*)?\))$")
 # a CSS background built from colours and gradients only: no url(), no functions beyond these
 BACKDROP = re.compile(r"^[\s#%(),./0-9a-zA-Z-]*$")
@@ -217,6 +220,32 @@ def clean_art(text):
     return out, p.errors
 
 
+def clean_frame(raw, errors):
+    """The page around the room: colours for its panels (Settings, dialogs) and a quieter top bar. All optional."""
+    out = {}
+    if raw is None:
+        return out
+    if not isinstance(raw, dict):
+        errors.append("frame must be an object with topbar and panel")
+        return out
+    for k in raw:
+        if k not in ("topbar", "panel"):
+            errors.append("unknown frame key %r (use topbar, panel)" % k)
+    if "topbar" in raw:
+        if raw["topbar"] == "quiet":
+            out["topbar"] = "quiet"
+        else:
+            errors.append('frame.topbar can only be "quiet"')
+    panel = raw.get("panel")
+    if panel is not None:
+        bad = not isinstance(panel, dict) or sorted(panel) != sorted(PANEL)
+        if bad or not all(isinstance(v, str) and COLOR.match(v.strip()) for v in panel.values()):
+            errors.append("frame.panel needs these colours, as #rrggbb or rgb()/rgba(): %s" % ", ".join(PANEL))
+        else:
+            out["panel"] = {k: v.strip() for k, v in panel.items()}
+    return out
+
+
 def clean_keepsakes(raw, errors):
     """The theme's trophies, defaults filled in for anything it leaves out."""
     if raw is None:
@@ -246,6 +275,11 @@ def clean_keepsakes(raw, errors):
         art, errs = clean_art(d.get("art"))
         errors.extend("keepsakes.%s.art: %s" % (k, x) for x in errs)
         e["art"] = art if not errs else DEFAULT_KEEPSAKES[k]["art"]
+        if k == "day" and d.get("top") is not None:     # seen from above: this week's trophies lying in the front room
+            top, errs = clean_art(d.get("top"))
+            errors.extend("keepsakes.day.top: %s" % x for x in errs)
+            if not errs:
+                e["top"] = top
         out[k] = e
     lines = raw.get("lines") or {}
     for k, v in (lines.items() if isinstance(lines, dict) else []):
@@ -349,6 +383,19 @@ def check_css(css, scoped=True):
     return errors[:20]
 
 
+def _selectors(prelude):
+    """A selector list split at its top-level commas, so :is(.a, .b) stays whole."""
+    out, depth, cur = [], 0, ""
+    for ch in prelude:
+        depth += (ch in "([") - (ch in ")]")
+        if ch == "," and depth == 0:
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    return out + [cur]
+
+
 def _check_rules(rules, errors):
     for prelude, body in rules:
         if body is None:
@@ -363,7 +410,7 @@ def _check_rules(rules, errors):
             else:
                 errors.append("%s isn't allowed in theme.css" % at)
             continue
-        for sel in prelude.split(","):
+        for sel in _selectors(prelude):
             sel = sel.strip()
             if not SCOPED.match(sel):
                 errors.append("selector %r must start with .room (a theme styles only its room)" % sel[:60])
@@ -462,6 +509,11 @@ def clean_meta(raw, tid):
     if raw.get("scape", "night") not in SCAPES:
         errors.append("scape must be one of %s" % ", ".join(SCAPES))
     meta["scape"] = raw.get("scape", "night") if raw.get("scape", "night") in SCAPES else "night"
+    meta["frame"] = clean_frame(raw.get("frame"), errors)
+    meta["replies"] = raw.get("replies", "script")
+    if meta["replies"] not in REPLIES:
+        errors.append("replies must be one of %s" % ", ".join(REPLIES))
+        meta["replies"] = "script"
     meta["keepsakes"] = clean_keepsakes(raw.get("keepsakes"), errors)
     return meta, errors
 

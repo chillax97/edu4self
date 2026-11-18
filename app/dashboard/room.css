@@ -144,12 +144,17 @@ body.v-bar .card { background: rgba(26,20,17,.92); }
 body.v-bar .card-title { font-family: var(--bx-head); letter-spacing: .14em; }
 body.v-bar .ms-current h3, body.v-bar .topic-card h3 { font-family: var(--bx-head); text-transform: uppercase; letter-spacing: .02em; }
 
-/* one column on a phone: the sign, the job and its replies, then the jukebox (its record still, the
-   top-bar countdown stands in while the jukebox is off screen), the record, the talk after them */
-
 /* bar view: the jukebox's music player */
 .bx-music { margin-top: var(--s-4); padding: var(--s-3); border: 1px solid var(--bx-line); background: var(--bx-music-bg); display: grid; gap: var(--s-2); }
 .bx-mu-head { display: flex; align-items: center; gap: var(--s-2); }
+/* a theme can quiet the top bar (theme.json "frame"): the one primary action is on the page */
+body.v-bar.frame-quiet .topbar { background: color-mix(in srgb, var(--bg) 62%, transparent); }
+body.v-bar.frame-quiet .brand-mark { background: none; color: var(--bar-amber); box-shadow: inset 0 0 0 1px currentColor; }
+body.v-bar.frame-quiet .brand-word { font-weight: 500; color: var(--ink-2); }
+body.v-bar.frame-quiet .pill { padding: 0; border: 0; background: none; color: var(--muted); }
+body.v-bar.frame-quiet .topbar .btn-primary, body.v-bar.frame-quiet .topbar-actions .btn { border-color: transparent; background: none; box-shadow: none; color: var(--ink); }
+body.v-bar.frame-quiet .topbar-actions .btn:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+
 .bx-mu-play { width: 38px; height: 38px; flex: none; border-radius: 50%; border: 0; background: var(--primary); color: var(--primary-ink); font: 700 var(--t-sm) var(--bx-mono); cursor: pointer; }
 .bx-mu-play:focus-visible { outline: 2px solid var(--bar-cream); outline-offset: 2px; }
 .bx-mu-title { min-width: 0; flex: 1; line-height: 1.25; }
@@ -240,11 +245,6 @@ body:not(.blk-on) .bx-music.is-playing .bx-eq i { animation: bx-eq .9s ease-in-o
 @keyframes rm-ring { 10% { transform: rotate(-14deg); } 25% { transform: rotate(11deg); } 40% { transform: rotate(-7deg); } 55% { transform: rotate(4deg); } 70% { transform: rotate(-2deg); } }
 .room[data-event~="grade"] .bx-log .bx-line:first-child { box-shadow: inset 3px 0 0 var(--c-orange-60-2); transition: box-shadow 1.6s ease-out; }
 
-/* ---------- a cap set on the counter when the goal is met, then on to the shelf */
-.bx-cap { position: absolute; left: 106px; bottom: 54px; width: 16px; height: 5px; border-radius: var(--r-sm) var(--r-sm) var(--r-sm) var(--r-sm); background: repeating-linear-gradient(90deg, var(--c-red-55) 0 2px, var(--c-red-70) 2px 3px); opacity: 0; }
-.room[data-event~="goal"] .bx-cap { animation: rm-cap-drop 1.4s cubic-bezier(.3,.8,.3,1) .5s; }
-@keyframes rm-cap-drop { 0% { opacity: 0; transform: translateY(-40px) rotate(-20deg); } 30% { opacity: 1; transform: translateY(0) rotate(0); } 38% { transform: translateY(-4px); } 46%, 80% { transform: translateY(0); opacity: 1; } 100% { opacity: 0; transform: translateX(20px); } }
-.blk-on .room .bx-tender .rag, .blk-on .room .bx-bottles i, .blk-on .room .bx-neon,
 .blk-on .room .bx-sign { color: var(--c-red-90); border-color: var(--c-red-90); text-shadow: 0 0 8px var(--c-red-60); box-shadow: 0 0 10px var(--c-red-60), inset 0 0 6px var(--c-red-60); animation: none; }
 
 /* ---------- voices: a new line arrives like someone leaning in */

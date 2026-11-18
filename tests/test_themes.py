@@ -62,6 +62,22 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(server.DEFAULT_CONFIG["goals"], {"day_minutes": 60, "week_days": 4})
 
 
+class FrameTest(unittest.TestCase):
+    PANEL = {k: "#123456" for k in themes.PANEL}
+
+    def test_a_room_can_quiet_the_top_bar_and_colour_its_panels(self):
+        errs = []
+        self.assertEqual(themes.clean_frame({"topbar": "quiet", "panel": self.PANEL}, errs), {"topbar": "quiet", "panel": self.PANEL})
+        self.assertEqual(errs, [])
+        self.assertEqual(themes.clean_frame(None, errs), {})
+
+    def test_anything_else_is_refused(self):
+        for bad in ("x", {"topbar": "loud"}, {"nav": 1}, {"panel": {"ink": "#000"}}, {"panel": dict(self.PANEL, ink="red;}body{display:none")}):
+            errs = []
+            themes.clean_frame(bad, errs)
+            self.assertTrue(errs, bad)
+
+
 class BackRoomTest(unittest.TestCase):
     ALL = "".join('<div data-slot="%s"></div>' % s for s in themes.BACK_SLOTS)
 
@@ -123,6 +139,8 @@ class CssTest(unittest.TestCase):
     def test_room_css_stays_in_the_room_and_loads_nothing(self):
         self.assertEqual(themes.check_css(".room .a, .room:hover b { color: red } @media (max-width: 9px) { .room p { x: y } } "
                                           "@keyframes k { from { opacity: 0 } } .room i { background: url('data:image/svg+xml;utf8,<svg/>') }"), [])
+        self.assertEqual(themes.check_css(".room :is(.a, .b) i, .room p:not(.c, .d) { color: red }"), [])
+        self.assertTrue(themes.check_css(".room :is(.a, .b), .topbar { color: red }"), "the list is still checked")
         for bad in ("body { color: red }", ".roomy { x: y }", "@media (x) { .topbar { display: none } }",
                     "@import url(x.css);", "@font-face { font-family: x; src: url(x.woff) }",
                     ".room i { background: url(https://example.com/x.png) }", ".room i { background: url(/api/state) }",
