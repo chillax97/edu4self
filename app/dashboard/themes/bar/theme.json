@@ -3,6 +3,9 @@
   "icon": "🍸",
   "about": "A dim bar where your skills talk about tonight's work. A jukebox, a bartender, a neon sign.",
   "dark": true,
+  "palette": { "bg": "#120e0c", "bg2": "#1f1915", "surface": "#1a1411", "surface2": "#231b16", "ink": "#f1e8da", "ink2": "#ddd0bd", "muted": "#b3a690",
+    "line": "#3a2e26", "line2": "#4d3e33", "accent": "#ffb36b", "accent2": "#ffe9cf" },
+  "backdrop": "radial-gradient(ellipse 40% 50% at 8% 22%, rgba(212,107,47,.32), transparent 70%), radial-gradient(ellipse 38% 45% at 92% 18%, rgba(24,166,141,.22), transparent 70%), radial-gradient(ellipse 45% 50% at 30% 100%, rgba(181,23,158,.22), transparent 70%), #120e0c",
   "scape": "night",
   "fonts": {
     "head": "head",
