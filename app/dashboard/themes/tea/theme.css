@@ -7,7 +7,7 @@
 .room .bx-neon { font: italic 400 var(--t-xl)/1.05 var(--serif); color: #2d261d; text-shadow: none; animation: none; }
 .room .bx-neon small { font: 600 var(--t-xs) var(--sans); color: var(--te-green); letter-spacing: .2em; }
 .room .bx-neon:focus-visible { outline-color: var(--te-green); }
-.room .te-noren { margin-left: auto; font: 600 var(--t-xs) var(--sans); letter-spacing: .2em; color: var(--te-paper); background: var(--te-red); padding: var(--s-1) var(--s-2); border-radius: 2px; }
+.room .te-noren { margin-left: auto; font: 600 var(--t-xs) var(--sans); letter-spacing: .2em; color: var(--te-paper); background: var(--te-red); padding: var(--s-1) var(--s-2); border-radius: var(--r-sm); }
 .room .te-time { font: 600 var(--t-sm) var(--bx-mono); color: #2d261d; font-variant-numeric: tabular-nums; }
 .room .bx-tabs { background: #e9dfcd; }
 .room .bx-tabs button { color: #4b4033; }
@@ -15,8 +15,8 @@
 .room .bx-mono, .room .bx-chk { color: #5e5242; }
 
 .room .te-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-4); padding: var(--s-4); border-bottom: 8px solid var(--te-wood);
-  background: repeating-linear-gradient(90deg, rgba(138,106,68,.06) 0 2px, transparent 2px 60px), #f6efe2; border-radius: 10px 10px 0 0; }
-.room .te-cup { background: var(--te-paper); border: 1px solid #d9ccb4; border-radius: 12px 12px 26px 26px; padding: var(--s-3) var(--s-4); }
+  background: repeating-linear-gradient(90deg, rgba(138,106,68,.06) 0 2px, transparent 2px 60px), #f6efe2; border-radius: var(--r-md) var(--r-md) 0 0; }
+.room .te-cup { background: var(--te-paper); border: 1px solid #d9ccb4; border-radius: var(--r-lg) var(--r-lg) var(--r-lg) var(--r-lg); padding: var(--s-3) var(--s-4); }
 .room .te-cup.bx-cab { background: var(--te-paper); border-color: #d9ccb4; }
 .room .bx-pips i { background: #efe6d4; border-color: #c9b998; color: #6e6250; }
 .room .bx-pips.h i.on { background: var(--te-green); border-color: #4a6424; }
@@ -29,7 +29,7 @@
 .room .te-room { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 290px; gap: var(--s-6); }
 .room .te-scroll { align-self: start; background: var(--te-paper); border-left: 1px solid #e3d8c4; border-right: 1px solid #e3d8c4; padding: 0 var(--s-6); display: flex; flex-direction: column; gap: var(--s-3);
   box-shadow: 0 18px 40px -26px rgba(60,40,20,.5); font: var(--t-md)/1.6 var(--serif); }
-.room .te-rod { height: 14px; margin: 0 calc(var(--s-10) * -1); border-radius: 7px; background: linear-gradient(#a07a4c, #6e4f2c); }
+.room .te-rod { height: 14px; margin: 0 calc(var(--s-10) * -1); border-radius: var(--r-md); background: linear-gradient(#a07a4c, #6e4f2c); }
 .room .te-scroll .bx-job { border-left: 0; background: none; padding: var(--s-2) 0 0; }
 .room .te-scroll .bx-job h2 { font: 400 var(--t-xl)/1.15 var(--serif); text-transform: none; color: #2d261d; }
 .room .te-scroll .bx-job p, .room .te-scroll .bx-meta { color: #4b4033; }
@@ -52,7 +52,7 @@
 .room .te-tray { position: relative; height: 64px; }
 .room .te-tray .bx-glass { left: 8px; right: auto; bottom: 6px; border-color: #8a6a44; background: rgba(93,122,46,.06); }
 .room .te-side { display: grid; gap: var(--s-3); align-content: start; }
-.room .te-side .bx-juke { border-radius: 14px; background: #f6efe2; border: 1px solid #c9b998; padding: var(--s-3); }
+.room .te-side .bx-juke { border-radius: var(--r-lg); background: #f6efe2; border: 1px solid #c9b998; padding: var(--s-3); }
 .room .te-side .bx-juke::before, .room .te-side .bx-juke::after { display: none; }
 .room .te-k { margin: 0 0 var(--s-2); font: italic 600 var(--t-sm) var(--serif); color: var(--te-green); }
 .room .bx-juke .blk-opt { background: #fbf6ec !important; color: #2d261d !important; border-color: #c9b998 !important; }
@@ -61,7 +61,7 @@
 .room .bx-juke .blk-clock { color: #2d261d !important; }
 .room .bx-music, .room .bx-music * { color: #2d261d; }
 .room .bx-music button { background: #fbf6ec; border-color: #c9b998; }
-.room .te-note { background: var(--te-paper); border: 1px solid #e3d8c4; border-radius: 8px; padding: var(--s-3) var(--s-3); }
+.room .te-note { background: var(--te-paper); border: 1px solid #e3d8c4; border-radius: var(--r-md); padding: var(--s-3) var(--s-3); }
 .room .finish .card-title, .room .bx-doors .bx-k { color: var(--te-green); }
 .room .finish .card-sub, .room .finish-eta, .room .bx-doors li b, .room .bx-doors li .bx-chk { color: #4b4033; }
 
