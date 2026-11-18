@@ -26,6 +26,12 @@ SLOTS_REQUIRED = ("name", "rooms", "voices", "job", "replies", "block", "music",
 SLOTS_OPTIONAL = ("timer", "finish", "doors", "clock", "sign", "water", "keys", "shelf", "streak")
 SLOTS = SLOTS_REQUIRED + SLOTS_OPTIONAL
 
+# The back room is a list of records, so a room arranges it but keeps all of it: every slot is required.
+BACK_SLOTS = ("name", "rooms", "finish", "doors", "shelf", "cluster", "milestones", "gates", "evidence",
+              "calibration", "skills", "topics", "linked")
+DEFAULT_BACK = ('<div class="bx-backroom"><div class="bx-backhead"><div data-slot="name"></div><div data-slot="rooms"></div></div>'
+                '<div class="bx-back">' + "".join('<div data-slot="%s"></div>' % s for s in BACK_SLOTS[2:]) + "</div></div>")
+
 # Words a theme may rename. Core learning words (Lesson, Submit, Grade, minutes) are never renamed.
 # Rule from docs/THEMES.md: fit the room, but stay understood at a glance.
 WORDS = {
@@ -75,9 +81,10 @@ REF = re.compile(r"^url\(#t-[a-z0-9-]+\)$")   # fill="url(#t-glow)" inside the t
 class _Sanitizer(HTMLParser):
     """Rebuilds the layout from allowed parts. Anything else is an error, so authors learn what to fix."""
 
-    def __init__(self):
+    def __init__(self, allowed=SLOTS):
         super().__init__(convert_charrefs=True)
         self.out, self.errors, self.stack, self.slots, self.svg = [], [], [], [], 0
+        self.allowed = allowed
 
     def err(self, msg):
         if len(self.errors) < 20:
@@ -108,8 +115,8 @@ class _Sanitizer(HTMLParser):
                 elif name == "role" and value not in ROLES:
                     self.err("role=%s isn't allowed" % value)
                 elif name == "data-slot":
-                    if value not in SLOTS:
-                        self.err("unknown slot %r (slots: %s)" % (value, ", ".join(SLOTS)))
+                    if value not in self.allowed:
+                        self.err("unknown slot %r (slots: %s)" % (value, ", ".join(self.allowed)))
                     self.slots.append(value)
                     kept.append((name, value))
                 else:
@@ -249,23 +256,28 @@ def clean_keepsakes(raw, errors):
     return out
 
 
-def clean_layout(text):
+def clean_layout(text, name="layout.html", allowed=SLOTS, required=SLOTS_REQUIRED):
     """(clean html, [errors]). The page only ever receives the clean version."""
     if len(text.encode("utf-8")) > LIMIT:
-        return "", ["layout.html is over 64 KB"]
-    p = _Sanitizer()
+        return "", ["%s is over 64 KB" % name]
+    p = _Sanitizer(allowed)
     p.feed(text)
     p.close()
     while p.stack:
         p.out.append("</%s>" % p.stack.pop())
     errors = p.errors
-    for s in SLOTS_REQUIRED:
+    for s in required:
         if s not in p.slots:
-            errors.append("missing the %r slot (every room needs: %s)" % (s, ", ".join(SLOTS_REQUIRED)))
+            errors.append("missing the %r slot (every room needs: %s)" % (s, ", ".join(required)))
     for s in set(p.slots):
         if p.slots.count(s) > 1:
             errors.append("the %r slot appears %d times; once only" % (s, p.slots.count(s)))
     return "".join(p.out), errors
+
+
+def clean_back(text):
+    """The optional back.html: the same rules as layout.html, with the back room's slots."""
+    return clean_layout(text, "back.html", BACK_SLOTS, BACK_SLOTS)
 
 
 def _strip_comments(css):
@@ -460,8 +472,8 @@ def _read(path):
 
 
 def load(folder, tid):
-    """{id, meta, layout, css, errors}. A theme with errors is listed but never applied."""
-    out = {"id": tid, "meta": {"id": tid, "name": tid}, "layout": "", "css": "", "lesson_css": "", "errors": []}
+    """{id, meta, layout, back, css, errors}. A theme with errors is listed but never applied."""
+    out = {"id": tid, "meta": {"id": tid, "name": tid}, "layout": "", "back": DEFAULT_BACK, "css": "", "lesson_css": "", "errors": []}
     if not THEME_ID.match(tid):
         out["errors"].append("theme folder names are lowercase letters, digits and - (max 32)")
         return out
@@ -486,7 +498,12 @@ def load(folder, tid):
         lcss = _read(lp)
         e4 = check_css(lcss, scoped=False)
         out["lesson_css"] = lcss if not e4 else ""
+    e5 = []
+    bp = os.path.join(folder, "back.html")
+    if os.path.isfile(bp):
+        out["back"], e5 = clean_back(_read(bp))
     out["errors"] = (["theme.json: " + e for e in e1] + ["layout.html: " + e for e in e2] +
+                     ["back.html: " + e for e in e5] +
                      ["theme.css: " + e for e in e3] + ["lesson.css: " + e for e in e4])
     return out
 

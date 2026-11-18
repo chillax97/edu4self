@@ -299,6 +299,34 @@ test("a broken room of your own shows its problem in Settings and can't be picke
   fs.rmSync(d, { recursive: true, force: true });
 });
 
+test("a room can arrange its back room with back.html and every record still shows", async () => {
+  const d = path.join(v.vault, "themes", "bar"), src = path.join(ENGINE, "app", "dashboard", "themes", "bar");
+  const order = ["cluster", "shelf", "finish", "doors", "milestones", "gates", "evidence", "calibration", "skills", "topics", "linked"];
+  setConfig({ theme: "bar" });
+  const titles = async () => {
+    const page = await openPage(browser, server.url, { view: "bar" });
+    await page.waitForSelector(".room.t-bar", { timeout: 5000 });
+    await page.click('[data-room="back"]');
+    await page.waitForSelector(".bx-back .cluster");
+    const out = await page.$$eval(".bx-back > *", (els) => els.map((e) => e.className));
+    assert.deepEqual(page.errors, []);
+    await closePage(page);
+    return out;
+  };
+  const standard = await titles();
+  assert.match(standard[0], /bx-finish/);
+  fs.cpSync(src, d, { recursive: true });
+  fs.writeFileSync(path.join(d, "back.html"), '<div class="bx-backroom"><div class="bx-backhead"><div data-slot="name"></div><div data-slot="rooms"></div></div><div class="bx-back">' +
+    order.map((s) => `<div data-slot="${s}"></div>`).join("") + "</div></div>");
+  try {
+    const mine = await titles();
+    assert.match(mine[0], /bx-cluster/);
+    assert.deepEqual([...mine].sort(), [...standard].sort());   // moved, and nothing lost
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true });
+  }
+});
+
 test("a bar of your own replaces the built-in: its words name the back room, its voice names show in Settings", async () => {
   const back = async (page) => {
     await page.click('[data-room="back"]');

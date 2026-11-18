@@ -1664,7 +1664,7 @@ class Handler(BaseHTTPRequestHandler):
             if t["errors"]:   # a broken theme is never applied; Settings shows why
                 return self.send_json(422, {"error": "this theme has problems", "errors": t["errors"], "meta": t["meta"]})
             meta = dict(t["meta"], words=dict(themes.WORDS, **t["meta"]["words"]))   # every word, defaults filled in
-            return self.send_json(200, {"meta": meta, "layout": t["layout"], "css": t["css"]})
+            return self.send_json(200, {"meta": meta, "layout": t["layout"], "back": t["back"], "css": t["css"]})
         if route == "/theme/lesson.css":
             return self.send_text("text/css; charset=utf-8", active_lesson_css())
         if route == "/api/state":

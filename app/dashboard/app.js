@@ -2410,14 +2410,21 @@
       '<button type="button" data-room="back" aria-pressed="' + (room === "back") + '">' + esc(W("back_icon")) + " " + esc(W("back")) + "</button></div>";
     var neon = '<button class="btn btn-link bx-neon" type="button" data-barname title="Click for another name">' + esc(nm[0]) + subHTML(nm) + "</button>";
     if (room === "back") {
-      var list = allBlocks();
-      return '<div class="room t-' + esc(THEME.meta.id) + ' is-back' + (active ? " is-running" : "") + '"><div class="bx-backroom">' + '<div class="bx-backhead">' + neon + tabs + "</div>" +
-        '<div class="bx-back">' + (topics[0] ? '<section class="card bx-finish">' + renderFinishLine(topics[0]) + "</section>" : "") + doorsHTML() + shelfCard("The shelf") +
-          (list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "") +
-          live.map(renderMilestones).join("") + renderGates(live) +
-          live.map(renderEvidence).join("") + renderCalibration() + live.map(renderSkills).join("") +
-          topics.map(renderTopic).join("") + renderLinked() +
-        '</div></div></div>';
+      var list = allBlocks(), each = function (draw, from) { return (from || live).map(draw).join(""); };
+      var records = {
+        name: neon, rooms: tabs,
+        finish: topics[0] ? '<section class="card bx-finish">' + renderFinishLine(topics[0]) + "</section>" : "",
+        doors: doorsHTML(), shelf: shelfCard("The shelf"),
+        cluster: list.length ? '<section class="card bx-cluster">' + clusterHTML(list) + "</section>" : "",
+        milestones: each(renderMilestones), gates: renderGates(live), evidence: each(renderEvidence),
+        calibration: renderCalibration(), skills: each(renderSkills), topics: each(renderTopic, topics), linked: renderLinked()
+      };
+      var plan = document.createElement("template");
+      plan.innerHTML = THEME.back;   // cleaned by the server, like the layout. A record takes its slot's place.
+      plan.content.querySelectorAll("[data-slot]").forEach(function (el) { el.outerHTML = records[el.dataset.slot] || ""; });
+      var shell = document.createElement("div");
+      shell.appendChild(plan.content);
+      return '<div class="room t-' + esc(THEME.meta.id) + ' is-back' + (active ? " is-running" : "") + '">' + shell.innerHTML + "</div>";
     }
     var fill = {
       name: neon, rooms: tabs,

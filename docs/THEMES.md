@@ -96,6 +96,7 @@ Each step ends with how you know it's done.
 |---|---|---|
 | `theme.json` | yes | the data: names, colours, words, voices, jokes, sound |
 | `layout.html` | yes | the room's markup, built around slots |
+| `back.html` | no | how the back room is arranged; without it the records follow the standard order |
 | `theme.css` | yes | the room's styles, scoped to `.room` |
 | `lesson.css` | no | how lesson pages look in this room; Settings → "Lessons wear the room's look" turns it off |
 
@@ -236,6 +237,13 @@ em strong small br hr kbd s u sup sub`, and inline SVG (shapes, `g`, `text`, gra
 masks, simple filters). Attributes: `class`, `data-slot`, `data-part`, `aria-hidden`, `aria-label`, `role`, `title`, and
 SVG's drawing attributes. Inside SVG, `id` is allowed when it starts with `t-`, and `url(#t-…)` may
 refer to it.
+
+### back.html
+
+The same rules as `layout.html`. The back room's records are all kept, so every slot is required, once:
+`name`, `rooms`, `finish`, `doors`, `shelf`, `cluster`, `milestones`, `gates`, `evidence`, `calibration`,
+`skills`, `topics`, `linked`. Each record takes the place of its slot element, and an empty record (no
+locked tasks, say) leaves nothing behind. Wrap them in whatever the room needs.
 
 ### theme.css
 

@@ -62,6 +62,33 @@ class BuiltinTest(unittest.TestCase):
         self.assertEqual(server.DEFAULT_CONFIG["goals"], {"day_minutes": 60, "week_days": 4})
 
 
+class BackRoomTest(unittest.TestCase):
+    ALL = "".join('<div data-slot="%s"></div>' % s for s in themes.BACK_SLOTS)
+
+    def test_the_default_plan_holds_every_record_once(self):
+        html, errs = themes.clean_back(themes.DEFAULT_BACK)
+        self.assertEqual(errs, [])
+        self.assertEqual(html, themes.DEFAULT_BACK)
+
+    def test_a_room_can_rearrange_the_records_but_not_drop_one(self):
+        self.assertEqual(themes.clean_back("<section>" + self.ALL + "</section>")[1], [])
+        errs = themes.clean_back(self.ALL.replace('<div data-slot="evidence"></div>', ""))[1]
+        self.assertTrue(any("'evidence'" in e for e in errs), errs)
+
+    def test_front_room_slots_and_scripts_are_refused(self):
+        self.assertTrue(any("unknown slot 'job'" in e for e in themes.clean_back(self.ALL + '<div data-slot="job"></div>')[1]))
+        self.assertTrue(any("<script>" in e for e in themes.clean_back(self.ALL + "<script>x</script>")[1]))
+        self.assertTrue(any("2 times" in e for e in themes.clean_back(self.ALL + '<div data-slot="shelf"></div>')[1]))
+
+    def test_load_uses_the_default_or_reports_a_broken_file(self):
+        with tempfile.TemporaryDirectory() as base:
+            d = make_theme(base, "plain")
+            self.assertEqual(themes.load(d, "plain")["back"], themes.DEFAULT_BACK)
+            with open(os.path.join(d, "back.html"), "w", encoding="utf-8") as fh:
+                fh.write('<div data-slot="name"></div>')
+            self.assertTrue(any(e.startswith("back.html: missing") for e in themes.load(d, "plain")["errors"]))
+
+
 class LayoutTest(unittest.TestCase):
     def errors(self, extra):
         return themes.clean_layout(SLOTS + extra)[1]
