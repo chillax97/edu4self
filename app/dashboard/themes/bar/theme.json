@@ -26,10 +26,11 @@
   },
   "lines": {
     "goal_met": "That's tonight's goal. I switched the sign on for you.",
-    "die_next": "About {time} more at the bar earns your next die.",
+    "die_next": "About {time} more at the bar puts a new trophy in the back room.",
     "week_nocap": "{hit} of {goal} nights at the bar. A cap takes {minutes} min in one night.",
     "tonight_left": "{left} min to tonight's cap.",
     "tonight_met": "Tonight's cap is in the jar.",
+    "tonight_none": "The stool's yours. One block starts the pour.",
     "record_near": "One more night ties the house record of {record}.",
     "record_tie": "You've tied the house record: {n} nights. One more night and it's yours.",
     "record_new": "A new house record: {n} nights running. It grows every night you come in."

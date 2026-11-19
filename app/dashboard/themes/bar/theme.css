@@ -168,21 +168,21 @@
 /* this week's caps, left where they fell. A cap is a crimped disc; a day studied is a ring; a bare day a dashed ring. Every place keeps its letter */
 .room .bx-k { font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .14em; color: var(--cream2); }
 .room .bx-mono { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
-.room .bq-caps { flex: 1; display: flex; flex-direction: column; padding: 0 var(--s-1); }
-.room .bq-caps .bx-pips.m { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; min-height: 88px; margin: var(--s-2) 0; align-items: start; }
+.room .bq-caps { display: flex; flex-direction: column; padding: 0 var(--s-1); }
+.room .bq-caps .bx-pips.m { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; min-height: 64px; margin: var(--s-2) 0 var(--s-1); align-items: start; }
 .room .bq-caps .bx-pips.m i { position: relative; display: block; width: 40px; height: 40px; margin: 0; background: none; border: 0; outline: 0; font: 600 var(--t-xs)/40px var(--f-ui); font-style: normal; text-align: center; color: var(--cream3); animation: none; }
-.room .bq-caps .bx-pips.m i:nth-child(1) { transform: translate(0, 28px); }
-.room .bq-caps .bx-pips.m i:nth-child(2) { transform: translate(-2px, 4px); }
-.room .bq-caps .bx-pips.m i:nth-child(3) { transform: translate(-6px, 40px); }
-.room .bq-caps .bx-pips.m i:nth-child(4) { transform: translate(-4px, 10px); }
-.room .bq-caps .bx-pips.m i:nth-child(5) { transform: translate(-8px, 34px); }
+.room .bq-caps .bx-pips.m i:nth-child(1) { transform: translate(0, 16px); }
+.room .bq-caps .bx-pips.m i:nth-child(2) { transform: translate(-2px, 2px); }
+.room .bq-caps .bx-pips.m i:nth-child(3) { transform: translate(-6px, 22px); }
+.room .bq-caps .bx-pips.m i:nth-child(4) { transform: translate(-4px, 6px); }
+.room .bq-caps .bx-pips.m i:nth-child(5) { transform: translate(-8px, 20px); }
 .room .bq-caps .bx-pips.m i:nth-child(6) { transform: translate(-6px, 0); }
-.room .bq-caps .bx-pips.m i:nth-child(7) { transform: translate(-10px, 24px); }
+.room .bq-caps .bx-pips.m i:nth-child(7) { transform: translate(-10px, 14px); }
 .room .bq-caps .bx-pips.m i::before { content: ""; position: absolute; inset: 4px; box-sizing: border-box; border-radius: 50%; border: 1px dashed rgba(244,232,212,.3); background: none; }
-/* the nights: a place set (still to come, dashed), a coaster ring (studied, short of a cap), bare wood (missed:
-   no ring, the letter faint), a cap (won), and tonight in a thick brass ring with its letter in bold */
-.room .bq-caps .bx-pips.m i.on::before { border: 1px solid rgba(244,232,212,.6); }
-.room .bq-caps .bx-pips.m i.on::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 1px solid rgba(244,232,212,.32); }
+/* the nights: a place set (still to come: an empty dashed ring), a ring poured as far as the night got (studied,
+   short of a cap: amber up to its minutes), bare wood (missed: no ring, the letter struck), a cap (won), and
+   tonight in a thick brass ring with its letter in bold */
+.room .bq-caps .bx-pips.m i.on::before { border: 1px solid rgba(240,196,110,.75); background: linear-gradient(to top, rgba(240,196,110,.62) calc(var(--f, 0) * 100%), rgba(240,196,110,.08) 0); }
 .room .bq-caps .bx-pips.m i.is-past:not(.on)::before { display: none; }
 .room .bq-caps .bx-pips.m i.is-past:not(.on) .bx-d { opacity: .75; text-decoration: line-through; text-decoration-color: rgba(244,232,212,.45); }
 .room .bq-caps .bx-pips.m i.is-today::before { border: 2px solid var(--brass); inset: 2px; }
@@ -200,9 +200,9 @@
    It moves once, when a block ends; a met goal foams once. Nothing here loops. */
 .room .bq-tonight { display: grid; gap: var(--s-2); padding: var(--s-4); border-radius: var(--r-md); background: rgba(201,161,95,.06); box-shadow: inset 0 0 0 1px rgba(201,161,95,.24); }
 .room .bq-tonight .bx-k { order: 1; }
-.room .bq-tonight .bx-mono { order: 2; margin: 0; font: 400 var(--t-sm)/1 var(--f-ui); color: var(--cream2); }
-.room .bq-tonight .bx-now { margin-right: var(--s-1); font: 400 var(--t-xl)/1 var(--f-read); color: var(--cream); }
-.room .bq-tonight .bx-pips.h { order: 3; display: flex; gap: 3px; height: 14px; margin: var(--s-1) 0 0; }
+.room .bq-tonight .bx-mono { order: 4; margin: 0; font: 400 var(--t-sm)/1.3 var(--f-ui); color: var(--cream2); }
+.room .bq-tonight .bx-now { font: 600 var(--t-sm)/1 var(--f-ui); color: var(--cream); }
+.room .bq-tonight .bx-pips.h { order: 3; display: flex; gap: 3px; height: 14px; margin: 0; }
 .room .bq-tonight .bx-pips.h i, .room .bq-tonight .bx-pips.h i.on:last-child { position: relative; flex: var(--w) 1 0; width: auto; height: 100%; margin: 0; overflow: hidden; transform: none; border: 0; border-radius: 2px; background: rgba(244,232,212,.08); box-shadow: inset 0 0 0 1px rgba(244,232,212,.2); animation: none; }
 .room .bq-tonight .bx-pips.h i::before { content: ""; position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--f)); background: linear-gradient(#f0c46e, #c98a2b); box-shadow: inset 0 2px 0 rgba(255,246,222,.55); }
 .room .bq-tonight .bx-pips.h i::after, .room .bq-tonight .bx-pips.h i[data-new]::after { content: none; }
@@ -210,27 +210,30 @@
 @keyframes bq-pour { from { transform: scaleX(var(--f0, 0)); } }
 .room[data-event~="goal"] .bq-tonight .bx-pips.h i { animation: bq-foam .6s ease-out both; animation-delay: calc(var(--k, 0) * 55ms); }
 @keyframes bq-foam { 40% { filter: brightness(1.35); } }
-.room .bq-tonight .bx-togo { order: 4; margin: 0; font: italic 400 var(--t-md)/1.35 var(--f-read); color: var(--cream); }
+.room .bq-tonight .bx-togo { order: 2; margin: 0; font: 400 var(--t-lg)/1.2 var(--f-read); color: var(--cream); text-wrap: balance; }
+.room .bq-tonight .bx-left { font: 400 var(--t-xl)/1 var(--f-read); }
+.room .bq-tonight .bx-togo.is-met { color: #f0c46e; }
+/* before the first block: no "0 of", just the way in */
+.room .bq-tonight .bx-invite { order: 4; margin: 0; font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--cream2); }
+.room .bq-tonight:has(.bx-invite) .bx-mono { display: none; }
 @media (prefers-reduced-motion: reduce) { .room .bq-tonight .bx-pips.h i[data-new]::before, .room[data-event~="goal"] .bq-tonight .bx-pips.h i { animation: none; } }
 
 /* the house record: said only when it's in reach, once, as the night's mark goes up */
 .room .bx-record { margin: var(--s-1) 0 0; font: italic 400 var(--t-md)/1.35 var(--f-read); color: var(--cream); }
 .room [data-slot="streak"]:has([data-new]) .bx-record { animation: rm-tick-pop .5s ease-out .6s both; }
 
-/* the run of nights, over the week it belongs to: how many in a row, the house record, and a word when it's in reach */
-.room .bq-run { padding: var(--s-2) var(--s-1) 0; border-top: 1px solid rgba(201,161,95,.2); }
-
-/* the tally: one plain line each */
-.room .bq-tally { display: grid; gap: var(--s-1); padding: var(--s-2) var(--s-1) 0; border-top: 1px solid rgba(201,161,95,.2); }
+/* the run of nights, under the week it belongs to: how many in a row, the house record, a word when it's in
+   reach, and how long until the next trophy for the back room, one plain line each */
+.room .bq-run { display: grid; gap: var(--s-1); padding: var(--s-2) var(--s-1) 0; border-top: 1px solid rgba(201,161,95,.2); }
 .room .bq-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 var(--s-3); }
-.room .bq-tally .bx-pips.h { display: none; }
+.room .bq-run .bx-pips.h { display: none; }
 .room .bq-row .bx-mono { text-align: right; }
 .room .bq-run .bx-chalk { position: static; width: auto; height: auto; transform: none; appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; display: flex; width: 100%; justify-content: space-between; align-items: baseline; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
 .room .bq-run .ch-in, .room .bq-run .ch-fade { display: contents; }
 .room .bq-run :is(.ch-prev, .ch-cur, .ch-dust, .ch-ul, .ch-rag, .ch-star) { display: none; }
 .room .bq-run .ch-n { position: static; display: inline-flex; gap: var(--s-1); font: inherit; color: inherit; }
 .room .bq-run .ch-n span, .room .bq-run .ch-lab, .room .bq-run .ch-best, .room .bq-run .ch-best b { position: static; margin: 0; letter-spacing: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
-.room .bq-die { margin-top: var(--s-1); padding: 0; background: none; border: 0; }
+.room .bq-die { margin: 0; padding: 0; background: none; border: 0; }
 .room .bq-die > .bx-k, .room .bq-die .bx-cab-row, .room .bq-die > .bx-mono { display: none; }
 .room .bx-next { margin: 0; font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--cream); }
 
