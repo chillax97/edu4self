@@ -204,7 +204,9 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
   capitalised), `row_full_body` (`{count}` dies, `{dies}`, `{hours}`, `{row}`) and `die_full_body`
   (`{tiles}`, `{hours}`, `{die}`, `{pos}` of `{count}`, `{row}` `{n}`). `goal_met` is the host's line
   beside the sign once tonight's goal is met (the sign also gets `.is-lit`), and `die_next` is said under the
-  die (`{time}`, in plain words). A `{name}` it doesn't know stays as written.
+  die (`{time}`, in plain words). `week_nocap` is the caption under the week's keepsakes when you studied
+  on some days but earned none yet (`{hit}` of `{goal}` `{nights}`, `{cap}`, `{minutes}` for one).
+  A `{name}` it doesn't know stays as written.
 
 ### keepsakes (trophies)
 

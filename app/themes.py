@@ -49,7 +49,8 @@ WORDS = {
 }
 # Lines a room may say its own way (the defaults are the bar's, in app.js occasionLines)
 LINES = ("play", "evening", "friday", "silent", "newyear", "nye", "halloween", "valentine", "music_quiet", "music_none",
-         "water", "hydrated", "row_full", "row_full_body", "die_full_body", "goal_met", "die_next")
+         "water", "hydrated", "row_full", "row_full_body", "die_full_body", "goal_met", "die_next",
+         "week_nocap")
 REPLIES = ("script", "short")   # script: numbered [lines], all shown. short: plain words, the job's own first, the rest folded
 VOICES = ("bartender", "logic", "volition", "gpu", "encyclopedia", "physical", "nostalgia", "critic", "regular", "jukebox", "you")
 FONTS = {"sans", "serif", "mono", "head", "neon"}   # bundled families, see app.css

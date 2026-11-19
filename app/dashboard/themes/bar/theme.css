@@ -79,20 +79,31 @@
 .room .bq-pages:not(:has(form.followup)) [data-slot="replies"]::before { content: "Your move"; margin-bottom: var(--s-3); font: 600 var(--t-xs)/1.3 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ox); }
 .room .bq-pages .bx-replies li { display: block; min-height: 0; }
 .room .bq-pages .bx-replies .bx-n, .room .bq-pages .bx-chk { display: none; }
-.room .bq-pages .bx-r { padding: 2px 0; font: 400 var(--t-md)/1.35 var(--f-read); color: var(--pen2); }
-.room .bq-pages .bx-replies li:first-of-type .bx-r { font-size: var(--t-lg); color: var(--ox); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+/* every move is a link in the margin: underlined words, the job's own first one bigger, the folded rest a link too */
+.room .bq-pages .bx-r, .room .bq-pages .bx-rest .btn { justify-content: flex-start; height: auto; padding: 2px 0; border: 0; background: none; font: 400 var(--t-md)/1.35 var(--f-read); color: var(--pen); text-decoration: underline; text-decoration-color: rgba(75,52,30,.45); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.room .bq-pages .bx-replies li:first-of-type .bx-r { font-size: var(--t-lg); color: var(--ox); text-decoration-color: currentColor; }
+.room .bq-pages .bx-rest .btn { font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--pen2); }
+.room .bq-pages .bx-rest .btn:hover { color: var(--ox); background: rgba(138,45,30,.08); }
 .room .bq-pages .bx-r:hover, .room .bq-pages .bx-r:focus-visible { color: var(--ox); background: rgba(138,45,30,.08); transform: none; }
 .room .bq-pages .bx-r:focus-visible { outline: 2px solid var(--ox); }
 .room .bq-pages .bx-replies li.is-quiet { font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--pen3); }
 .room .bq-pages .bx-replies li.is-quiet span { font: inherit; }
 .room .bq-pages .bx-replies:not(:has([aria-expanded="true"])) li.is-rest { display: none; }
-.room .bq-pages .bx-rest { margin-top: var(--s-2); }
-/* a memory check waiting: one wide page, nothing split */
-.room .bq-pages:has(.bx-recall) { display: block; background: var(--tex-paper) center / 320px, var(--paper); }
-.room .bq-pages:has(.bx-recall) .bx-job { display: block; margin-bottom: var(--s-6); }
-.room .bq-pages:has(.bx-recall) form.followup { margin-top: var(--s-4); }
-.room .bq-pages:has(.bx-recall) [data-slot="replies"] { margin-top: var(--s-4); }
-.room .bq-pages .bx-recall ol { margin: var(--s-2) 0 var(--s-4); padding-left: var(--s-6); font: 400 var(--t-md)/1.45 var(--f-read); color: var(--pen2); }
+.room .bq-pages .bx-rest { margin-top: var(--s-1); }
+/* a memory check waiting: a slip laid across both pages, the book still open under it, the job shifted a row down */
+.room .bq-pages:has(.bx-recall) { grid-template-rows: auto auto auto auto auto auto 1fr auto; }
+.room .bq-pages .bx-job.bx-recall { grid-column: 1 / -1; grid-row: 1; display: block; margin: 0 0 var(--s-6); padding: var(--s-4) var(--s-6); border-radius: 2px; background: var(--tex-paper) center / 320px, var(--paper); box-shadow: 0 1px 2px rgba(45,24,8,.35), 0 6px 14px -8px rgba(45,24,8,.5); }
+.room .bq-pages .bx-recall h2 { margin: var(--s-1) 0; font-size: var(--t-lg); }
+.room .bq-pages .bx-recall > p { margin: 0; }
+.room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > .bx-k { grid-row: 2; }
+.room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > h2 { grid-row: 3; }
+.room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > p { grid-row: 4; }
+.room .bq-pages:has(.bx-recall) .bx-meta { grid-row: 5; }
+.room .bq-pages:has(.bx-recall) :is(.bx-rules, .bx-sent, .bx-stuck) { grid-row: 6; }
+.room .bq-pages:has(.bx-recall) form.followup { grid-row: 2 / -1; }
+.room .bq-pages:has(.bx-recall) [data-slot="replies"] { grid-row: 8; }
+.room .bq-pages:has(.bx-recall):not(:has(form.followup)) [data-slot="replies"] { grid-row: 2 / -1; }
+.room .bq-pages .bx-recall ol { margin: var(--s-2) 0 var(--s-3); padding-left: var(--s-6); font: 400 var(--t-md)/1.45 var(--f-read); color: var(--pen2); }
 .room .bq-pages .recall-actions { display: flex; gap: var(--s-2); }
 
 /* the mat: flat and dark, so nothing competes with what the bartender says. It runs to the end of the counter */
@@ -158,7 +169,7 @@
 .room .bx-k { font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .14em; color: var(--cream2); }
 .room .bx-mono { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
 .room .bq-caps { flex: 1; display: flex; flex-direction: column; padding: 0 var(--s-1); }
-.room .bq-caps .bx-pips.m { flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; min-height: 88px; margin: var(--s-2) 0; align-items: start; }
+.room .bq-caps .bx-pips.m { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; min-height: 88px; margin: var(--s-2) 0; align-items: start; }
 .room .bq-caps .bx-pips.m i { position: relative; display: block; width: 40px; height: 40px; margin: 0; background: none; border: 0; outline: 0; font: 600 var(--t-xs)/40px var(--f-ui); font-style: normal; text-align: center; color: var(--cream3); animation: none; }
 .room .bq-caps .bx-pips.m i:nth-child(1) { transform: translate(0, 28px); }
 .room .bq-caps .bx-pips.m i:nth-child(2) { transform: translate(-2px, 4px); }

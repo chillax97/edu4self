@@ -26,7 +26,8 @@
   },
   "lines": {
     "goal_met": "That's tonight's goal. I switched the sign on for you.",
-    "die_next": "About {time} more at the bar earns your next die."
+    "die_next": "About {time} more at the bar earns your next die.",
+    "week_nocap": "{hit} of {goal} nights at the bar. A cap takes {minutes} min in one night."
   },
   "voices": {},
   "names": [

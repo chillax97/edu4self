@@ -1981,8 +1981,12 @@
         (top ? weekSpot(k, "MTWTFSS"[j], it, top) : "MTWTFSS"[j]) + "</i>";
     }
     var look = ksLook("day"), said = top ? (won ? plural(won, look.name, look.plural) : "No " + look.plural + " yet") + " · " : "";
+    var nights = t.hit + " of " + WEEK_GOAL_DAYS + " " + W("nights") + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "");
+    // nights studied but no keepsake yet: say what earns one, rather than set "none" against "3 of 4"
+    if (top && !won && t.hit) said = "", nights = fill(LINE("week_nocap", "{hit} of {goal} {nights}. Each {cap} takes {minutes} min in one day."),
+      { hit: t.hit, goal: WEEK_GOAL_DAYS, nights: W("nights"), cap: look.name, minutes: DAY_GOAL_MIN });
     return '<div class="bx-k">' + esc(W("week")) + '</div><div class="bx-pips m">' + week + '</div>' +
-      '<div class="bx-mono">' + esc(said) + t.hit + " of " + WEEK_GOAL_DAYS + " " + esc(W("nights")) + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "") + "</div>";
+      '<div class="bx-mono">' + esc(said + nights) + "</div>";
   }
 
   // "2½ hours", "1 hour", "25 minutes": how long is left, the way a person says it
