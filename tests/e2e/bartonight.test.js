@@ -36,7 +36,7 @@ after(async () => { await browser?.close(); await stopServer(server); fs.rmSync(
 // where tonight sits and how it reads
 const tonightBox = (page) => page.evaluate(() => {
   const el = document.querySelector('.room [data-slot="tonight"]'), r = el.getBoundingClientRect();
-  const now = el.querySelector(".bx-now"), meter = el.querySelector(".bx-pips.h"), juke = document.querySelector(".room .bq-juke").getBoundingClientRect();
+  const now = el.querySelector(".bx-togo .bx-left"), meter = el.querySelector(".bx-pips.h"), juke = document.querySelector(".room .bq-juke").getBoundingClientRect();
   return { top: r.top, bottom: r.bottom, h: innerHeight, below: r.top - juke.bottom,
     big: now ? parseFloat(getComputedStyle(now).fontSize) : 0, meterW: meter ? meter.getBoundingClientRect().width : 0,
     meterShown: !!meter && getComputedStyle(meter).display !== "none", text: el.innerText.replace(/\s+/g, " ") };
@@ -51,7 +51,7 @@ for (const long of [false, true]) {
     const t = await tonightBox(page);
     assert.ok(t.top >= 0 && t.bottom <= t.h, `tonight is fully on the first screen: ${Math.round(t.top)}..${Math.round(t.bottom)} of ${t.h}`);
     assert.ok(t.below >= 0 && t.below <= 48, `tonight sits right under the jukebox (${Math.round(t.below)} px)`);
-    assert.ok(t.big >= 32, `the minutes read at a glance (${t.big} px)`);
+    assert.ok(t.big >= 32, `what's left reads at a glance (${t.big} px)`);
     assert.ok(t.meterShown && t.meterW >= 240, `a meter shows the way to the goal (${Math.round(t.meterW)} px)`);
     assert.match(t.text, /50 of 125 min/);
     assert.match(t.text, /75 min to tonight's cap/i, "what's left, in the bar's words");

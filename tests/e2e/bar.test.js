@@ -130,11 +130,11 @@ test("no follow-up: the replies take the right page, the rest fold into one butt
   await closePage(page);
 });
 
-test("the next die is said in plain words, and every text is on the bar's type scale", async () => {
+test("the next trophy is said in plain words, and every text is on the bar's type scale", async () => {
   seed([block(today(), 50)]);
   const page = await open();
   const die = await page.$eval('.room [data-slot="die"]', (e) => e.innerText);
-  assert.match(die, /about 9 hours more at the bar earns your next die/i);
+  assert.match(die, /about 9 hours more at the bar puts a new trophy in the back room/i);
   assert.doesNotMatch(die, /25-minute|slot per|#1/);
   const sizes = await page.evaluate(() => { const out = new Set(), w = document.createTreeWalker(document.querySelector(".room"), NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) { const e = n.parentElement; if (n.textContent.trim() && e.getBoundingClientRect().width > 0 && !e.closest("[aria-hidden=true]")) out.add(parseFloat(getComputedStyle(e).fontSize)); } return [...out]; });
