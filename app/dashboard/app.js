@@ -1951,10 +1951,16 @@
   }
 
   function tonightHTML() {
-    var t = tonight(), pips = "";
-    for (var i = 0; i < DAY_GOAL_MIN / 20; i++) pips += '<i class="' + (t.mins >= (i + 1) * 20 ? "on" : t.mins > i * 20 ? "half" : "") + '"></i>';
+    var t = tonight(), pips = "", met = t.mins >= DAY_GOAL_MIN;
+    for (var i = 0; i < DAY_GOAL_MIN / 20; i++) {
+      var w = Math.min(20, DAY_GOAL_MIN - i * 20), f = Math.max(0, Math.min(1, (t.mins - i * 20) / w));
+      pips += '<i class="' + (t.mins >= i * 20 + w ? "on" : t.mins > i * 20 ? "half" : "") + '" style="--w:' + w + ";--f:" + +f.toFixed(3) + '"></i>';
+    }
+    // what's left, in the room's words, for a room that has them (lines.tonight_left, lines.tonight_met)
+    var say = met ? LINE("tonight_met", "") : fill(LINE("tonight_left", ""), { left: DAY_GOAL_MIN - t.mins, goal: DAY_GOAL_MIN, mins: t.mins });
     return '<div class="bx-k">' + esc(W("tonight")) + '</div><div class="bx-pips h">' + pips + '</div>' +
-      '<div class="bx-mono">' + t.mins + " of " + DAY_GOAL_MIN + " min" + (t.mins >= DAY_GOAL_MIN ? " ✓" : "") + "</div>";
+      '<div class="bx-mono"><span class="bx-now">' + t.mins + "</span> of " + DAY_GOAL_MIN + " min" + (met ? " ✓" : "") + "</div>" +
+      (say ? '<p class="bx-togo">' + esc(say) + "</p>" : "");
   }
   // this week's day trophies, by date. A room that draws its trophy from above (keepsakes.day.top) lays them out
   // in the week slot; a trophy won in another room keeps that room's own drawing.
@@ -1977,13 +1983,13 @@
       var d = new Date(t.monday); d.setDate(t.monday.getDate() + j);
       var k = dayKey(d), it = keeps[k];
       if (it) won++;
-      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : "") + (it ? " has-cap" : "") + '" title="' + k + '" data-day="' + k + '">' +
+      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : k < t.today ? " is-past" : "") + (it ? " has-cap" : "") + '" title="' + k + '" data-day="' + k + '">' +
         (top ? weekSpot(k, "MTWTFSS"[j], it, top) : "MTWTFSS"[j]) + "</i>";
     }
     var look = ksLook("day"), said = top ? (won ? plural(won, look.name, look.plural) : "No " + look.plural + " yet") + " · " : "";
     var nights = t.hit + " of " + WEEK_GOAL_DAYS + " " + W("nights") + (t.hit >= WEEK_GOAL_DAYS ? " · week won" : "");
     // nights studied but no keepsake yet: say what earns one, rather than set "none" against "3 of 4"
-    if (top && !won && t.hit) said = "", nights = fill(LINE("week_nocap", "{hit} of {goal} {nights}. Each {cap} takes {minutes} min in one day."),
+    if (top && !won && t.hit && t.hit < WEEK_GOAL_DAYS) said = "", nights = fill(LINE("week_nocap", "{hit} of {goal} {nights}. Each {cap} takes {minutes} min in one day."),
       { hit: t.hit, goal: WEEK_GOAL_DAYS, nights: W("nights"), cap: look.name, minutes: DAY_GOAL_MIN });
     return '<div class="bx-k">' + esc(W("week")) + '</div><div class="bx-pips m">' + week + '</div>' +
       '<div class="bx-mono">' + esc(said + nights) + "</div>";
@@ -2047,7 +2053,7 @@
       else if (k !== today && !isRestDay(d)) break;
       d.setDate(d.getDate() - 1);
     }
-    var best = 0, last = 0, run = 0, prev = null;
+    var best = 0, last = 0, run = 0, prev = null, before = 0;
     keys.forEach(function (k) {
       var joined = false;
       if (prev) {   // joined when every day between the two is a rest day (none between: the next day)
@@ -2058,10 +2064,11 @@
           if (!isRestDay(g)) { joined = false; break; }
         }
       }
+      if (!joined) before = Math.max(before, run);   // a run ended: it counts toward the record before the last one
       run = joined ? run + 1 : 1;
       best = Math.max(best, run); last = run; prev = new Date(k + "T12:00:00");
     });
-    return { now: now, best: best, last: last };
+    return { now: now, best: best, last: last, before: before };
   }
 
   // What your blocks say about tonight: per-day minutes, streak, record, last stop, time on the hero task
@@ -2582,7 +2589,14 @@
       el.querySelectorAll(sel).forEach(function (n, i) { if (n.classList.contains("on") && !(a[i] && a[i].classList.contains("on"))) { n.setAttribute("data-new", ""); out.push(n); } });
       return out;
     }
-    if (k === "tonight" && lit(".bx-pips i").length) roomSound("fuel", 0);
+    if (k === "tonight") {
+      var was = old.querySelectorAll(".bx-pips i"), poured = lit(".bx-pips i").length;
+      el.querySelectorAll(".bx-pips i").forEach(function (n, i) {
+        var f0 = was[i] ? parseFloat(was[i].style.getPropertyValue("--f")) || 0 : 0, f = parseFloat(n.style.getPropertyValue("--f")) || 0;
+        if (f > f0) { n.setAttribute("data-new", ""); n.style.setProperty("--f0", f0); poured++; }
+      });
+      if (poured) roomSound("fuel", 0);
+    }
     if (k === "week" && lit(".bx-pips i").length) roomSound("week", 0);
     if (k === "die" && lit(".die i").length) {
       var nb = el.querySelector(".bx-num"), ob = old.querySelector(".bx-num");
@@ -2703,7 +2717,14 @@
     var s = streakRuns(), was = stage.seen;
     if (!was && stage.back) return boardHTML(s.last, s.best, "wipe", false);   // back after days: the old run gets wiped once
     var day = !!(was && s.now > was.streak);
-    return boardHTML(s.now, s.best, day ? "day" : "", day && s.best > was.best);
+    return boardHTML(s.now, s.best, day ? "day" : "", day && s.best > was.best) + recordHTML(s);
+  }
+  // Quiet unless the record is in reach: one night short (record_near), level with it (record_tie), or past it
+  // (record_new). A record of one or two nights is no record yet.
+  function recordHTML(s) {
+    var r = s.before, k = r < 3 || !s.now ? "" : s.now === r - 1 ? "record_near" : s.now === r ? "record_tie" : s.now > r ? "record_new" : "";
+    var say = k && LINE(k, "");
+    return say ? '<p class="bx-record" data-record="' + k.slice(7) + '">' + esc(fill(say, { n: s.now, record: r, nights: W("nights") })) + "</p>" : "";
   }
 
   // ------------------------------------------------ room sounds: synthesized with Web Audio, no files
