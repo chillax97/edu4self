@@ -61,14 +61,14 @@ test("no keepsakes this week: seven bare places, no caps, and the line says so",
   await closePage(page);
 });
 
-test("some days: a cap exactly on the days with a real keepsake, left loosely, each day still named", async () => {
+test("some days: a cap exactly on the days with a real keepsake, in one row, each day still named", async () => {
   seed([block(weekDay(0), 50), block(weekDay(2), 50), block(weekDay(4), 20)]);   // the 20 minutes showed up but won nothing
   const page = await open();
   const c = await caps(page), real = await dayCaps();
   assert.deepEqual(c.filter((x) => x.cap).map((x) => x.day), real);
   assert.deepEqual(real, [ymd(weekDay(0)), ymd(weekDay(2))]);
   assert.ok(c[4].on && !c[4].cap, "a day studied below the goal is marked, without a cap");
-  assert.ok(new Set(c.map((x) => x.top)).size >= 3, "not a neat row");
+  assert.equal(new Set(c.map((x) => Math.round(x.top))).size, 1, "the nights sit in one row");
   // told apart by shape as well as colour: a cap is a drawing, a bare day is a ring with no drawing
   const looks = await page.$$eval('.room [data-slot="week"] .bx-pips.m i', (l) => l.map((e) => getComputedStyle(e, "::before").borderTopStyle));
   assert.equal(looks[1], "dashed", "a bare day is a dashed ring");
