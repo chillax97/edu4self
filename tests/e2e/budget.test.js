@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { ENGINE, makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, sleep } from "./harness.js";
+import { seedLongDay } from "./longday.js";
 
 const ROOMS = fs.readdirSync(path.join(ENGINE, "app", "dashboard", "themes")).sort();
 const VIEWS = [["classic", "classic"], ...ROOMS.map((id) => [id, "bar"])];
@@ -86,7 +87,7 @@ function firstScreen() {
     const t = a.effect && a.effect.target;
     return t && t.nodeType === 1 && a.playState === "running" && a.effect.getComputedTiming().iterations === Infinity && !t.closest('[data-part~="running"]');
   }).map((a) => (a.animationName || "?") + " on " + (t => t.className && t.className.baseVal === undefined ? t.className : t.tagName)(a.effect.target));
-  return { job: !!job && inView(job), jobText: job && job.textContent.trim().slice(0, 40), action: !!action && inView(action), actionText: action && action.textContent.trim().slice(0, 30), countdowns, endless };
+  return { job: !!job && inView(job), jobText: job && job.textContent.trim().slice(0, 40), action: !!action && inView(action), actionBottom: action && Math.round(action.getBoundingClientRect().bottom), actionText: action && action.textContent.trim().slice(0, 30), countdowns, endless };
 }
 
 for (const followUp of [true, false]) {
@@ -107,6 +108,34 @@ for (const followUp of [true, false]) {
       });
     }
   }
+}
+
+// The same budget on a real learner's day: a long "From memory" card, a long lesson with rules, no follow-up,
+// four kinds of block. The short data above fits any layout; this is the one that has to hold.
+// Only the bar holds it so far; the other rooms and classic still push the action below the fold on a long day
+// (a follow-up of bar-realdata). They run as todo: reported on every run, not yet a failure.
+const LONG_HOLDS = new Set(["bar"]);
+for (const [id, view] of VIEWS) {
+  test(`${id} on a desktop, a long day: next step and its action on the first screen, one countdown, nothing else moving, no sideways scroll`,
+    LONG_HOLDS.has(id) ? {} : { todo: "the long day pushes this room's action below the fold" }, async () => {
+    const keep = Object.fromEntries(["state.json", "inbox.jsonl", "blocks.jsonl", "config.json"].map((f) => [f, fs.readFileSync(sys(f), "utf8")]));
+    try {
+      seedLongDay(v.vault, { theme: id === "classic" ? "bar" : id });
+      const task = readJSON(sys("state.json")).topics[0].queue[0].id;
+      const page = await open(view, 1440, 900, task);
+      const s = await page.evaluate(firstScreen);
+      assert.ok(s.job, `${id}: the next step's title is on the first screen`);
+      assert.ok(s.action, `${id}: its action (${s.actionText}) is on the first screen (${s.actionBottom} of 900)`);
+      assert.equal(s.countdowns.length, 1, `${id}: the countdown shows once, not ${JSON.stringify(s.countdowns)}`);
+      assert.deepEqual(s.endless, [], `${id}: only the running signal moves during a block`);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${id}: no sideways scroll`);
+      assert.deepEqual(page.errors, []);
+      await closePage(page);
+    } finally {
+      for (const [f, text] of Object.entries(keep)) fs.writeFileSync(sys(f), text);
+      fs.rmSync(sys("keepsakes.json"), { force: true });
+    }
+  });
 }
 
 // Click as a person would: bring the control into view, make sure nothing (the sticky top bar) covers it, click.
