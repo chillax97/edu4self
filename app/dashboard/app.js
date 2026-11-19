@@ -1935,14 +1935,14 @@
   function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
   function tonight() {
-    var today = dayKey(new Date()), monday = weekStart(), mins = 0, days = {}, glasses = 0;
+    var today = dayKey(new Date()), monday = weekStart(), mins = 0, days = {}, dayMins = {}, glasses = 0;
     allBlocks().forEach(function (b) {
       var d = new Date(b.ts || b.started), k = dayKey(d);
       if (k === today) { mins += b.minutes; glasses += b.water_drunk || 0; }
-      if (d >= monday) days[k] = true;
+      if (d >= monday) { days[k] = true; dayMins[k] = (dayMins[k] || 0) + (b.minutes || 0); }
     });
     if (active) glasses += active.drunk || 0;
-    return { mins: mins, days: days, hit: Object.keys(days).length, glasses: glasses, monday: monday, today: today };
+    return { mins: mins, days: days, dayMins: dayMins, hit: Object.keys(days).length, glasses: glasses, monday: monday, today: today };
   }
 
   function dieNow() {
@@ -1956,11 +1956,14 @@
       var w = Math.min(20, DAY_GOAL_MIN - i * 20), f = Math.max(0, Math.min(1, (t.mins - i * 20) / w));
       pips += '<i class="' + (t.mins >= i * 20 + w ? "on" : t.mins > i * 20 ? "half" : "") + '" style="--w:' + w + ";--f:" + +f.toFixed(3) + '"></i>';
     }
-    // what's left, in the room's words, for a room that has them (lines.tonight_left, lines.tonight_met)
-    var say = met ? LINE("tonight_met", "") : fill(LINE("tonight_left", ""), { left: DAY_GOAL_MIN - t.mins, goal: DAY_GOAL_MIN, mins: t.mins });
+    // what's left, in the room's words, for a room that has them (lines.tonight_left, lines.tonight_met), and before
+    // the first block of the day a word that asks you in (lines.tonight_none)
+    var v = { left: DAY_GOAL_MIN - t.mins, goal: DAY_GOAL_MIN, mins: t.mins };
+    var say = met ? LINE("tonight_met", "") : fill(LINE("tonight_left", ""), v), ask = !t.mins && fill(LINE("tonight_none", ""), v);
     return '<div class="bx-k">' + esc(W("tonight")) + '</div><div class="bx-pips h">' + pips + '</div>' +
       '<div class="bx-mono"><span class="bx-now">' + t.mins + "</span> of " + DAY_GOAL_MIN + " min" + (met ? " ✓" : "") + "</div>" +
-      (say ? '<p class="bx-togo">' + esc(say) + "</p>" : "");
+      (say ? '<p class="bx-togo' + (met ? " is-met" : "") + '">' + (met ? esc(say) : esc(say).replace(String(v.left), '<b class="bx-left">' + v.left + "</b>")) + "</p>" : "") +
+      (ask ? '<p class="bx-invite">' + esc(ask) + "</p>" : "");
   }
   // this week's day trophies, by date. A room that draws its trophy from above (keepsakes.day.top) lays them out
   // in the week slot; a trophy won in another room keeps that room's own drawing.
@@ -1983,7 +1986,9 @@
       var d = new Date(t.monday); d.setDate(t.monday.getDate() + j);
       var k = dayKey(d), it = keeps[k];
       if (it) won++;
-      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : k < t.today ? " is-past" : "") + (it ? " has-cap" : "") + '" title="' + k + '" data-day="' + k + '">' +
+      // --f: how far the night got toward the day's goal, for a room that fills a night by its minutes
+      week += '<i class="' + (t.days[k] ? "on" : "") + (k === t.today ? " is-today" : k < t.today ? " is-past" : "") + (it ? " has-cap" : "") + '" title="' + k + '" data-day="' + k + '"' +
+        (t.days[k] ? ' style="--f:' + +Math.min(1, t.dayMins[k] / DAY_GOAL_MIN).toFixed(3) + '"' : "") + ">" +
         (top ? weekSpot(k, "MTWTFSS"[j], it, top) : "MTWTFSS"[j]) + "</i>";
     }
     var look = ksLook("day"), said = top ? (won ? plural(won, look.name, look.plural) : "No " + look.plural + " yet") + " · " : "";

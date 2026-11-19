@@ -206,8 +206,10 @@ The engine's own markup inside slots uses `bx-*` classes (`.bx-neon` for the sig
   beside the sign once tonight's goal is met (the sign also gets `.is-lit`), and `die_next` is said under the
   die (`{time}`, in plain words). `week_nocap` is the caption under the week's keepsakes when you studied
   on some days but earned none yet (`{hit}` of `{goal}` `{nights}`, `{cap}`, `{minutes}` for one).
-  `tonight_left` and `tonight_met` are said under tonight's minutes, before and after the day's goal (`{left}`,
-  `{goal}`, `{mins}`). `record_near`, `record_tie` and `record_new` are said under the streak when the run is one
+  `tonight_left` and `tonight_met` are said with tonight's minutes, before and after the day's goal (`{left}`,
+  `{goal}`, `{mins}`; the met line gets `.is-met`), and `tonight_none` asks you in before the day's first block
+  (same names). Each night of the week carries `--f`, how far it got toward the day's goal (0 to 1), for a room
+  that fills a night by its minutes. `record_near`, `record_tie` and `record_new` are said under the streak when the run is one
   night short of the record held before it, level with it, or past it (`{n}`, `{record}`, `{nights}`); a record
   under three nights stays quiet. Leave them out and the room says nothing there.
   A `{name}` it doesn't know stays as written.
