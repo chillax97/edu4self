@@ -83,8 +83,9 @@ test("a typed reply survives the page refreshing itself", async () => {
   graded();
   const page = await openPage(browser, server.url, { view: "classic" });
   await page.type(".hero form[data-followup] textarea", "half a th");
-  // coming back to the tab reloads and redraws the page, as the 15 s poll does
+  // something in the vault changes, so the page fetches the state again and redraws
   const reloaded = page.waitForResponse((r) => r.url().endsWith("/api/state"));
+  const later = new Date(Date.now() + 5000); fs.utimesSync(STATE, later, later);
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   await reloaded;
   await page.evaluate(() => new Promise((r) => setTimeout(r, 50)));
