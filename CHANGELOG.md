@@ -5,6 +5,8 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
+## [1.7.0] - 2026-11-21
+
 ### Fixed
 
 - A room saved in a vault before the shared room base keeps its layout. Rooms without `"format": 2` load the old
@@ -15,6 +17,12 @@ versions follow [Semantic Versioning](https://semver.org).
   makes its vault the default.
 
 ### Added
+
+- A stuck checker offers the next hint in the terminal: after 3 failing runs in a row with a hint still unopened,
+  the checker's output ends with the offer and a link that opens that task's hints on the dashboard.
+- The dashboard keeps up with your vault on its own: a grade, a new lesson, a finished block, a checker run or a
+  settings change shows within a few seconds, with no reload. The page asks a small change check every 2 seconds
+  and fetches the full state only when something moved.
 
 - The bar is rebuilt as a place: you look down at the counter. The job lies in an open book with your reply on
   the right page, the voices talk on the mat, and by your hand stand the jukebox, your glass and this week's
@@ -35,8 +43,8 @@ versions follow [Semantic Versioning](https://semver.org).
 ### Changed
 
 - The front-room budget: every room and the classic view shows the next step and its action on the first
-  screen (desktop 1440×900 and a half-screen window 720×900, beside the terminal; the dashboard is local, so
-  phone widths are not a target), the block's countdown once, and tonight, the week and the die. The finish line,
+  screen at 1440×900 (the dashboard is local, so desktop is the target), the block's countdown once, and
+  tonight, the week and the next trophy. The finish line,
   locked tasks and trophies are in the back room. Past the host and two voices, the rest wait behind
   "Show N more". During a block only the room's running signal moves (the bar's record, the train's hills,
   the station's planet). The rule for room authors is in `docs/THEMES.md`.
