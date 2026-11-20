@@ -669,6 +669,9 @@ def pending_entries(state):
             if e.get("kind") != "withdraw" and e.get("id") not in processed and e.get("id") not in withdrawn]
 
 
+STAMP_SKIP = {"node_modules", "venv", "__pycache__", "target"}   # big tool folders a learner's code may grow: never trace/
+
+
 def change_stamp():
     """A short fingerprint of everything the page shows: state.json, the inbox, the blocks, the settings and the
     checker runs in trace/ folders (size and time of each), plus the hour, for what turns with the clock. The page
@@ -676,7 +679,8 @@ def change_stamp():
     h = hashlib.sha1(datetime.now().astimezone().strftime("%Y-%m-%d %H").encode())
     paths = [STATE, INBOX, BLOCKS, CONFIG]
     for base, dirs, files in os.walk(ROOT):
-        dirs[:] = [d for d in dirs if not d.startswith(".") and not (base == ROOT and d in ("_system", "themes"))]
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in STAMP_SKIP
+                   and not (base == ROOT and d in ("_system", "themes"))]
         if os.path.basename(base) == "trace":
             paths += [os.path.join(base, n) for n in sorted(files) if n.endswith(".json")]
     for path in paths:
