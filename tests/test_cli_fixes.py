@@ -147,27 +147,27 @@ class FirstRunTest(Cmd):
 
 
 class ReadmeSetupTest(unittest.TestCase):
-    """The README's setup steps work as written on every system they name."""
+    """The setup steps in the README and docs/SETUP.md work as written on every system they name."""
 
-    def section(self, title):
-        text = read(os.path.join(ENGINE, "README.md"))
+    def section(self, title, doc="README.md"):
+        text = read(os.path.join(ENGINE, doc))
         start = text.index("## " + title)
         end = text.find("\n## ", start + 3)
         return text[start:end if end > 0 else None]
 
     def test_every_setup_section_gives_the_windows_form_too(self):
-        for title in ("Quick start", "Set it up yourself", "Everyday commands"):
-            body = self.section(title)
+        for doc, title in (("README.md", "Quick start"), ("docs/SETUP.md", "Set it up yourself"), ("docs/SETUP.md", "Everyday commands")):
+            body = self.section(title, doc)
             self.assertIn("./edu4self", body)
             self.assertIn("python edu4self", body, "%s says ./edu4self, which PowerShell can't run" % title)
 
     def test_a_fresh_mac_is_told_about_the_command_line_tools(self):
-        self.assertIn("Command Line Tools", self.section("What you need"))
+        self.assertIn("Command Line Tools", self.section("What you need", "docs/SETUP.md"))
 
     def test_the_clone_goes_to_the_home_folder(self):
         # not Documents, Desktop or Downloads, which macOS may keep a login service out of
-        for title in ("Quick start", "Set it up yourself"):
-            self.assertIn("cd ~", self.section(title), title)
+        for doc, title in (("README.md", "Quick start"), ("docs/SETUP.md", "Set it up yourself")):
+            self.assertIn("cd ~", self.section(title, doc), title)
 
 
 class SetupTwiceTest(Cmd):
