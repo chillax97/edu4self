@@ -11,6 +11,7 @@ const iso = (d) => d.toISOString().replace(/\.\d+Z$/, "Z");
 const ymd = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
 const v = makeVault("Sam");
+v.env.EDU4SELF_CLAUDE = path.join(ENGINE, "tests", "fake_claude.py");   // a stand-in Claude Code, so no "not set up" banner
 const sys = (...p) => path.join(v.vault, "_system", ...p);
 
 // two weeks of focus blocks
