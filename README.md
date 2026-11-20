@@ -1,271 +1,122 @@
 # edu4self
 
-**A learning dashboard that runs on your computer, with Claude Code as your tutor. Hand it to your
-agent and it sets itself up around you.**
+**A learning dashboard on your computer, with Claude Code as your tutor.**
 
-![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
+Tell it what you want to learn. Claude writes short lessons, checks your answers against a key it
+wrote beforehand, and keeps an honest record of what you've learned. The dashboard shows you one next
+step, every time.
 
-You pick what to learn. Claude writes short lessons, tests what you know, and grades your answers
-against a key it wrote before you answered. When one point is thin, it asks you one follow-up
-question instead of guessing.
-The dashboard always shows one next step, keeps a record of what you've actually proven, and turns
-your focused time into something you can see grow. The dashboard and your files stay on your
-computer; Claude Code talks to Anthropic as it always does ([privacy](#privacy)).
+![The bar room: today's lesson on an open book, the jukebox and a focus block on the right](docs/images/bar.png)
+
+## What you get
+
+- **One next step.** The dashboard always says what to do now. No planning, no deciding.
+- **Short lessons on anything.** Spanish for a move, Rust for a new job, statistics for an exam:
+  Claude plans the topic around your goal and writes each lesson for where you are.
+- **Answers that are checked.** You answer from memory; Claude grades against the key and tells you
+  exactly what to fix. When one point is unclear, it asks you one short question instead of guessing.
+- **A record of what you can do.** Progress counts what you have shown, not what you have read.
+- **Focus blocks you can see.** Each focused stretch fills a tile, and your weeks add up on a shelf.
+- **A place you like.** Five rooms with their own look, characters and music, or a calm classic view.
 
 ## Quick start
 
-1. Install [Claude Code](https://claude.com/claude-code) and sign in. Python 3.9+ and git too.
-2. Easiest: open Claude Code and paste `Clone https://github.com/chillax97/edu4self (git clone --depth 1), read its AGENTS.md, and set it up for me.`
-3. Or do it yourself, from your home folder: `cd ~ && git clone --depth 1 https://github.com/chillax97/edu4self.git && cd edu4self`
-4. Then `./edu4self setup` (makes your vault, starts the dashboard at login, installs the tutor skills, opens it).
-   On Windows, type `python edu4self` wherever this page says `./edu4self`, here `python edu4self setup`.
-5. Check anything with `./edu4self doctor`. More below: [rooms](#make-it-your-room), [full setup](#set-it-up-yourself).
+You need [Claude Code](https://claude.com/claude-code) (signed in), Python 3.9+ and git.
 
-## What you need
+```sh
+cd ~
+git clone --depth 1 https://github.com/chillax97/edu4self.git
+cd edu4self
+./edu4self setup
+```
 
-- **Claude Code**, signed in with a Claude plan that includes it. Claude is the tutor, so nothing works without it.
-- **macOS, Linux or Windows.** All three can start the dashboard for you at login (launchd, systemd, Task Scheduler).
-  Windows is newer: the tests run on Windows in CI, but the login task has only been checked by unit tests so far
-  ([details](#windows)).
-- **What it costs:** edu4self is free. Grading runs Claude Code, so it uses your Claude usage. On a Pro or Max plan
-  that counts against your plan's limits, with no extra bill. With an API key each run is billed: one measured first-try
-  grade cost $0.28; grading a full inbox does more work and costs more.
-- **Python 3.9 or newer**, and git. macOS and most Linux systems already have Python; on Windows install it from python.org.
-  On a Mac that has never used them, the first `git` or `python3` offers to install Apple's Command Line Tools:
-  say yes, it takes a few minutes.
+`setup` makes your learning folder (your vault, `~/learn` by default), gives Claude the tutor skills,
+starts the dashboard at login and opens it at <http://127.0.0.1:4747>. On Windows, type
+`python edu4self setup`.
 
-[![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
+Then open Claude Code in your vault and say what you want to learn:
 
-<sub>The first minute of the tour. [Watch all of it (2 min)](docs/video/tour.mp4).</sub>
+```sh
+cd ~/learn && claude
+> I want to learn Spanish for a move to Madrid
+```
 
-## Make it your room
-
-You'll study more in a place you like being in. Pick one of five rooms, each with its own layout,
-colours, characters, jokes and sound, and your lessons dress to match. Or describe a place to Claude
-("a lighthouse in a storm", "my grandmother's kitchen") and it builds one for you, following
-[docs/THEMES.md](docs/THEMES.md). Everything else is yours to change too: your goals, block lengths,
-names, voices, music. All of it is in **⚙ Settings**, no terminal needed.
-
-Meeting your goals fills a shelf. Every day you hit your daily goal adds a trophy to a pile, drawn by
-the room you're in: a bottle cap in the bar, a book in the library. Weeks and finished dice get their
-own trophy and a card you can print, and Claude quietly makes you something from what you proved.
-Trophies keep the look of the room they were won in, so when you move rooms, your shelf comes along.
-
-| the bar | the library | the space station |
-|---|---|---|
-| ![The bar: a neon sign, the jukebox, the die case](docs/images/rooms/bar.png) | ![The library: an open book on the desk, voices in the margin](docs/images/rooms/library.png) | ![The space station: a viewport, the reactor core, the comms log](docs/images/rooms/space.png) |
-| **the night train** | **the tea house** | |
-| ![The night train: your ticket, the dining car, the ticket book](docs/images/rooms/train.png) | ![The tea house: a scroll, the kettle, the tea tin](docs/images/rooms/tea.png) | |
-
-A room changes how things look and what they're called, never how learning works: Lesson 01 is
-Lesson 01 everywhere, and the room can't run code or reach the internet.
-
-## Hand it to your agent
-
-Open Claude Code (or any coding agent) and paste:
+Rather not type commands? Paste this into Claude Code and it does all of the above for you:
 
 ```text
 Clone https://github.com/chillax97/edu4self (git clone --depth 1), read its AGENTS.md, and set it up for me.
 ```
 
-Then say what you want in your own words. The agent asks what it's missing, installs everything,
-turns your wishes into settings, checks its own work, and tells you how to start your first topic.
-[AGENTS.md](AGENTS.md) is the playbook it follows.
+Something not right? `./edu4self doctor` checks everything and says how to fix it. Every option,
+Windows notes and the everyday commands are in [docs/SETUP.md](docs/SETUP.md).
 
-A real run, word for word what was asked:
+[![A two-minute tour: install, first lesson, grading, Settings](docs/images/tour.gif)](docs/video/tour.mp4)
 
-> Call me Kim. I'm learning Rust so I can contribute to a CLI tool by March. I study 45 minutes at a
-> time, about 90 minutes a day, 5 days a week. No water reminders please. Call the bar 'The Borrow
-> Checker' with the tagline 'nothing outlives its owner', and make the critic grumpier.
+## A day with it
 
-It came back with 45-minute blocks, a 90-minute goal over 5 days, water off, the new sign, and a critic
-renamed "The curmudgeon" with lines of its own: *"unwrap() is not error handling. It is a confession."*
-Then it ran `edu4self check` to prove the settings were valid.
+You open the dashboard. Up next is a 25-minute lesson, so you start a focus block and read it. At the
+end you answer a few questions from memory and press Submit, then **✦ Grade**. A minute later the page
+updates: two answers passed and went into your record, one needs a fix, and it says which point is
+missing. Tomorrow, a quick recall check on last week's work is waiting before the next lesson.
 
-Rather click than type? Everything the agent changed is also in **⚙ Settings** on the dashboard.
+## Make it yours
 
-## How it works
+Pick a room: a bar, a library, a space station, a night train or a tea house. Each has its own layout,
+characters and sound, and your lessons dress to match. Or describe a place to Claude ("a lighthouse in
+a storm") and it builds one for you. Prefer quiet? The classic view is calm and plain.
 
-```
-   ┌──────────────┐  1. Up next: open the lesson,     ┌──────────────┐
-   │  dashboard   │     do it, press Submit           │   inbox      │
-   │  (browser)   │ ────────────────────────────────▶ │ (a file in   │
-   │              │                                   │  your vault) │
-   │              │  3. the page updates itself       └──────┬───────┘
-   │              │ ◀──────────────┐                         │ 2. press ✦ Grade
-   └──────────────┘                │                         │    (Claude Code runs it)
-                            ┌──────┴───────┐                 │
-                            │  state.json  │ ◀───────────────┘
-                            │ (written by  │   Claude grades it, writes down what
-                            │  Claude only)│   you proved, and lines up what's next
-                            └──────────────┘
-```
+| the library | the space station | the tea house |
+|---|---|---|
+| ![The library](docs/images/rooms/library.png) | ![The space station](docs/images/rooms/space.png) | ![The tea house](docs/images/rooms/tea.png) |
 
-- **One next step, always.** The Up next card says what to do. No planning, no deciding.
-- **Proof, not time.** The evidence log lights up only when you demonstrate something, like an answer
-  from memory or a solved problem. Reading doesn't count. This follows the research on retrieval
-  practice ([sources](CREDITS.md#references)).
-- **Focus blocks you can see.** Each focused 25 minutes etches a tile. 24 tiles make a die (10 hours),
-  8 dies a row, 4 rows a tray. A water reminder arrives every 15 minutes while a block runs, if you want one.
-- **A room, or plain.** In a room your skills talk to you about tonight's work, the music plays a
-  built-in soundscape, a radio station or your own songs, and the host reminds you to drink water.
-  *Classic* is calm and plain.
-
-<details>
-<summary>More screenshots: classic view, the back room, Settings</summary>
-
-| classic | the back room |
-|---|---|
-| ![Classic view](docs/images/classic.png) | ![The back room: the die case, milestones, evidence, skills](docs/images/backroom.png) |
-| **Settings** | |
-| ![Settings panel](docs/images/settings.png) | |
-
-</details>
-
-## Set it up yourself
-
-You need [Claude Code](https://claude.com/claude-code), Python 3.9+ and git (see [What you need](#what-you-need)).
-
-```sh
-cd ~                     # your home folder: macOS may keep the login service out of Documents, Desktop and Downloads
-git clone --depth 1 https://github.com/chillax97/edu4self.git
-cd edu4self
-./edu4self setup         # on Windows: python edu4self setup
-```
-
-`setup` asks where to put your learning vault (default `~/learn`) and what to call you, and offers to
-give Claude the tutor skills (the edu4self plugin). Then it starts the dashboard at login and opens
-<http://127.0.0.1:4747>. It installs the plugin by running these two commands for you, and checks that
-it worked. If it couldn't (or you said no, or passed `--no-plugin`), run them yourself once:
-
-```sh
-claude plugin marketplace add chillax97/edu4self
-claude plugin install edu4self@edu4self
-```
-
-`./edu4self doctor` tells you whether the plugin is installed and enabled, and whether Claude Code is signed in.
-
-Then it's all on the dashboard: **+ New topic** starts one (say what and why, Claude asks a few
-questions in the side panel), **✦ Grade** grades what you submitted, and **✦ Claude** opens a chat with
-your tutor. The page runs Claude Code on your computer, with your own login. A terminal still works too:
-
-```sh
-cd ~/learn && claude
-> I want to learn Spanish for a move to Madrid   # start a topic (or /edu4self:new-topic)
-> check my inbox                          # after you submit something on the dashboard
-```
-
-The first time you open the dashboard it asks you to try the method once, in about two minutes: one idea,
-hidden, answered from memory, checked, and graded by Claude if you like. Then you pick your own topic or the
-example one ("How learning works"), which runs the whole loop in 15 minutes. Delete it whenever you like: tell Claude "remove the example topic".
-
-<details>
-<summary>You don't want a login service</summary>
-
-Run `python3 edu4self setup --no-service`, then keep `python3 edu4self serve` running in a terminal
-while you study. Starting at login is automated on macOS (launchd), Linux (systemd user services) and
-Windows (a Task Scheduler task).
-</details>
-
-<a id="windows"></a>
-<details>
-<summary>Windows</summary>
-
-Use `python edu4self ...` wherever this page says `./edu4self` (for example `python edu4self setup`), in
-PowerShell or Command Prompt. `setup` and `install` add a Task Scheduler task named `edu4self` that starts
-the dashboard when you log on; `uninstall` removes it. You can also see it in the Task Scheduler app.
-
-- The Claude panel works with Claude Code from Anthropic's installer (`claude.exe`) or from npm
-  (`npm i -g @anthropic-ai/claude-code`). npm's `claude.cmd` is never run itself, because `cmd.exe` mangles
-  the text of a prompt: the dashboard runs the program (or `node` and the script) it points at. If that
-  can't be found, `python edu4self doctor` says why and what to do.
-- A mail app password is kept in a file in your user folder (Windows has no password store this tool can
-  use without extra software). Use an app password, not your real one.
-- What is tested: the unit and browser tests run on Windows in CI. What is not: the login task, which
-  needs a real logon session, is only covered by unit tests of the commands it would run, and the Claude
-  panel is only tested against a stand-in. If something is off, run `python edu4self doctor` and open an issue.
-</details>
-
-## Everyday commands
-
-On Windows, write `python edu4self` for `./edu4self`.
-
-| command | what it does |
-|---|---|
-| `./edu4self setup` | first-time setup: make a vault, start at login, open the dashboard |
-| `./edu4self serve [--open]` | run the dashboard in this terminal instead of as a service |
-| `./edu4self install` / `uninstall` | start at login / stop doing that (your files stay) |
-| `./edu4self restart` / `status` | restart the service / show what's running |
-| `./edu4self check` | validate the vault (Claude runs this after every update) |
-| `./edu4self doctor` | check everything and say how to fix what's wrong |
-| `./edu4self mail setup` | a mail when you've been away, and the Sunday recap, from your own account |
-| `./edu4self mcp` | your progress for any AI tool that speaks MCP ([how](docs/MCP.md)) |
-
-## Updating
-
-The code and your data live in different folders, so updating never touches your vault. Two parts update:
-
-```sh
-cd edu4self && git pull && ./edu4self restart                                    # the dashboard and the engine
-claude plugin marketplace update edu4self && claude plugin update edu4self@edu4self   # the tutor skills (a separate copy)
-```
-
-Restart Claude Code afterwards so it loads the new skills. `./edu4self doctor` looks up the latest release
-on GitHub and prints these two lines when you are behind. That lookup is one request to `api.github.com`
-asking for the newest release number; nothing about you or your vault is sent. It gives up after 2 seconds,
-says nothing when you are offline, and `EDU4SELF_NO_UPDATE_CHECK=1` turns it off.
-
-## What's where
-
-```
-edu4self/               the code (this repo)            ~/learn/                your vault (yours)
-  app/server.py           local web server                CLAUDE.md, AGENTS.md    instructions for the tutor
-                                                          PLAN.md                 what comes next, in order (Claude keeps it)
-  app/dashboard/          the page (no build step)        _system/state.json      what the dashboard shows (Claude writes)
-  edu4self                the command line                _system/inbox.jsonl     your submissions
-  template/               what a new vault starts as      _system/blocks.jsonl    your focus blocks
-  plugin/                 Claude Code skills              _system/config.json     your Settings
-  docs/                   protocol, customizing, rooms    _system/music/          your jukebox track
-                                                          themes/                 rooms you made
-                                                          gifts/                  what Claude made you
-                                                          _system/keepsakes.json  your trophies
-                                                          _system/keys/           answer keys (Claude writes)
-                                                          <topic>/                lessons, probes, records
-```
-
-The vault is plain files. It opens in [Obsidian](https://obsidian.md) as is (turn on "Open notes in
-Obsidian" in Settings), and works with git if you want history.
-
-## Documentation
-
-- [AGENTS.md](AGENTS.md): what an agent does when you hand it this repo
-- [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
-- [Rooms](docs/THEMES.md): how a room is made, for you or your agent
-- [The Claude protocol](docs/PROTOCOL.md): the contract between the dashboard and the tutor
-- [MCP](docs/MCP.md): your progress in Claude, Codex, Cursor or any MCP tool
-- [Architecture](docs/ARCHITECTURE.md): files, API, data flow, security model
-- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
+Goals, block lengths, names, voices and music are all in **⚙ Settings**, no terminal needed. Every
+setting is listed in [docs/CUSTOMIZING.md](docs/CUSTOMIZING.md).
 
 ## Privacy
 
-The server binds to `127.0.0.1` only and refuses requests from other sites. The page loads nothing from
-the internet (`./edu4self doctor` makes one request to `api.github.com` for the newest release number; see [Updating](#updating)) (fonts are bundled), with one exception you choose: if you pick a radio station for the
-jukebox, the page connects to that station while it plays. Your submissions, blocks, settings and music stay in your vault. Claude
-reads your inbox only when you ask it to, through Claude Code, under Anthropic's terms. If you connect
-any AI tool over MCP (Claude included), it sees your progress and sends it to its own model under its
-own terms; the tool is asked to tell you so when it first reads it ([details](docs/MCP.md)).
-When you run an exercise's checker, its output and a copy of your code are saved in that exercise's
-`trace/` folder, with the hints you open, for your tutor to read when you hand it in; Settings can
-delete all of it. If you set up mail, reminders go out through your own mail account; its app password stays outside
-the vault, in `~/.config/edu4self/` (your user folder on Windows) or, if you choose, the macOS Keychain or your Linux password store
-([risks of each](docs/CUSTOMIZING.md#reminders-and-the-sunday-recap)).
+edu4self has no accounts, no server of its own and no tracking. The dashboard listens only on
+`127.0.0.1` and refuses requests from other sites. Your answers, focus blocks, settings and music stay
+in your vault, a folder of plain files you own. That includes what an exercise's checker saves for
+your tutor in its `trace/` folder, which Settings can delete.
 
-## Credits
+What goes out, and only when you choose it:
 
-edu4self stands on other people's work: Claude Code, Matt Pocock's `teach` skill (an inspiration for the lesson formats), four open-source
-typefaces, and decades of learning research. The bar view's dialogue is inspired by *Disco Elysium*.
-Full list with licenses: [CREDITS.md](CREDITS.md).
+- **Grading and lessons** run through Claude Code, which sends what it reads to Anthropic under
+  Anthropic's terms, as it does for any work you give it.
+- **Update check:** `./edu4self doctor` asks `api.github.com` for the newest version number. Nothing
+  about you is sent. `EDU4SELF_NO_UPDATE_CHECK=1` turns it off.
+- **Radio:** if you pick a radio station for the music, the page connects to it while it plays.
+- **MCP:** if you connect another AI tool, it sees your progress and sends it to its own model
+  ([details](docs/MCP.md)).
+- **Mail reminders**, if you set them up, go through your own mail account. The app password stays
+  outside the vault ([where and how](docs/CUSTOMIZING.md#reminders-and-the-sunday-recap)).
 
-## License
+## Updating
 
-[MIT](LICENSE). Bundled fonts are under the SIL Open Font License 1.1 (see [CREDITS.md](CREDITS.md)).
+Your code and your data live in different folders, so updating never touches your vault:
+
+```sh
+cd edu4self && git pull && ./edu4self restart
+claude plugin marketplace update edu4self && claude plugin update edu4self@edu4self
+```
+
+The first line updates the dashboard, the second the tutor skills; then restart Claude Code.
+`./edu4self doctor` tells you when a new version is out.
+
+## Learn more
+
+- [Setup](docs/SETUP.md): every option, Windows, everyday commands, where your files live
+- [Customizing](docs/CUSTOMIZING.md): every setting, in the panel and in `config.json`
+- [Rooms](docs/THEMES.md): how a room is made, by you or your agent
+- [MCP](docs/MCP.md): your progress in Claude, Codex, Cursor or any MCP tool
+- [The Claude protocol](docs/PROTOCOL.md) and [architecture](docs/ARCHITECTURE.md): how it works inside
+- [AGENTS.md](AGENTS.md): what an agent does when you hand it this repo
+- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md)
+
+## Credits and license
+
+edu4self stands on other people's work: Claude Code, Matt Pocock's `teach` skill (an inspiration for
+the lesson formats), four open-source typefaces, and decades of learning research. The bar's dialogue
+is inspired by *Disco Elysium*. Full list with licenses: [CREDITS.md](CREDITS.md).
+
+edu4self is [MIT](LICENSE) licensed. Bundled fonts are under the SIL Open Font License 1.1.
