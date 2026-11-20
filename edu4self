@@ -13,7 +13,8 @@
     ./edu4self mail setup|test|off   away mails and the Sunday recap (your own mail account)
     ./edu4self mcp                   your progress for any AI tool that speaks MCP (see docs/MCP.md)
 
-The vault and port are remembered in ~/.config/edu4self/settings.json after init.
+The vault and port are remembered in ~/.config/edu4self/settings.json by setup, and by init for the first vault
+(a later init keeps the old default unless given --make-default).
 """
 import argparse
 import errno
@@ -88,8 +89,18 @@ def say(mark, text):
 
 # ---------------------------------------------------------------- init
 
+def is_vault(path):
+    return bool(path) and os.path.isfile(os.path.join(path, "_system", "state.json"))
+
+
 def cmd_init(args):
     vault = os.path.abspath(os.path.expanduser(args.path))
+    make_default = getattr(args, "make_default", False)
+    if make_default and is_vault(vault):      # switch the default to a vault that exists; its files stay as they are
+        port = args.port or DEFAULT_PORT
+        write_settings(vault=vault, port=port)
+        print("%s is now your default vault (port %d)." % (vault, port))
+        return vault, port
     if os.path.exists(vault) and os.listdir(vault):
         sys.exit("%s already exists and isn't empty. Pick a new folder (it gets created)." % vault)
     port = args.port or DEFAULT_PORT
@@ -158,8 +169,15 @@ def cmd_init(args):
     for fname in ("CLAUDE.md", "AGENTS.md"):
         with open(os.path.join(vault, fname), "w", encoding="utf-8") as fh:
             fh.write(text)
-    write_settings(vault=vault, port=port)
     print("Made a vault at %s" % vault)
+    # status, doctor, serve and the login service use the remembered vault: a second vault (a try-out, a test)
+    # never takes that over silently, only when asked or when the old one is gone
+    old = read_settings().get("vault")
+    if make_default or not is_vault(old) or os.path.abspath(old) == vault:
+        write_settings(vault=vault, port=port)
+    else:
+        print("Your default vault is still %s (status, doctor and serve use it). To make this one the default:\n"
+              "  ./edu4self init %s --make-default%s" % (old, shell_quote(vault), "" if port == DEFAULT_PORT else " --port %d" % port))
     return vault, port
 
 
@@ -897,7 +915,8 @@ def cmd_setup(args):
         write_settings(vault=vault, port=port)
         print("Using the vault at %s (its files are left as they are)." % vault)
     else:
-        ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example, gifts=gifts)
+        ns = argparse.Namespace(path=path, name=name, port=args.port, no_example=args.no_example, gifts=gifts,
+                                make_default=True)      # setup is the deliberate choice of a vault
         vault, port = cmd_init(ns)
     rc = 0
     if not args.no_service:
@@ -950,6 +969,8 @@ def main(argv=None):
     p.add_argument("--name", default="")
     p.add_argument("--no-example", action="store_true")
     p.add_argument("--gifts", choices=("on", "off"))
+    p.add_argument("--make-default", action="store_true",
+                   help="make it the vault status, doctor and serve use (also for a vault that already exists)")
     p = common(sub.add_parser("serve", help="run the dashboard in this terminal"))
     p.add_argument("--open", action="store_true", help="open a browser too")
     for name, h in (("install", "start at login"), ("uninstall", "stop starting at login"), ("restart", "restart the service"),
@@ -967,8 +988,11 @@ def main(argv=None):
         ap.print_help()
         return 0
     if args.cmd == "init":
-        cmd_init(args)
-        print("Start it with:  ./edu4self serve --open   (or ./edu4self install to start at login)")
+        vault, port = cmd_init(args)
+        if read_settings().get("vault") == vault:
+            print("Start it with:  ./edu4self serve --open   (or ./edu4self install to start at login)")
+        else:
+            print("Try it with:    ./edu4self serve --vault %s --port %d --open" % (shell_quote(vault), port))
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
             "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,

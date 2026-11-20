@@ -170,6 +170,75 @@ class ReadmeSetupTest(unittest.TestCase):
             self.assertIn("cd ~", self.section(title), title)
 
 
+class InitKeepsSettingsTest(Cmd):
+    """init never silently re-points status, doctor and the service at a second vault."""
+
+    def remembered(self):
+        with open(os.path.join(self.tmp, "cfg", "settings.json"), encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def init(self, name, *extra):
+        r = self.run_cli("init", os.path.join(self.tmp, name), "--name", "Kim", *extra)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        return r
+
+    def test_a_fresh_config_remembers_the_first_vault(self):
+        a = os.path.join(self.tmp, "a")
+        self.init("a", "--port", str(self.free))
+        remembered = self.remembered()
+        self.assertEqual(remembered["vault"], os.path.abspath(a))
+        self.assertEqual(remembered["port"], self.free)
+
+    def test_a_second_vault_keeps_the_first_as_default_and_says_how_to_switch(self):
+        a = os.path.join(self.tmp, "a")
+        b = os.path.join(self.tmp, "b")
+        self.init("a")
+        r = self.init("b")
+        self.assertEqual(self.remembered()["vault"], os.path.abspath(a))
+        self.assertIn(os.path.abspath(a), r.stdout)
+        self.assertIn(os.path.abspath(b), r.stdout)
+        self.assertIn("--make-default", r.stdout)
+
+    def test_the_printed_switch_and_serve_commands_carry_the_new_vaults_port(self):
+        self.init("a")
+        r = self.init("b", "--port", str(self.free))
+        self.assertIn("--make-default --port %d" % self.free, r.stdout)
+        self.assertIn("serve --vault", r.stdout, "serve without --vault would open the old default")
+
+    def test_a_deleted_default_is_replaced(self):
+        a = os.path.join(self.tmp, "a")
+        b = os.path.join(self.tmp, "b")
+        self.init("a")
+        shutil.rmtree(a)
+        self.init("b")
+        self.assertEqual(self.remembered()["vault"], os.path.abspath(b))
+
+    def test_make_default_switches_to_an_existing_vault_without_touching_it(self):
+        b = os.path.join(self.tmp, "b")
+        self.init("a")
+        self.init("b")
+        state = os.path.join(b, "_system", "state.json")
+        before = read(state)
+        r = self.run_cli("init", b, "--make-default")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.remembered()["vault"], os.path.abspath(b))
+        self.assertEqual(read(state), before)
+
+    def test_make_default_at_init_time_switches_at_once(self):
+        b = os.path.join(self.tmp, "b")
+        self.init("a")
+        self.init("b", "--make-default")
+        self.assertEqual(self.remembered()["vault"], os.path.abspath(b))
+
+    def test_setup_still_remembers_its_vault(self):
+        s = os.path.join(self.tmp, "s")
+        self.init("a")
+        r = self.run_cli("setup", "--vault", s, "--name", "Kim", "--port", str(self.free), "--no-service",
+                         "--no-open", "--no-plugin", "--gifts", "off")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.remembered()["vault"], os.path.abspath(s))
+
+
 class SetupTwiceTest(Cmd):
     def test_setup_on_an_existing_vault_carries_on_and_leaves_it_alone(self):
         vault = self.make_vault()
