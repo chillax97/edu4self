@@ -13,6 +13,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "app"))
 sys.path.insert(0, HERE)
+import edu_trace  # noqa: E402
 import server  # noqa: E402
 from test_server import make_vault, free_port, read_json  # noqa: E402
 
@@ -220,6 +221,119 @@ class TraceTest(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.ex, keep)), keep)
         _, d = self.req("GET", "/api/hints?task=" + self.task["id"])
         self.assertFalse(any(h["opened"] for h in d["hints"]), "the record of opened hints goes with it")
+
+
+class TerminalNudgeTest(unittest.TestCase):
+    """The stuck nudge reaches the terminal: two failed runs say nothing, the third offers the next hint."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(prefix="edu4self-nudge-")
+        cls.vault, _ = make_vault(cls.tmp)
+        cls.port = free_port()
+        cls.httpd = server.make_server(cls.vault, cls.port)      # writes _system/edu_trace.py and _system/dashboard.json
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+        cls.folders, cls.tasks = {}, {}
+        st = read_json(os.path.join(cls.vault, "_system", "state.json"))
+        queue = st["topics"][0]["queue"]
+        for i in range(1, 8):
+            folder = os.path.join(cls.vault, "topic", "exercises", "n%d" % i)
+            os.makedirs(folder)
+            with open(os.path.join(folder, "check.py"), "w", encoding="utf-8") as fh:
+                fh.write(CHECKER)
+            with open(os.path.join(folder, "HINTS.md"), "w", encoding="utf-8") as fh:
+                fh.write(HINTS)
+            cls.folders[i] = folder
+            task = json.loads(json.dumps(queue[0]))             # its own todo task, pointed at its own folder
+            task["id"], task["exercise"], task["status"] = "nudge-%d" % i, "topic/exercises/n%d" % i, "todo"
+            queue.append(task)
+            cls.tasks[i] = task
+        with open(os.path.join(cls.vault, "_system", "state.json"), "w", encoding="utf-8") as fh:
+            json.dump(st, fh)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def solve(self, i, body):
+        with open(os.path.join(self.folders[i], "sol.py"), "w", encoding="utf-8") as fh:
+            fh.write(body)
+
+    def check(self, i):
+        return subprocess.run([sys.executable, os.path.join(self.folders[i], "check.py")], cwd=self.folders[i],
+                              capture_output=True, encoding="utf-8", timeout=30)
+
+    def fail_runs(self, i, n):
+        self.solve(i, "def double(x):\n    return x\n")
+        return [self.check(i) for _ in range(n)]
+
+    def test_the_first_two_failing_runs_say_nothing(self):
+        first, second = self.fail_runs(1, 2)
+        for res in (first, second):
+            self.assertNotIn("Stuck?", res.stdout)
+            self.assertEqual(res.returncode, 1, "the checker's own result is untouched")
+
+    def test_the_third_failing_run_offers_the_next_hint_with_the_dashboard_address(self):
+        self.fail_runs(2, 2)
+        third = self.check(2)
+        self.assertEqual(third.returncode, 1)
+        self.assertIn("Stuck? 3 runs in a row", third.stdout)
+        self.assertIn("Hint 1 is ready: 1 · double", third.stdout)
+        self.assertIn("http://127.0.0.1:%d/#hints=%s" % (self.port, self.tasks[2]["id"]), third.stdout)
+
+    def test_after_a_hint_is_opened_the_offer_moves_to_the_next_one(self):
+        self.fail_runs(3, 3)
+        self.solve(3, "def double(x):\n    return x\n")
+        server.open_hint(self.tasks[3], 1)
+        fourth = self.check(3)
+        self.assertEqual(fourth.returncode, 1)
+        self.assertIn("Hint 2 is ready: 2 · edge cases", fourth.stdout)
+
+    def test_no_offer_once_every_hint_is_open(self):
+        self.fail_runs(4, 3)
+        server.open_hint(self.tasks[4], 1)
+        server.open_hint(self.tasks[4], 2)
+        fifth = self.check(4)
+        self.assertEqual(fifth.returncode, 1)
+        self.assertNotIn("Stuck?", fifth.stdout)
+
+    def test_a_pass_starts_the_count_again(self):
+        self.fail_runs(5, 3)
+        self.solve(5, "def double(x):\n    return x * 2\n")
+        passed = self.check(5)
+        self.assertEqual(passed.returncode, 0)
+        self.assertNotIn("Stuck?", passed.stdout)
+        self.solve(5, "def double(x):\n    return x\n")
+        after = self.check(5)
+        self.assertEqual(after.returncode, 1)
+        self.assertNotIn("Stuck?", after.stdout)
+
+    def test_without_the_dashboard_address_the_offer_still_appears(self):
+        addr = os.path.join(self.vault, "_system", "dashboard.json")
+        with open(addr, encoding="utf-8") as fh:
+            saved = fh.read()
+        os.remove(addr)
+        try:
+            self.fail_runs(6, 2)
+            third = self.check(6)
+        finally:
+            with open(addr, "w", encoding="utf-8") as fh:
+                fh.write(saved)
+        self.assertEqual(third.returncode, 1)
+        self.assertIn("(open it on the dashboard)", third.stdout)
+
+    def test_without_hints_there_is_nothing_to_offer(self):
+        os.remove(os.path.join(self.folders[7], "HINTS.md"))
+        self.fail_runs(7, 3)
+        third = self.check(7)
+        self.assertEqual(third.returncode, 1)
+        self.assertNotIn("Stuck?", third.stdout)
+
+    def test_the_server_uses_the_one_failing_run_count(self):
+        self.assertIs(server.fails_in_a_row, edu_trace.fails_in_a_row)
+        self.assertEqual(server.fails_in_a_row([0, 1, 1]), 2)
 
 
 class TeeTest(unittest.TestCase):

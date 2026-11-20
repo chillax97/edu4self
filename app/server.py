@@ -369,11 +369,15 @@ def now_iso():
 # A checker run saves its output and the learner's code into <exercise>/trace/; a hint opened in the
 # dashboard is saved there too. The tutor reads the folder when the task is handed in.
 TRACE_MARK = "edu4self_trace"
-HINT_FILE = re.compile(r"^.+-hint-(\d+)(?:-\d+)?\.json$")
+HINT_FILE = edu_trace.HINT_FILE
+STUCK_RUNS = edu_trace.STUCK_RUNS
+fails_in_a_row = edu_trace.fails_in_a_row
+parse_hints = edu_trace.parse_hints
+hints_opened = edu_trace.hints_opened
 
 
 def install_trace_helper():
-    """Copy edu_trace.py into <vault>/_system/, where every checker looks for it."""
+    """Copy edu_trace.py into <vault>/_system/, where every checker looks for it, and note the dashboard's address."""
     try:
         with open(os.path.join(APP, "edu_trace.py"), encoding="utf-8") as fh:
             src = fh.read()
@@ -381,6 +385,17 @@ def install_trace_helper():
         if os.path.isdir(SYSTEM) and (not os.path.isfile(dest) or read_text(dest) != src):
             with open(dest, "w", encoding="utf-8") as fh:
                 fh.write(src)
+        if os.path.isdir(SYSTEM):                     # where a stuck checker sends the learner (edu_trace.dashboard_link)
+            want = json.dumps({"url": "http://127.0.0.1:%d/" % PORT})
+            addr = os.path.join(SYSTEM, "dashboard.json")
+            try:
+                with open(addr, encoding="utf-8") as fh:
+                    have = fh.read()
+            except OSError:
+                have = None
+            if have != want:
+                with open(addr, "w", encoding="utf-8") as fh:
+                    fh.write(want)
     except OSError:
         pass
 
@@ -404,34 +419,6 @@ def exercise_dir(task):
     target = os.path.realpath(os.path.join(ROOT, *parts))
     root = os.path.realpath(ROOT)
     return target if target.startswith(root + os.sep) and os.path.isdir(target) else None
-
-
-def parse_hints(text):
-    """HINTS.md: one hint per '## ' heading, in order. Whatever comes before the first heading is the intro."""
-    out, cur = [], None
-    for line in text.splitlines():
-        if line.startswith("## "):
-            cur = {"title": line[3:].strip(), "lines": []}
-            out.append(cur)
-        elif cur is not None:
-            cur["lines"].append(line)
-    return [{"n": i + 1, "title": h["title"][:120], "body": "\n".join(h["lines"]).strip()[:4000]} for i, h in enumerate(out)]
-
-
-def hints_opened(folder):
-    """{hint number: when it was opened}, from the hint files in trace/."""
-    opened, tdir = {}, os.path.join(folder, "trace")
-    for name in sorted(os.listdir(tdir)) if os.path.isdir(tdir) else []:
-        m = HINT_FILE.match(name)
-        if not m:
-            continue
-        try:
-            rec = json.loads(read_text(os.path.join(tdir, name)))
-        except (OSError, ValueError):
-            continue
-        if isinstance(rec, dict) and rec.get(TRACE_MARK):
-            opened.setdefault(int(m.group(1)), rec.get("ts"))
-    return opened
 
 
 def hints_for(task):
@@ -463,19 +450,6 @@ def open_hint(task, n):
                        "hint": n, "title": hint["title"]}, fh, ensure_ascii=False, indent=1)
     hint["opened"] = hints_opened(folder).get(n)
     return hint
-
-
-STUCK_RUNS = 3     # failing checker runs in a row (no pass since) before the page offers the next hint
-
-
-def fails_in_a_row(exits):
-    """How many runs at the end failed, counting back to the last pass."""
-    n = 0
-    for code in reversed(exits):
-        if code == 0:
-            break
-        n += 1
-    return n
 
 
 def attempts(task):

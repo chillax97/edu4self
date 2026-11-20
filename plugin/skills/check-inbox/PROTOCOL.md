@@ -289,6 +289,8 @@ opening it, so an answer about hints is still worth asking for.
 how long after the one before) and each hint opened, in order. After 3 failing runs in a row with
 no pass since, the task shows a gentle nudge that offers the next hint not opened yet. The nudge
 writes nothing; a hint opened from it is noted like any other, so the record already tells you.
+The checker says the same in the terminal, after its "run saved" line, with a link that opens that
+task's hints on the dashboard, so the learner sees it while coding.
 
 **Grading.** When the task is handed in, read every file in `trace/` in name order (the names sort by
 time) as one story, together with the submission and the learner's comments (in the note and in the
