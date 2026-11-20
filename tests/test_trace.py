@@ -263,7 +263,8 @@ class TerminalNudgeTest(unittest.TestCase):
 
     def check(self, i):
         return subprocess.run([sys.executable, os.path.join(self.folders[i], "check.py")], cwd=self.folders[i],
-                              capture_output=True, encoding="utf-8", timeout=30)
+                              capture_output=True, encoding="utf-8", errors="replace", timeout=30,
+                              env=dict(os.environ, PYTHONIOENCODING="utf-8"))   # Windows pipes default to the code page
 
     def fail_runs(self, i, n):
         self.solve(i, "def double(x):\n    return x\n")

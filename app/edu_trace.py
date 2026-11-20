@@ -248,7 +248,8 @@ def start(checker_file, code_files):
                 except Exception:
                     line = None
                 if line:
-                    out.write(line + "\n")
+                    enc = getattr(out, "encoding", None) or "utf-8"      # a title the console can't print still prints, as ?
+                    out.write((line + "\n").encode(enc, "replace").decode(enc, "replace"))
                 out.flush()
             except Exception:
                 pass
