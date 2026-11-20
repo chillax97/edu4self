@@ -15,6 +15,7 @@ Files it writes:  _system/inbox.jsonl and _system/blocks.jsonl (append-only),
 """
 import argparse
 import copy
+import hashlib
 import html
 import json
 import mimetypes
@@ -666,6 +667,25 @@ def pending_entries(state):
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     return [e for e in entries
             if e.get("kind") != "withdraw" and e.get("id") not in processed and e.get("id") not in withdrawn]
+
+
+def change_stamp():
+    """A short fingerprint of everything the page shows: state.json, the inbox, the blocks, the settings and the
+    checker runs in trace/ folders (size and time of each), plus the hour, for what turns with the clock. The page
+    asks for it every few seconds and fetches /api/state only when it moves."""
+    h = hashlib.sha1(datetime.now().astimezone().strftime("%Y-%m-%d %H").encode())
+    paths = [STATE, INBOX, BLOCKS, CONFIG]
+    for base, dirs, files in os.walk(ROOT):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and not (base == ROOT and d in ("_system", "themes"))]
+        if os.path.basename(base) == "trace":
+            paths += [os.path.join(base, n) for n in sorted(files) if n.endswith(".json")]
+    for path in paths:
+        try:
+            st = os.stat(path)
+            h.update(("%s %d %d\n" % (path, st.st_mtime_ns, st.st_size)).encode())
+        except OSError:
+            h.update(("%s -\n" % path).encode())
+    return h.hexdigest()[:16]
 
 
 def api_state():
@@ -1643,6 +1663,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_text("text/css; charset=utf-8", active_lesson_css())
         if route == "/api/state":
             return self.send_json(200, api_state())
+        if route == "/api/stamp":
+            return self.send_json(200, {"stamp": change_stamp()})
         if route == "/card":
             page = card_page(urllib.parse.parse_qs(parsed.query).get("id", [""])[0])
             if page is None:

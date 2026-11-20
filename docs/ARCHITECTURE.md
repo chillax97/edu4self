@@ -96,7 +96,7 @@ top bar with the fix and greys out Grade.
 
 ## The page
 
-`render()` rebuilds `#app` from `/api/state` every 15 seconds (and on focus). Two persistent elements
+`render()` rebuilds `#app` from `/api/state` whenever `/api/stamp` (a fingerprint of state.json, the inbox, the blocks, the settings and the trace/ runs, asked every 2 seconds and on focus) moves. Two persistent elements
 survive re-renders: the focus-block card and the jukebox, which are moved into slots after each render
 so a running timer and playing audio are never interrupted.
 

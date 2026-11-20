@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var POLL_MS = 15000;
+  var STAMP_MS = 2000;   // how often the page asks whether anything in the vault changed
   var ONBOARD_KEY = "edu.onboarded.v1";
   var DATA = null;
   var lastStamp = null;
@@ -3819,6 +3819,16 @@
   }
 
   // ---------------------------------------------------------------- loading
+  // Keeping up with the vault: every couple of seconds ask the server for a fingerprint of the files the page shows,
+  // and fetch the whole state only when it moved (Claude graded, a block ended, a checker ran, the settings changed).
+  var fileStamp = null;
+  function sync() {
+    return fetch("/api/stamp", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.stamp === fileStamp && DATA && !DATA.__offline) return;
+      fileStamp = j.stamp;
+      return load();
+    }, function () { return load(); });   // the server is away: load() says so, and keeps retrying with us
+  }
   function load() {
     return fetch("/api/state", { cache: "no-store" })
       .then(function (r) { return r.json(); })
@@ -3918,7 +3928,7 @@
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) return;
     if (!CL.busy) claudePoll(true);
-    load();
+    sync();
     if (celebrateNext) showCelebration();
   });
 
@@ -3937,13 +3947,13 @@
   }
   window.addEventListener("hashchange", followHash);
 
-  Promise.all([claudePoll(), load()]).then(function () {
+  Promise.all([claudePoll(), sync()]).then(function () {
     if (CL.known && DATA) render();   // the Claude buttons depend on what the check said
     resumeBlock();
     if (location.hash) return followHash();
     if (FIRST) { if (!$("#onboarding").hidden) $("#ft-kicker").textContent = ftKicker(); return; }   // the room is known now
     askGifts();
   });
-  setInterval(function () { if (!document.hidden) load(); }, POLL_MS);
+  setInterval(function () { if (!document.hidden) sync(); }, STAMP_MS);
   setInterval(function () { if (!document.hidden && !active) barTick(); }, 2000);
 })();

@@ -141,7 +141,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
 6. Run `edu4self check` (from the edu4self folder, or the full command in the vault's `CLAUDE.md`).
    It must print two passing lines and exit 0. If it fails, fix `state.json` before replying.
 
-The dashboard polls every 15 seconds and shows "Claude updated your dashboard" when `updated` changes.
+The dashboard notices a change to the vault's files within a few seconds and shows "Claude updated your dashboard" when `updated` changes.
 
 ## 2. A new topic
 
