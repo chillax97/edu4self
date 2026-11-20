@@ -204,7 +204,8 @@ named in Settings, or the vault folder's name by default. Off, they open as plai
 
 ## Changing the port
 
-The port is chosen at `init` (default 4747) and stored in `~/.config/edu4self/settings.json`. To change
+The port is chosen at `setup` or `init` (default 4747) and stored, with the vault, in `~/.config/edu4self/settings.json`.
+A second `init` keeps the first vault as the default; `./edu4self init <vault> --make-default` switches. To change
 it, run `./edu4self install --port 4800` (it rewrites the login service), and update the port in your
 vault's `CLAUDE.md`.
 

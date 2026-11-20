@@ -9,6 +9,10 @@ versions follow [Semantic Versioning](https://semver.org).
 
 - A room saved in a vault before the shared room base keeps its layout. Rooms without `"format": 2` load the old
   room rules (`room-compat.css`); no other room does.
+- `init` no longer re-points `status`, `doctor`, `serve` and the login service at a second vault. It remembers a vault
+  only when none is remembered or the old one is gone, and otherwise prints the old default and the switch,
+  `./edu4self init <vault> --make-default` (which also works on a vault that already exists). `setup` still
+  makes its vault the default.
 
 ### Added
 
