@@ -5,7 +5,7 @@ versions follow [Semantic Versioning](https://semver.org).
 
 ## Unreleased
 
-## [1.7.0] - 2026-11-21
+## 1.7.0 - 2026-11-21
 
 ### Fixed
 
@@ -23,7 +23,6 @@ versions follow [Semantic Versioning](https://semver.org).
 - The dashboard keeps up with your vault on its own: a grade, a new lesson, a finished block, a checker run or a
   settings change shows within a few seconds, with no reload. The page asks a small change check every 2 seconds
   and fetches the full state only when something moved.
-
 - The bar is rebuilt as a place: you look down at the counter. The job lies in an open book with your reply on
   the right page, the voices talk on the mat, and by your hand stand the jukebox, your glass and this week's
   bottle caps. The neon sign stays dim until tonight's goal is met.
