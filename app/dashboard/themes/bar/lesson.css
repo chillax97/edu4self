@@ -1,12 +1,151 @@
-/* Lessons in the bar: low amber light on dark wood, a cream napkin for quizzes. */
-:root { --ink: #f1e8da; --ink-soft: #ddd0bd; --faint: #b3a690; --rule: #3a2e26; --bg: #120e0c; --panel: #1f1915;
-  --accent: #ffb36b; --good: #9be0a8; --bad: #ff9a8a; --code: #231b16; }
-body { background: radial-gradient(ellipse 60% 30% at 20% 0%, rgba(255,179,107,.10), transparent 70%), #120e0c; }
-a { border-bottom-color: rgba(255,179,107,.35); }
-.quiz { background: #ffe9cf; color: #2a1a10; border-color: #c9a07a; }
-.quiz .prompt, .quiz p { color: #2a1a10; }
-.quiz button { background: #7a3a1a; color: #ffe9cf; border-color: #7a3a1a; }
-.quiz button.opt { background: #fff4e4; color: #2a1a10; border-color: #c9a07a; }
-.quiz textarea, .quiz input[type=text] { background: #fff4e4; color: #2a1a10; }
-.quiz .verdict.ok { color: #1f6b3a; } .quiz .verdict.no { color: #a3241a; }
-.quiz .explain { color: #4a3420; }
+/* Lessons in the bar: Hopper chiaroscuro meets a late-night listening bar monograph.
+   Warm dim tungsten light over obsidian, brushed-brass hairlines, smoked-glass quiz cards,
+   high contrast for 20-minute reading sessions. Print stays clean black-on-white. */
+
+:root {
+  --ink: #f2efe8; --ink-soft: #cfc9be; --faint: #8f8c84;
+  --rule: rgba(229,162,74,.18); --bg: #0b0e10; --panel: #13161a;
+  --accent: #e5a24a; --good: #8ad6a7; --bad: #f07d67; --code: #0e1115;
+}
+
+body {
+  background:
+    radial-gradient(110% 70% at 50% 0%, rgba(229,162,74,.14), transparent 68%),
+    radial-gradient(75% 75% at 90% 42%, rgba(210,136,52,.10), transparent 68%),
+    radial-gradient(65% 70% at 8% 92%, rgba(20,74,84,.22), transparent 68%),
+    linear-gradient(155deg, #0b1012 0%, #100d0b 50%, #15100c 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  line-height: 1.66;
+}
+
+.wrap { max-width: 47rem; padding: 3.5rem 1.8rem 7rem; }
+
+/* Editorial masthead framed like the bar counter */
+header.masthead {
+  padding: 1.8rem 2rem 1.6rem;
+  margin-bottom: 2.6rem;
+  border: 1px solid rgba(229,162,74,.20);
+  border-top: 2px solid rgba(229,162,74,.52);
+  border-radius: 10px;
+  background:
+    radial-gradient(75% 80% at 20% 0%, rgba(229,162,74,.12), transparent 65%),
+    linear-gradient(180deg, rgba(24,19,16,.88), rgba(13,14,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.12), 0 22px 48px -22px rgba(0,0,0,.85);
+}
+.kicker { color: #e5a24a; font-weight: 600; letter-spacing: .16em; }
+h1 { font-size: 2.25rem; font-weight: 400; color: #f7f3eb; letter-spacing: -.015em; }
+.dek { color: #d6cfc3; font-size: 1.05rem; margin-top: .5rem; }
+.meta { color: #8f8c84; margin-top: 1.1rem; padding-top: .85rem; border-top: 1px solid rgba(242,239,232,.09); }
+.meta a { color: #e5a24a; border-bottom-color: rgba(229,162,74,.38); }
+
+h2 {
+  font-size: 1.42rem; font-weight: 400; color: #f5d39c;
+  margin: 3rem 0 .85rem; padding-top: 1.4rem;
+  border-top: 1px solid rgba(229,162,74,.14);
+}
+h3 { color: #f2efe8; font-weight: 600; letter-spacing: .01em; }
+p { color: #e6e0d6; }
+li { color: #e6e0d6; margin: .35rem 0; }
+strong, b { color: #f7f3eb; }
+a { color: #e5a24a; border-bottom-color: rgba(229,162,74,.38); transition: border-color .15s, color .15s; }
+a:hover { color: #ffd996; border-bottom-color: #ffd996; }
+
+/* Code, callouts, formulas, quotes */
+code { background: rgba(229,162,74,.10); color: #f5d39c; border: 1px solid rgba(229,162,74,.16); padding: .1em .38em; border-radius: 4px; }
+pre { background: #0c0f13; border: 1px solid rgba(242,239,232,.10); border-radius: 8px; padding: 1.1rem 1.3rem; }
+pre code { border: 0; color: #e8e2d6; padding: 0; }
+blockquote { border-left: 3px solid rgba(229,162,74,.55); color: #d6cfc3; padding: .2rem 0 .2rem 1.2rem; }
+
+.note {
+  background: linear-gradient(180deg, rgba(24,19,15,.84), rgba(14,15,18,.88));
+  border: 1px solid rgba(229,162,74,.18);
+  border-left: 3px solid #e5a24a;
+  border-radius: 0 8px 8px 0;
+  padding: 1rem 1.3rem;
+  color: #ddd6ca;
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.08);
+}
+.formula {
+  background: #0d1014;
+  border: 1px solid rgba(229,162,74,.22);
+  border-radius: 8px;
+  padding: 1.1rem 1.3rem;
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.05);
+}
+.formula .lhs { color: #e5a24a; font-weight: 600; }
+
+/* Worked traces */
+.trace li { padding: .5rem 0 .5rem 2.6rem; border-bottom-color: rgba(242,239,232,.10); }
+.trace li:before {
+  background: #e5a24a; color: #090b0d; font-weight: 700;
+  box-shadow: 0 0 12px rgba(229,162,74,.28);
+}
+
+/* Tables */
+th { color: #e5a24a; border-bottom-color: rgba(229,162,74,.28); }
+td { border-bottom-color: rgba(242,239,232,.09); }
+tbody tr:hover { background: rgba(229,162,74,.06); }
+
+/* Interactive quiz cards: smoked-glass bar-counter style */
+.quiz {
+  background:
+    radial-gradient(70% 65% at 18% 0%, rgba(229,162,74,.10), transparent 65%),
+    linear-gradient(180deg, rgba(24,19,16,.92), rgba(12,13,16,.96));
+  color: #f2efe8;
+  border: 1px solid rgba(229,162,74,.24);
+  border-top: 2px solid rgba(229,162,74,.52);
+  border-radius: 10px;
+  padding: 1.4rem 1.6rem;
+  margin: 2rem 0;
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.10), 0 18px 40px -20px rgba(0,0,0,.85);
+}
+.quiz .prompt { color: #f7f3eb; font-size: 1.02rem; margin-bottom: 1rem; }
+.quiz .prompt strong { color: #e5a24a; }
+.quiz .row { gap: .6rem; }
+.quiz button {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: .9rem; font-weight: 600;
+  padding: .6rem 1.15rem; border-radius: 7px;
+  background: #f2efe8; color: #090b0d; border: 1px solid #f2efe8;
+  transition: background .15s, border-color .15s, color .15s, transform .12s;
+}
+.quiz button:hover:not(:disabled) { background: #e5a24a; border-color: #e5a24a; color: #090b0d; transform: translateY(-1px); }
+.quiz button.opt {
+  font-family: var(--serif); font-size: .96rem; font-weight: 400; line-height: 1.45;
+  padding: .72rem 1rem;
+  background: rgba(9,11,14,.74); color: #ede7dc;
+  border: 1px solid rgba(242,239,232,.16);
+}
+.quiz button.opt:hover:not(:disabled) {
+  background: rgba(229,162,74,.12); border-color: rgba(229,162,74,.65); color: #fff8ec; transform: none;
+}
+.quiz button:disabled { opacity: .62; }
+.quiz textarea, .quiz input[type=text] {
+  background: rgba(7,9,11,.85); color: #f2efe8;
+  border: 1px solid rgba(242,239,232,.20); border-radius: 7px;
+  padding: .58rem .8rem; font-size: .92rem;
+}
+.quiz textarea:focus, .quiz input[type=text]:focus {
+  outline: none; border-color: #e5a24a; box-shadow: 0 0 0 3px rgba(229,162,74,.22);
+}
+.quiz .verdict { font-size: .82rem; font-weight: 600; letter-spacing: .04em; margin-top: .9rem; }
+.quiz .verdict.ok { color: #8ad6a7; }
+.quiz .verdict.no { color: #f07d67; }
+.quiz .explain {
+  color: #d6cfc3; margin-top: .85rem; padding-top: .85rem;
+  border-top: 1px solid rgba(229,162,74,.18);
+}
+
+.nav { border-top-color: rgba(229,162,74,.18); }
+footer.ask {
+  background: rgba(20,17,14,.85);
+  border: 1px solid rgba(229,162,74,.18);
+  border-radius: 8px;
+}
+
+@media print {
+  body { background: #fff; color: #16161a; }
+  header.masthead, .quiz, .note, .formula { background: #fff; color: #16161a; border-color: #ccc; box-shadow: none; }
+  h1, h2, h3, p, li, strong, b { color: #16161a; }
+}

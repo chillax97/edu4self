@@ -4,9 +4,9 @@
   "icon": "🍸",
   "about": "A dim bar where your skills talk about tonight's work. A jukebox, a bartender, a neon sign.",
   "dark": true,
-  "palette": { "bg": "#120b07", "bg2": "#1f1915", "surface": "#1a1411", "surface2": "#231b16", "ink": "#f1e8da", "ink2": "#ddd0bd", "muted": "#b3a690",
-    "line": "#3a2e26", "line2": "#4d3e33", "accent": "#ffb36b", "accent2": "#ffe9cf" },
-  "backdrop": "#120b07",
+  "palette": { "bg": "#080b0d", "bg2": "#101417", "surface": "#111518", "surface2": "#181d21", "ink": "#f2efe8", "ink2": "#cec9be", "muted": "#8e8b84",
+    "line": "#25292d", "line2": "#363b40", "accent": "#e5a24a", "accent2": "#f7d9a8", "accent_ink": "#0a0c0e" },
+  "backdrop": "#080b0d",
   "scape": "night",
   "fonts": {
     "head": "head",
@@ -16,8 +16,8 @@
   "replies": "short",
   "frame": {
     "topbar": "quiet",
-    "panel": { "surface": "#e9dec8", "surface2": "#e1d5bd", "ink": "#2b2118", "ink2": "#4d3f31", "muted": "#65574a",
-               "line": "rgba(75,52,30,.26)", "line2": "rgba(75,52,30,.46)", "accent": "#8a2d1e", "accent_ink": "#fff6e8" }
+    "panel": { "surface": "#111417", "surface2": "#181c20", "ink": "#f2efe8", "ink2": "#cfc9be", "muted": "#928e86",
+               "line": "rgba(242,239,232,.14)", "line2": "rgba(242,239,232,.26)", "accent": "#e5a24a", "accent_ink": "#0a0c0e" }
   },
   "words": {
     "tonight": "Tonight",

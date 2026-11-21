@@ -541,6 +541,10 @@ body:not(.blk-on) .finish-track li.current span { animation: here 2s ease-in-out
   background: color-mix(in srgb, var(--c-orange-5) 45%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
   animation: fade .18s ease;
 }
+body.v-bar .overlay {
+  background: rgba(5, 7, 9, .72);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { opacity: 0; transform: translateY(12px) scale(.98); } }
 .dialog {
@@ -548,6 +552,24 @@ body:not(.blk-on) .finish-track li.current span { animation: here 2s ease-in-out
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
   animation: rise .22s ease;
 }
+body.v-bar .dialog {
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--line));
+  border-top: 2px solid color-mix(in srgb, var(--primary) 58%, transparent);
+  background:
+    radial-gradient(80% 42% at 50% 0%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 66%),
+    var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.10), 0 32px 80px -20px rgba(0,0,0,.92);
+}
+body.v-bar .submit { max-width: 680px; }
+body.v-bar .sub-head h2 { font-size: var(--t-xl); font-weight: 400; }
+body.v-bar .sub-fields textarea { min-height: 76px; background: color-mix(in srgb, var(--bg) 55%, var(--surface)); border-radius: var(--r-md); }
+body.v-bar .sub-fields textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+body.v-bar .sure-row input:checked + span {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+body.v-bar .honor input { accent-color: var(--primary); }
 .onboard { max-width: 520px; padding: var(--s-8) var(--s-8) var(--s-6); }
 .ob-slide h2 { font: 600 var(--t-xl)/1.15 var(--serif); letter-spacing: -.02em; margin: var(--s-4) 0 var(--s-2); }
 .ob-slide p { margin: 0 0 var(--s-2); color: var(--ink-2); font-size: var(--t-md); }

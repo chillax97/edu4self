@@ -1,252 +1,578 @@
-.room { --bx-line: #3a2e26; --bx-line2: #2e241e; --bx-k: #f1d9bf; --bx-text: #d9ccb8; --bx-dim: #cdbfa9; --bx-faint: #b9ab95; --bx-bright: #efe5d6; --bx-soft: #e6d9c6; --bx-label: #ddd0bd; --bx-edge: #5a4636; --bx-panel: rgba(8,6,5,.55); --bx-frame: rgba(12,9,8,.55); --bar-amber: #ffb36b; --bar-cream: #ffe9cf; }
-.room .bx { display: grid; grid-template-columns: minmax(0, 1fr) 330px; margin-top: var(--s-6); border: 1px solid var(--bx-line); border-radius: var(--r-lg); overflow: hidden; background: var(--bx-frame); }
-.room .bx-neon { cursor: pointer; display: block; font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--bx-head); color: #ffd6f0;
-  text-shadow: 0 0 6px #ff4fb4, 0 0 18px #ff4fb4, 0 0 36px #b5179e;  overflow-wrap: anywhere; }
-.room:not(.is-running) .bx-neon { animation: bx-flicker 7s infinite; }
-.room .bx-neon small { display: block; font: 600 var(--t-xs) var(--bx-head); letter-spacing: .26em; text-transform: uppercase; color: var(--bar-amber); text-shadow: none; margin-top: var(--s-2); transition: opacity .6s ease; }
-.room .bx-neon:focus-visible { outline: 2px solid #ff4fb4; outline-offset: 4px; }
-.room .bx-juke { position: relative; border-radius: var(--r-full) var(--r-full) var(--r-md) var(--r-md); padding: var(--s-6) var(--s-3) var(--s-4); background: linear-gradient(#2a1630, #1a0f1f); isolation: isolate; }
-.room .bx-juke::before { content: ""; position: absolute; inset: -3px; z-index: -1; border-radius: inherit; background: linear-gradient(90deg, #ff4fb4, #ffb36b, #18c8e0, #7b7bf0, #ff4fb4); background-size: 300% 100%; }
-.room:not(.is-running) .bx-juke::before { animation: bx-hue 6s linear infinite; }
-.room .bx-juke::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(#2a1630, #1a0f1f); }
-@keyframes bx-hue { to { background-position: 300% 0; } }
-.room .bx-vinyl { position: relative; width: 112px; height: 112px; margin: 0 auto var(--s-2); border-radius: 50%;
-  background: radial-gradient(circle, var(--blk, #7b7bf0) 0 22%, #111 23% 25%, transparent 26%), repeating-radial-gradient(circle, #151515 0 2px, #222 2px 4px);
-  box-shadow: 0 0 0 4px #0b0b0b, 0 8px 20px rgba(0,0,0,.6); }
-.room .bx-vinyl::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 20deg, transparent 0 40deg, rgba(255,255,255,.12) 50deg, transparent 60deg 220deg, rgba(255,255,255,.08) 230deg, transparent 240deg); }
-.room .bx-vinyl::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: calc(var(--s-1) * -1); border-radius: 50%; background: #e5d8c4; }
-.room.is-running .bx-vinyl { animation: rm-spin-up 1.4s cubic-bezier(.5,0,1,1), rm-spin 6s linear 1.4s infinite; }
-@keyframes rm-spin-up { to { transform: rotate(140deg); } }
-@keyframes rm-spin { from { transform: rotate(140deg); } to { transform: rotate(500deg); } }
-.room[data-event~="end"] .bx-vinyl { animation: rm-spin-down 2.2s cubic-bezier(0,0,.3,1); }
-@keyframes rm-spin-down { from { transform: rotate(0); } to { transform: rotate(160deg); } }
+/* The bar: Hopper Nighthawks chiaroscuro meets Tokyo jazz kissa precision.
+   Nocturnal rain-glass obsidian on the left, a single warm tungsten-lit bar window on the right.
+   Every selector starts with .room. Type: 12 labels, 14 UI, 17 reading, 22, 32+ job, 48 clock. */
 
-/* The bar, seen from your stool: looking down at the counter. Every selector starts with .room. The wood, paper and felt
-   are drawn here; everything readable is live text.
-   Type: 12 labels, 14 interface, 17 reading, 22, 32 the job, 48 the clock. Space: steps of 8 (4 inside small things). Corners: 4, 8. */
-.room { --w0: #120b07; --brass: #c9a15f; --cream: #f4e8d4; --cream2: #dccdb6; --cream3: #bcab92; --mat: #140c08;
-  --paper: #e9dec8; --pen: #2b2118; --pen2: #4d3f31; --pen3: #65574a; --ox: #8a2d1e; --room-block: var(--brass);
-  --f-read: "Bar Baskerville", Georgia, serif; --f-head: "Bar Oswald", "Avenir Next Condensed", sans-serif; --f-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --tex-paper: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIj48ZmlsdGVyIGlkPSJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjgiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48ZmVDb2xvck1hdHJpeCB2YWx1ZXM9IjAgMCAwIDAgMC4zNiAwIDAgMCAwIDAuMjcgMCAwIDAgMCAwLjE3IDAgMCAwIDAuMTYgMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg=="); color: var(--cream); }
-.room::before { content: ""; position: fixed; inset: 0; z-index: -2; background: radial-gradient(90% 80% at 42% 42%, rgba(70,44,26,.3), transparent 70%), url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MDAiIGhlaWdodD0iOTAwIj48ZmlsdGVyIGlkPSJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjAwMyAuMzIiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48ZmVDb2xvck1hdHJpeCB2YWx1ZXM9IjAgMCAwIDAgMC42MiAwIDAgMCAwIDAuNDIgMCAwIDAgMCAwLjI3IDAgMCAwIDAuMDQgMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==") center / 900px, linear-gradient(#150e0a, #0e0906); }
-.room::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(120% 90% at 50% 30%, transparent 55%, rgba(8,4,2,.45) 100%); }
-.room .bq { display: grid; gap: var(--s-4); padding: var(--s-2) 0 var(--s-8); }
+.room {
+  --bx-line: rgba(242,239,232,.11); --bx-line2: rgba(242,239,232,.07);
+  --bx-k: #e5a24a; --bx-text: #d4cfc5; --bx-dim: #a39f97; --bx-faint: #84817a;
+  --bx-bright: #f2efe8; --bx-soft: #ded9cf; --bx-label: #cfc9be;
+  --bx-edge: rgba(229,162,74,.28); --bx-panel: rgba(12,15,18,.72); --bx-frame: rgba(10,12,15,.72);
+  --bar-amber: #e5a24a; --bar-cream: #f2efe8;
 
-/* the sign is the bar's name, a dim tube. It lights when tonight's goal is met, and only then */
-.room .bq-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-6); min-height: 72px; }
-.room .bq-sign { display: flex; align-items: center; gap: var(--s-8); min-width: 0; }
-.room .bx-neon, .room .bq-sign .bx-neon { flex: none; animation: none; font-size: var(--t-xl); line-height: 1.05; color: #b98aa6; text-shadow: none; }
+  --obsidian: #080b0d; --glass: #101417; --amber: #e5a24a; --amber-soft: #f5d39c;
+  --ember: #de4324; --rain: #63c5d6; --bone: #f2efe8; --bone2: #cfc9be; --smoke: #8f8c84;
+  --room-block: var(--amber);
+  --f-read: "Bar Baskerville", Georgia, serif;
+  --f-head: "Bar Oswald", "Avenir Next Condensed", sans-serif;
+  --f-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --f-mono: "Bar Plex", ui-monospace, Menlo, monospace;
+  color: var(--bone);
+}
+
+/* Full-bleed atmospheric lighting: dim warm tungsten bar light spread gently across the whole room,
+   with subtle rain-streaked glass sheen and cool nocturnal shadow at the far outer edge */
+.room::before {
+  content: ""; position: fixed; inset: 0; z-index: -2;
+  background:
+    repeating-linear-gradient(104deg, rgba(229,190,140,.015) 0 1px, transparent 1px 28px),
+    radial-gradient(115% 82% at 50% 16%, rgba(229,162,74,.15), transparent 72%),
+    radial-gradient(85% 90% at 86% 44%, rgba(210,136,52,.14), transparent 70%),
+    radial-gradient(95% 75% at 26% 74%, rgba(176,112,48,.09), transparent 70%),
+    radial-gradient(60% 70% at 6% 94%, rgba(20,74,84,.22), transparent 68%),
+    linear-gradient(155deg, #0c1113 0%, #110e0c 48%, #16110c 100%);
+}
+.room::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(130% 105% at 50% 35%, transparent 58%, rgba(6,5,4,.36) 100%);
+}
+
+.room .bq { position: relative; z-index: 1; display: grid; gap: var(--s-4); padding: var(--s-2) 0 var(--s-8); }
+
+/* Header: wide architectural backlit barback diorama behind the neon sign; bartender's lit-sign line sits cleanly below it */
+.room .bq-head {
+  position: relative; display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 84px auto;
+  align-items: center; column-gap: var(--s-6); padding: 0;
+  border-bottom: 1px solid rgba(229,162,74,.22);
+  overflow: hidden; background: none;
+}
+.room .bq-backbar {
+  grid-column: 1 / -1; grid-row: 1; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0; opacity: .92;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.5) 14%, #000 28%, #000 72%, rgba(0,0,0,.5) 86%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.5) 14%, #000 28%, #000 72%, rgba(0,0,0,.5) 86%, transparent 100%);
+  transition: opacity .5s ease;
+}
+.room:has(.bx-neon.is-lit) .bq-backbar { opacity: 1; }
+.room .bq-shelf-svg { display: block; width: 100%; height: 100%; }
+/* Living Backbar: earned stages glow with filled liquid & specular glass; NEXT stage waits as a dashed silhouette */
+.room .bb-s { opacity: 0; transition: opacity .6s ease; }
+.room .bb-glow { opacity: .42; transition: opacity .6s ease; }
+.room[data-tier="1"] .bb-glow, .room[data-tier="2"] .bb-glow { opacity: .68; }
+.room[data-tier="3"] .bb-glow, .room[data-tier="4"] .bb-glow { opacity: .88; }
+.room[data-tier="5"] .bb-glow { opacity: 1; }
+/* Earned (solid rim-lit glass with liquid, labels, and pendant light cones) */
+.room[data-tier="1"] .bb-s1,
+.room[data-tier="2"] :is(.bb-s1, .bb-s2),
+.room[data-tier="3"] :is(.bb-s1, .bb-s2, .bb-s3),
+.room[data-tier="4"] :is(.bb-s1, .bb-s2, .bb-s3, .bb-s4),
+.room[data-tier="5"] .bb-s { opacity: 1; }
+/* Next stage waiting to be unlocked (clean ghosted dashed outline, internal liquid hidden) */
+.room[data-tier="0"] .bb-s1,
+.room[data-tier="1"] .bb-s2,
+.room[data-tier="2"] .bb-s3,
+.room[data-tier="3"] .bb-s4,
+.room[data-tier="4"] .bb-s5 { opacity: .45; }
+.room[data-tier="0"] .bb-s1 path, .room[data-tier="0"] .bb-s1 rect,
+.room[data-tier="1"] .bb-s2 path, .room[data-tier="1"] .bb-s2 line,
+.room[data-tier="2"] .bb-s3 path,
+.room[data-tier="3"] .bb-s4 path, .room[data-tier="3"] .bb-s4 rect, .room[data-tier="3"] .bb-s4 line,
+.room[data-tier="4"] .bb-s5 path { fill: none; stroke-dasharray: 3 3; }
+.room[data-tier="0"] .bb-s1 .bb-fill,
+.room[data-tier="1"] .bb-s2 .bb-fill,
+.room[data-tier="2"] .bb-s3 .bb-fill,
+.room[data-tier="3"] .bb-s4 .bb-fill,
+.room[data-tier="4"] .bb-s5 .bb-fill { opacity: 0; }
+.room .bq-sign { display: contents; }
+.room .bq-tabs { grid-column: 3; grid-row: 1; position: relative; z-index: 1; padding-right: var(--s-4); }
+.room .bx-neon, .room .bq-sign .bx-neon {
+  grid-column: 1; grid-row: 1; position: relative; z-index: 1; padding-left: var(--s-4);
+  flex: none; cursor: pointer; display: block; animation: none;
+  font: 400 var(--t-xl)/1.05 var(--bx-sign, "Bar Neon"), var(--f-head);
+  letter-spacing: .06em; color: rgba(242,239,232,.46); text-shadow: none;
+  transition: color .4s ease, text-shadow .4s ease; overflow-wrap: anywhere;
+}
 .room:not(.is-running) .bq-sign .bx-neon.rotates { animation: bx-flicker 7s infinite; }
-.room .bx-neon small { margin-top: var(--s-1); font: 600 var(--t-xs)/1 var(--f-head); letter-spacing: .16em; color: var(--cream3); }
-.room .bq-sign .bx-neon.is-lit, .room .bx-neon.is-lit { color: #ffd6f0; text-shadow: 0 0 3px #ff4fb4, 0 0 12px #ff4fb4, 0 0 28px #b5179e; }
-.room .bx-lit-line { margin: 0; max-width: 40ch; font: italic 400 var(--t-md)/1.35 var(--f-read); color: var(--cream); }
-.room .bx-lit-line .bx-who { display: block; font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .14em; text-transform: uppercase; color: var(--cream3); }
-/* the room switch: words, the current one underlined */
-.room .bx-tabs { background: none; box-shadow: none; padding: 0; gap: var(--s-2); }
-.room :is(.bq-tabs, .bx-backhead) .bx-tabs button, .room :is(.bq-tabs, .bx-backhead) .bx-tabs button[aria-pressed="true"] { background: none; color: var(--cream3); border-radius: 0; padding: var(--s-2) var(--s-1); font: 500 var(--t-sm)/1 var(--f-ui); }
-.room :is(.bq-tabs, .bx-backhead) .bx-tabs button[aria-pressed="true"] { color: var(--cream); box-shadow: inset 0 -1px 0 var(--brass); }
+.room .bx-neon small {
+  display: block; margin-top: var(--s-1);
+  font: 600 var(--t-xs)/1 var(--f-head); letter-spacing: .24em; text-transform: uppercase;
+  color: var(--smoke); text-shadow: none;
+}
+.room .bq-sign .bx-neon.is-lit, .room .bx-neon.is-lit {
+  color: #ffe9cc;
+  text-shadow: 0 0 4px rgba(229,162,74,.9), 0 0 16px rgba(222,67,36,.65), 0 0 34px rgba(229,162,74,.38);
+}
+.room .bx-neon:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
+.room .bx-lit-line {
+  grid-column: 1 / -1; grid-row: 2; position: relative; z-index: 1;
+  display: flex; align-items: baseline; gap: var(--s-3);
+  margin: 0; max-width: none; padding: var(--s-2) var(--s-4);
+  background: rgba(14,11,9,.86); border-top: 1px solid rgba(229,162,74,.16);
+  font: italic 400 var(--t-sm)/1.35 var(--f-read); color: var(--amber-soft);
+}
+.room .bx-lit-line .bx-who {
+  display: inline; font: 600 var(--t-xs)/1.3 var(--f-mono); font-style: normal;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--amber);
+}
 
-/* the counter: book over mat on the left, what stands by your hand on the right; both columns end on one line */
-.room .bq-counter { display: grid; grid-template-columns: minmax(0, 1fr) 336px; grid-template-rows: auto 1fr; gap: var(--s-4) var(--s-8); }
-.room .bq-book { grid-column: 1; padding: var(--s-2); border-radius: var(--r-md); background: linear-gradient(#4a1d15, #33130e); box-shadow: 0 1px 0 rgba(255,220,180,.16) inset, 0 2px 3px rgba(0,0,0,.6), 0 24px 48px -16px rgba(0,0,0,.85); }
-.room .bq-pages { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto auto 1fr auto; column-gap: var(--s-16); min-height: 408px; padding: var(--s-6) var(--s-10); color: var(--pen); border-radius: 2px;
-  background: linear-gradient(90deg, rgba(70,42,16,.12), transparent 7%, transparent 43%, rgba(70,42,16,.2) 48.6%, rgba(45,24,8,.5) 50%, rgba(70,42,16,.2) 51.4%, transparent 57%, transparent 93%, rgba(70,42,16,.12)), var(--tex-paper) center / 320px, var(--paper);
-  box-shadow: 0 1px 0 #f7efdf inset, 2px 0 0 #d7cab1, -2px 0 0 #d7cab1, 4px 0 0 #c5b79d, -4px 0 0 #c5b79d; }
+/* Room switch: minimal architectural hairline tabs */
+.room .bx-tabs { background: none; box-shadow: none; padding: 0; gap: var(--s-4); }
+.room :is(.bq-tabs, .bx-backhead) .bx-tabs button,
+.room :is(.bq-tabs, .bx-backhead) .bx-tabs button[aria-pressed="true"] {
+  background: none; color: var(--smoke); border-radius: 0; padding: var(--s-2) 0;
+  font: 600 var(--t-xs)/1 var(--f-ui); letter-spacing: .08em; text-transform: uppercase;
+}
+.room :is(.bq-tabs, .bx-backhead) .bx-tabs button:hover { color: var(--bone); }
+.room :is(.bq-tabs, .bx-backhead) .bx-tabs button[aria-pressed="true"] {
+  color: var(--bone); box-shadow: inset 0 -2px 0 var(--amber);
+}
+
+/* Counter: architectural 2-plane split — left atmospheric stage, right unified lit bar window */
+.room .bq-counter {
+  display: grid; grid-template-columns: minmax(0, 1fr) 368px; grid-template-rows: auto 1fr;
+  gap: var(--s-4) var(--s-8);
+}
+
+/* Left Top: The Mahogany & Brass Bar Counter (overhead pendant spotlight, smoked-glass translucency) */
+.room .bq-book {
+  grid-column: 1; padding: 0; border-radius: var(--r-md);
+  background:
+    radial-gradient(60% 65% at 24% 0%, rgba(229,162,74,.11), transparent 64%),
+    linear-gradient(180deg, rgba(22,18,15,.76) 0%, rgba(12,13,15,.82) 100%);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(229,162,74,.18);
+  border-top: 2px solid rgba(229,162,74,.42);
+  box-shadow: inset 0 1px 0 rgba(255,232,188,.14), 0 24px 56px -22px rgba(0,0,0,.88);
+}
+.room .bq-pages {
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .95fr);
+  grid-template-rows: auto auto auto auto auto 1fr auto;
+  column-gap: var(--s-10); min-height: 368px; padding: var(--s-6) var(--s-8);
+  color: var(--bone);
+}
 .room .bq-job, .room .bq-pages .bx-job { display: contents; }
 .room .bq-pages .bx-job > * { grid-column: 1; }
-.room .bq-pages .bx-k, .room .bq-pages .fu-k { font: 600 var(--t-xs)/1.3 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ox); }
+.room .bq-pages .bx-k, .room .bq-pages .fu-k {
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--amber);
+}
 .room .bq-pages .bx-job > .bx-k { grid-row: 1; margin-bottom: var(--s-4); }
-.room .bq-pages h2 { grid-row: 2; margin: 0 0 var(--s-2); font: 400 var(--t-xl)/1.14 var(--f-read); letter-spacing: 0; text-transform: none; color: var(--pen); }
-.room .bq-pages .bx-label { display: block; margin-bottom: var(--s-1); font: italic 400 var(--t-md)/1.2 var(--f-read); letter-spacing: 0; color: var(--pen3); }
-.room .bq-pages .bx-job > p { grid-row: 3; margin: 0 0 var(--s-2); font: 400 var(--t-md)/1.5 var(--f-read); color: var(--pen2); }
-.room .bq-pages .bx-meta { grid-row: 4; gap: var(--s-1) var(--s-4); font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--pen3); }
-.room .bq-pages .bx-rules, .room .bq-pages .bx-sent, .room .bq-pages .bx-stuck { grid-row: 5; margin-top: var(--s-2); font: 400 var(--t-sm)/1.4 var(--f-ui); color: var(--ox); background: none; border: 0; padding: 0; }
-.room .bq-pages .bx-stuck { color: var(--pen2); }
+.room .bq-pages h2 {
+  grid-row: 2; margin: 0 0 var(--s-3);
+  font: 400 var(--t-xl)/1.12 var(--f-read); letter-spacing: -.01em; text-transform: none; color: var(--bone);
+}
+.room .bq-pages .bx-label {
+  display: block; margin-bottom: var(--s-1);
+  font: italic 400 var(--t-md)/1.2 var(--f-read); letter-spacing: 0; color: var(--amber-soft);
+}
+.room .bq-pages .bx-job > p {
+  grid-row: 3; margin: 0 0 var(--s-3);
+  font: 400 var(--t-md)/1.55 var(--f-read); color: var(--bone2);
+}
+.room .bq-pages .bx-meta {
+  grid-row: 4; gap: var(--s-1) var(--s-4);
+  font: 400 var(--t-xs)/1.4 var(--f-mono); color: var(--smoke);
+}
+.room .bq-pages .bx-rules, .room .bq-pages .bx-sent, .room .bq-pages .bx-stuck {
+  grid-row: 5; margin-top: var(--s-3);
+  font: 400 var(--t-sm)/1.45 var(--f-ui); color: var(--amber-soft);
+  background: none; border: 0; padding: 0;
+}
+.room .bq-pages .bx-sent { color: #8ad6a7; }
+.room .bq-pages .bx-stuck { color: var(--bone2); }
 .room .bq-pages .bx-stuck .btn { margin-top: var(--s-2); }
-/* the reply is written on the right page */
-.room .bq-pages form.followup { grid-column: 2; grid-row: 1 / -1; display: flex; flex-direction: column; gap: var(--s-2); margin: 0; padding: 0; background: none; border: 0; }
-.room .bq-pages .fu-q { margin: var(--s-2) 0 0; font: 400 var(--t-lg)/1.32 var(--f-read); color: var(--pen); }
-.room .bq-pages textarea { flex: 1; min-height: 112px; margin-top: var(--s-2); padding: 2px; resize: none; border: 0; border-radius: 0; color: var(--pen); font: italic 400 var(--t-md)/28px var(--f-read); background: repeating-linear-gradient(transparent 0 27px, rgba(75,52,30,.38) 27px 28px); background-attachment: local; }
-.room .bq-pages textarea::placeholder { color: var(--pen3); opacity: 1; }
-.room .bq-pages textarea:focus-visible { outline: 2px solid var(--ox); outline-offset: 2px; }
+
+/* Tomorrow's Coaster: overnight bridge left on the counter */
+.room .bq-pages .bx-coaster {
+  grid-row: 6; align-self: end; margin-top: var(--s-4); padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm); background: rgba(229,162,74,.07);
+  border: 1px dashed rgba(229,162,74,.34); display: grid; gap: var(--s-1);
+}
+.room .bq-pages .bx-coaster.is-ask {
+  padding: 0; background: none; border: 0;
+}
+.room .bq-pages .bx-coaster-k {
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--amber);
+}
+.room .bq-pages .bx-coaster-txt {
+  margin: 0; font: italic 400 var(--t-sm)/1.45 var(--f-read); color: var(--bone);
+}
+.room .bq-pages .bx-coaster-act {
+  justify-self: start; height: auto; padding: 0; border: 0; background: none;
+  font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--smoke);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.room .bq-pages .bx-coaster-act:hover { color: var(--amber); }
+.room .bq-pages .bx-coaster-row { display: flex; gap: var(--s-2); align-items: center; margin-top: var(--s-1); }
+.room .bq-pages .bx-coaster-row input {
+  flex: 1; min-width: 0; height: 32px; padding: 0 var(--s-2); border-radius: var(--r-sm);
+  border: 1px solid rgba(242,239,232,.2); background: rgba(6,8,10,.65);
+  color: var(--bone); font: 400 var(--t-sm)/1.3 var(--f-read);
+}
+.room .bq-pages .bx-coaster-row input:focus-visible { outline: 2px solid var(--amber); border-color: var(--amber); }
+
+/* Right side of stage: Follow-up correspondence (dark glass with amber focus) */
+.room .bq-pages form.followup {
+  grid-column: 2; grid-row: 1 / -1; display: flex; flex-direction: column; gap: var(--s-3);
+  margin: 0; padding: 0 0 0 var(--s-8); background: none; border: 0;
+  border-left: 1px solid rgba(242,239,232,.10);
+}
+.room .bq-pages .fu-q { margin: var(--s-1) 0 0; font: 400 var(--t-lg)/1.35 var(--f-read); color: var(--bone); }
+.room .bq-pages textarea {
+  flex: 1; min-height: 112px; margin-top: var(--s-1); padding: var(--s-3); resize: none;
+  border: 1px solid rgba(242,239,232,.16); border-radius: var(--r-sm);
+  color: var(--bone); font: 400 var(--t-md)/1.5 var(--f-read);
+  background: rgba(6,8,10,.65);
+}
+.room .bq-pages textarea::placeholder { color: var(--smoke); opacity: 1; }
+.room .bq-pages textarea:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; border-color: var(--amber); }
 .room .bq-pages .fu-actions { display: flex; gap: var(--s-3); flex-wrap: nowrap; align-items: center; }
-.room .bq-pages .fu-note { margin: 0; font: 400 var(--t-xs)/1.35 var(--f-ui); color: var(--pen3); opacity: 1; }
-.room .bq-pages .btn { --primary: var(--ox); --primary-ink: #fff6e8; height: 40px; flex: none; padding: 0 var(--s-4); border-radius: var(--r-sm); font: 600 var(--t-sm)/1 var(--f-ui); }
-.room .bq-pages .btn-ghost { height: 32px; padding: 0 var(--s-3); color: var(--pen); background: none; border: 1px solid rgba(75,52,30,.5); }
-/* replies: the job's own first; the rest wait behind one button */
-.room .bq-pages [data-slot="replies"] { grid-column: 1; grid-row: 7; display: grid; gap: var(--s-1); margin: var(--s-4) 0 0; padding: var(--s-3) 0 0; list-style: none; border-top: 1px solid rgba(75,52,30,.3); }
-.room .bq-pages:not(:has(form.followup)) [data-slot="replies"] { grid-column: 2; grid-row: 1 / -1; align-content: start; margin: 0; padding: 0; border: 0; }
-.room .bq-pages:not(:has(form.followup)) [data-slot="replies"]::before { content: "Your move"; margin-bottom: var(--s-3); font: 600 var(--t-xs)/1.3 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ox); }
+.room .bq-pages .fu-note { margin: 0; font: 400 var(--t-xs)/1.35 var(--f-ui); color: var(--smoke); opacity: 1; }
+.room .bq-pages .btn {
+  --primary: var(--ember); --primary-ink: #fff8f4;
+  height: 40px; flex: none; padding: 0 var(--s-4); border-radius: var(--r-sm);
+  font: 600 var(--t-sm)/1 var(--f-ui); letter-spacing: .02em;
+}
+.room .bq-pages .btn-ghost {
+  height: 32px; padding: 0 var(--s-3); color: var(--bone2); background: none;
+  border: 1px solid rgba(242,239,232,.22);
+}
+
+/* Replies: Your move on the right half when no follow-up; primary action elevated to crisp high-contrast CTA */
+.room .bq-pages [data-slot="replies"] {
+  grid-column: 1; grid-row: 7; display: grid; gap: var(--s-2);
+  margin: var(--s-4) 0 0; padding: var(--s-4) 0 0; list-style: none;
+  border-top: 1px solid rgba(242,239,232,.10);
+}
+.room .bq-pages:not(:has(form.followup)) [data-slot="replies"] {
+  grid-column: 2; grid-row: 1 / -1; align-content: start;
+  margin: 0; padding: 0 0 0 var(--s-8); border: 0;
+  border-left: 1px solid rgba(242,239,232,.10);
+}
+.room .bq-pages:not(:has(form.followup)) [data-slot="replies"]::before {
+  content: "Your move"; margin-bottom: var(--s-3);
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--amber);
+}
 .room .bq-pages .bx-replies li { display: block; min-height: 0; }
 .room .bq-pages .bx-replies .bx-n, .room .bq-pages .bx-chk { display: none; }
-/* every move is a link in the margin: underlined words, the job's own first one bigger, the folded rest a link too */
-.room .bq-pages .bx-r, .room .bq-pages .bx-rest .btn { justify-content: flex-start; height: auto; padding: 2px 0; border: 0; background: none; font: 400 var(--t-md)/1.35 var(--f-read); color: var(--pen); text-decoration: underline; text-decoration-color: rgba(75,52,30,.45); text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.room .bq-pages .bx-replies li:first-of-type .bx-r { font-size: var(--t-lg); color: var(--ox); text-decoration-color: currentColor; }
-.room .bq-pages .bx-rest .btn { font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--pen2); }
-.room .bq-pages .bx-rest .btn:hover { color: var(--ox); background: rgba(138,45,30,.08); }
-.room .bq-pages .bx-r:hover, .room .bq-pages .bx-r:focus-visible { color: var(--ox); background: rgba(138,45,30,.08); transform: none; }
-.room .bq-pages .bx-r:focus-visible { outline: 2px solid var(--ox); }
-.room .bq-pages .bx-replies li.is-quiet { font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--pen3); }
+.room .bq-pages .bx-r, .room .bq-pages .bx-rest .btn {
+  justify-content: flex-start; height: auto; padding: var(--s-1) 0; border: 0; background: none;
+  font: 400 var(--t-md)/1.4 var(--f-read); color: var(--bone2);
+  text-decoration: underline; text-decoration-color: rgba(242,239,232,.28);
+  text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+.room .bq-pages .bx-replies li:first-of-type { margin-bottom: var(--s-2); }
+.room .bq-pages .bx-replies li:first-of-type .bx-r {
+  display: inline-flex; align-items: center; padding: 10px 20px; border-radius: var(--r-sm);
+  background: var(--bone); color: #090b0d; text-decoration: none;
+  font: 600 var(--t-sm)/1.2 var(--f-ui); letter-spacing: .02em;
+  box-shadow: 0 6px 22px -6px rgba(229,162,74,.32);
+  transition: background .15s ease, transform .15s ease;
+}
+.room .bq-pages .bx-replies li:first-of-type .bx-r:hover,
+.room .bq-pages .bx-replies li:first-of-type .bx-r:focus-visible {
+  background: var(--amber); color: #090b0d; transform: translateY(-1px);
+}
+.room .bq-pages .bx-r:hover, .room .bq-pages .bx-r:focus-visible {
+  color: var(--amber); text-decoration-color: var(--amber); background: none; transform: none;
+}
+.room .bq-pages .bx-r:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.room .bq-pages .bx-rest .btn {
+  font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--smoke); text-decoration-color: rgba(242,239,232,.2);
+}
+.room .bq-pages .bx-rest .btn:hover { color: var(--bone); background: none; }
+.room .bq-pages .bx-replies li.is-quiet { font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--smoke); }
 .room .bq-pages .bx-replies li.is-quiet span { font: inherit; }
 .room .bq-pages .bx-replies:not(:has([aria-expanded="true"])) li.is-rest { display: none; }
 .room .bq-pages .bx-rest { margin-top: var(--s-1); }
-/* a memory check waiting: a slip laid across both pages, the book still open under it, the job shifted a row down */
+
+/* Recall slip across the top of the stage */
 .room .bq-pages:has(.bx-recall) { grid-template-rows: auto auto auto auto auto auto 1fr auto; }
-.room .bq-pages .bx-job.bx-recall { grid-column: 1 / -1; grid-row: 1; display: block; margin: 0 0 var(--s-6); padding: var(--s-4) var(--s-6); border-radius: 2px; background: var(--tex-paper) center / 320px, var(--paper); box-shadow: 0 1px 2px rgba(45,24,8,.35), 0 6px 14px -8px rgba(45,24,8,.5); }
-.room .bq-pages .bx-recall h2 { margin: var(--s-1) 0; font-size: var(--t-lg); }
-.room .bq-pages .bx-recall > p { margin: 0; }
+.room .bq-pages .bx-job.bx-recall {
+  grid-column: 1 / -1; grid-row: 1; display: block; margin: 0 0 var(--s-4); padding: var(--s-4) var(--s-6);
+  border-radius: var(--r-sm); background: rgba(229,162,74,.08);
+  border: 1px solid rgba(229,162,74,.28); border-left: 3px solid var(--amber);
+}
+.room .bq-pages .bx-recall h2 { margin: var(--s-1) 0; font-size: var(--t-lg); color: var(--bone); }
+.room .bq-pages .bx-recall > p { margin: 0; color: var(--bone2); }
 .room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > .bx-k { grid-row: 2; }
 .room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > h2 { grid-row: 3; }
 .room .bq-pages:has(.bx-recall) .bx-job:not(.bx-recall) > p { grid-row: 4; }
 .room .bq-pages:has(.bx-recall) .bx-meta { grid-row: 5; }
 .room .bq-pages:has(.bx-recall) :is(.bx-rules, .bx-sent, .bx-stuck) { grid-row: 6; }
+.room .bq-pages:has(.bx-recall) .bx-coaster { grid-row: 7; }
 .room .bq-pages:has(.bx-recall) form.followup { grid-row: 2 / -1; }
 .room .bq-pages:has(.bx-recall) [data-slot="replies"] { grid-row: 8; }
 .room .bq-pages:has(.bx-recall):not(:has(form.followup)) [data-slot="replies"] { grid-row: 2 / -1; }
-.room .bq-pages .bx-recall ol { margin: var(--s-2) 0 var(--s-3); padding-left: var(--s-6); font: 400 var(--t-md)/1.45 var(--f-read); color: var(--pen2); }
+.room .bq-pages .bx-recall ol { margin: var(--s-2) 0 var(--s-3); padding-left: var(--s-6); font: 400 var(--t-md)/1.45 var(--f-read); color: var(--bone2); }
 .room .bq-pages .recall-actions { display: flex; gap: var(--s-2); }
 
-/* the mat: flat and dark, so nothing competes with what the bartender says. It runs to the end of the counter */
-.room .bq-mat { grid-column: 1; display: flex; padding: var(--s-4) var(--s-6); border-radius: var(--r-md); background-color: var(--mat); box-shadow: inset 0 0 0 1px rgba(201,161,95,.14); }
-.room .bq-mat [data-slot="voices"] { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr 1fr; grid-auto-rows: min-content; align-content: start; gap: var(--s-3) var(--s-8); font: 400 var(--t-sm)/1.45 var(--f-read); }
-.room .bq-mat .bx-line { margin: 0; padding: 0; min-height: 0; background: none; box-shadow: none; color: var(--cream2); }
+/* Left Bottom: Voices across the bar (ribbed dark bar-rail mat) */
+.room .bq-mat {
+  grid-column: 1; display: flex; padding: var(--s-4) var(--s-8); border-radius: var(--r-md);
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 6px),
+    rgba(11,13,15,.72);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(229,162,74,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.room .bq-mat [data-slot="voices"] {
+  flex: 1; display: grid; grid-template-columns: 1.45fr 1fr 1fr; grid-auto-rows: min-content;
+  align-content: start; gap: var(--s-3) var(--s-8); font: 400 var(--t-sm)/1.5 var(--f-read);
+}
+.room .bq-mat .bx-line { margin: 0; padding: 0; min-height: 0; background: none; box-shadow: none; color: var(--bone2); }
 .room .bq-mat .bx-line::before, .room .bq-mat .bx-line::after { display: none; }
-.room .bq-mat .bx-line:first-child { font-size: var(--t-md); color: var(--cream); }
-.room .bq-mat .bx-line:first-child b { display: block; margin-bottom: var(--s-1); font-weight: 400; color: var(--cream); }
-.room .bq-mat .bx-who { display: block; margin: 0 0 var(--s-1); font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .14em; color: var(--cream3); }
+.room .bq-mat .bx-line:first-child { font-size: var(--t-md); color: var(--bone); }
+.room .bq-mat .bx-line:first-child b { display: block; margin-bottom: var(--s-1); font-weight: 400; color: var(--amber-soft); }
+.room .bq-mat .bx-who {
+  display: block; margin: 0 0 var(--s-1);
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; color: var(--vc, var(--amber));
+}
 .room .bq-mat .bx-chk { display: none; }
 .room .bq-mat .fold { --fold: 3; }
 .room .bq-mat .bx-line:first-child .fold-2 { --fold: 2; }
-.room .bq-mat .fold-more, .room .bq-mat .bx-more { height: 24px; margin-top: var(--s-2); padding: 0 var(--s-2); box-sizing: border-box; display: inline-flex; align-items: center; border-radius: var(--r-sm); box-shadow: inset 0 0 0 1px rgba(201,161,95,.45); font: 500 var(--t-xs)/1 var(--f-ui); color: var(--cream); text-decoration: none; opacity: 1; }
+.room .bq-mat .fold-more, .room .bq-mat .bx-more {
+  height: 24px; margin-top: var(--s-2); padding: 0 var(--s-2); box-sizing: border-box;
+  display: inline-flex; align-items: center; border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px rgba(229,162,74,.38); font: 500 var(--t-xs)/1 var(--f-ui);
+  color: var(--bone); text-decoration: none; opacity: 1;
+}
 .room .bq-mat .fold-more[hidden] { display: none; }
 .room .bq-mat .bx-more { grid-column: 1 / -1; justify-self: end; align-self: end; margin-top: 0; }
-.room .bq-mat .fold-more:hover, .room .bq-mat .bx-more:hover { background: rgba(244,232,212,.1); }
+.room .bq-mat .fold-more:hover, .room .bq-mat .bx-more:hover { background: rgba(229,162,74,.14); }
 
-/* the rail: the jukebox, the glass, the caps, the tally */
-.room .bq-rail { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: var(--s-4); }
-.room .bq-juke { position: relative; padding: var(--s-4); border-radius: var(--r-md); background: linear-gradient(#21140f, #140c08); box-shadow: inset 0 1px 0 rgba(255,220,170,.22), inset 0 0 0 1px rgba(201,161,95,.3), 0 16px 32px -12px rgba(0,0,0,.8); isolation: auto; }
+/* Right Plane: The Lit Bar Window — ONE cohesive architectural tungsten column, separated by hairlines */
+.room .bq-rail {
+  grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 0;
+  border-radius: var(--r-md); overflow: hidden;
+  background:
+    radial-gradient(120% 45% at 50% 0%, rgba(229,162,74,.14), transparent 68%),
+    linear-gradient(180deg, rgba(28,21,16,.76) 0%, rgba(14,12,11,.84) 100%);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(229,162,74,.24);
+  box-shadow: inset 0 1px 0 rgba(255,226,178,.14), 0 24px 56px -20px rgba(0,0,0,.88);
+}
+
+/* Station 1: The Hi-Fi Turntable & Focus Block */
+.room .bq-juke {
+  position: relative; padding: var(--s-4) var(--s-6); border-radius: 0;
+  background: none; box-shadow: none; border-bottom: 1px solid rgba(229,162,74,.16);
+  isolation: auto;
+}
 .room .bq-juke::before, .room .bq-juke::after { display: none; }
-.room .bq-juke .bx-juke-k { margin: 0 0 var(--s-3); text-align: left; font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .16em; color: var(--cream3); }
-.room .bq-juke .bx-vinyl { --blk: var(--ox); display: none; position: absolute; right: 16px; top: 40px; width: 72px; height: 72px; margin: 0; box-shadow: 0 0 0 2px #0b0b0b, 0 4px 8px rgba(0,0,0,.6); }
-.room.is-running .bq-juke .bx-vinyl { display: block; animation: bq-spin 3.2s linear infinite; }
+.room .bq-juke .bx-juke-k {
+  margin: 0 0 var(--s-3); text-align: left;
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .14em; color: var(--amber);
+}
+.room .bq-juke .bx-vinyl {
+  --blk: var(--ember); display: none; position: absolute; right: 20px; top: 44px;
+  width: 74px; height: 74px; margin: 0; border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--blk) 0 18%, #0d0d0f 19% 22%, transparent 23%),
+    repeating-radial-gradient(circle, #111214 0 2px, #1d1e22 2px 3.5px);
+  box-shadow: 0 0 0 1px rgba(242,239,232,.14), 0 8px 18px rgba(0,0,0,.7);
+}
+.room .bq-juke .bx-vinyl::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 20deg, transparent 0 40deg, rgba(255,255,255,.12) 50deg, transparent 60deg 220deg, rgba(255,255,255,.08) 230deg, transparent 240deg);
+}
+.room .bq-juke .bx-vinyl::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px;
+  border-radius: 50%; background: var(--bone);
+}
+.room.is-running .bq-juke .bx-vinyl { display: block; animation: bq-spin 4.2s linear infinite; }
 @keyframes bq-spin { to { transform: rotate(360deg); } }
+
 .room .bq-juke .blk-live { gap: var(--s-1); }
-.room .bq-juke .blk-live-top { max-width: 216px; flex-wrap: wrap; justify-content: flex-start; gap: var(--s-1) var(--s-2); }
-.room .bq-juke .blk-live-top .chip { padding: 0; background: none; border: 0; font: 600 var(--t-xs)/1.3 var(--f-ui); letter-spacing: 0; text-transform: none; color: var(--cream2); }
-.room .bq-juke .blk-live-top .card-sub { font: 400 var(--t-xs)/1.3 var(--f-ui); color: var(--cream3); }
-.room .bq-juke .blk-clock { margin: var(--s-1) 0 var(--s-2); font: 500 var(--t-2xl)/1.1 var(--f-head); letter-spacing: .01em; color: var(--cream); }
-.room .bq-juke .bar { height: 3px; background: rgba(255,255,255,.14); }
-.room .bq-juke .btn { height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); font: 600 var(--t-sm)/1 var(--f-ui); color: var(--cream); background: transparent; border: 1px solid rgba(201,161,95,.45); }
-.room .bq-juke [data-blk-stop] { justify-self: end; margin-top: var(--s-1); padding: 0 var(--s-1); border-color: transparent; color: var(--cream3); }
+.room .bq-juke .blk-live-top { max-width: 224px; flex-wrap: wrap; justify-content: flex-start; gap: var(--s-1) var(--s-2); }
+.room .bq-juke .blk-live-top .chip { padding: 0; background: none; border: 0; font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .04em; text-transform: uppercase; color: var(--amber-soft); }
+.room .bq-juke .blk-live-top .card-sub { font: 400 var(--t-xs)/1.3 var(--f-mono); color: var(--smoke); }
+.room .bq-juke .blk-clock { margin: var(--s-1) 0 var(--s-2); font: 400 var(--t-2xl)/1.05 var(--f-mono); letter-spacing: -.02em; color: var(--bone); font-variant-numeric: tabular-nums; }
+.room .bq-juke .bar { height: 2px; background: rgba(242,239,232,.14); }
+.room .bq-juke .btn { height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); font: 600 var(--t-xs)/1 var(--f-ui); color: var(--bone); background: transparent; border: 1px solid rgba(229,162,74,.4); }
+.room .bq-juke [data-blk-stop] { justify-self: end; margin-top: var(--s-1); padding: 0 var(--s-1); border-color: transparent; color: var(--smoke); }
+.room .bq-juke [data-blk-stop]:hover { color: var(--ember); }
 .room .bq-juke .blk-idle { display: grid; gap: var(--s-2); }
 .room .bq-juke .blk-row { gap: var(--s-1); }
-.room .bq-juke .blk-opt { padding: var(--s-1) var(--s-2); border-radius: var(--r-sm); font: 500 var(--t-xs)/1.3 var(--f-ui); color: var(--cream2); background: none; border: 1px solid rgba(201,161,95,.3); }
-.room .bq-juke .blk-opt[aria-pressed="true"] { color: #1a110a; background: var(--cream); border-color: var(--cream); }
+.room .bq-juke .blk-opt { padding: var(--s-1) var(--s-2); border-radius: var(--r-sm); font: 500 var(--t-xs)/1.3 var(--f-mono); color: var(--bone2); background: rgba(8,10,12,.45); border: 1px solid rgba(242,239,232,.16); }
+.room .bq-juke .blk-opt[aria-pressed="true"] { color: #090b0d; background: var(--amber); border-color: var(--amber); font-weight: 700; }
 .room .bq-juke .blk-custom input { width: 56px; font: inherit; }
-.room .bq-juke .blk-lab { width: auto; align-self: center; margin-right: var(--s-1); font: 500 var(--t-xs)/1.3 var(--f-ui); color: var(--cream3); }
-.room .bq-juke .blk-start { width: 100%; height: 40px; color: #1a110a; background: var(--cream); border-color: var(--cream); letter-spacing: 0; text-transform: none; }
-.room .bq-juke .bx-music { margin: var(--s-3) 0 0; padding: var(--s-3) 0 0; gap: var(--s-2); background: none; border: 0; border-top: 1px solid rgba(201,161,95,.22); }
-.room .bq-juke .bx-mu-title b { font: 600 var(--t-sm)/1.2 var(--f-ui); letter-spacing: 0; color: var(--cream); }
-.room .bq-juke .bx-mu-title small, .room .bq-juke .bx-mu-time { font: 400 var(--t-xs)/1.3 var(--f-ui); color: var(--cream3); }
-.room .bq-juke .bx-mu-play { width: 32px; height: 32px; font-size: var(--t-xs); background: none; color: var(--cream); box-shadow: inset 0 0 0 1px rgba(201,161,95,.5); }
+.room .bq-juke .blk-lab { width: auto; align-self: center; margin-right: var(--s-1); font: 500 var(--t-xs)/1.3 var(--f-mono); color: var(--smoke); }
+.room .bq-juke .blk-start { width: 100%; height: 40px; color: #fff8f4; background: var(--ember); border-color: var(--ember); font: 600 var(--t-sm)/1 var(--f-ui); letter-spacing: .03em; text-transform: none; }
+.room .bq-juke .blk-start:hover { background: #c9381c; }
+
+/* Music controls: ALWAYS visible (zero layout jump on hover!) */
+.room .bq-juke .bx-music { margin: var(--s-3) 0 0; padding: var(--s-3) 0 0; gap: var(--s-2); background: none; border: 0; border-top: 1px solid rgba(229,162,74,.14); }
+.room .bq-juke .bx-mu-title b { font: 600 var(--t-sm)/1.2 var(--f-ui); letter-spacing: 0; color: var(--bone); }
+.room .bq-juke .bx-mu-title small, .room .bq-juke .bx-mu-time { font: 400 var(--t-xs)/1.3 var(--f-mono); color: var(--smoke); }
+.room .bq-juke .bx-mu-play { width: 32px; height: 32px; font-size: var(--t-xs); background: none; color: var(--bone); box-shadow: inset 0 0 0 1px rgba(229,162,74,.45); }
+.room .bq-juke .bx-mu-play:hover { background: rgba(229,162,74,.14); }
 .room .bq-juke .bx-eq { visibility: hidden; }
 .room .bq-juke .bx-music.is-playing .bx-eq { visibility: visible; }
-.room .bq-juke .bx-mu-scapes button, .room .bq-juke .bx-mu-skip button { padding: var(--s-1) var(--s-2); font: 400 var(--t-xs)/1 var(--f-ui); color: var(--cream2); background: none; border: 1px solid rgba(201,161,95,.3); border-radius: var(--r-sm); }
-.room .bq-juke .bx-mu-change, .room .bq-juke .bx-mu-vol, .room .bq-juke .bx-mu-vol span, .room .bq-juke .bx-mu-hint, .room .bq-juke .bx-mu-empty, .room .bq-juke .bx-mu-add { font: 400 var(--t-xs)/1.3 var(--f-ui); color: var(--cream3); }
-.room .bq-juke .bx-mu-scapes, .room .bq-juke .bx-mu-vol { display: none; }
-.room .bq-juke .bx-music:hover .bx-mu-scapes, .room .bq-juke .bx-music:focus-within .bx-mu-scapes, .room .bq-juke .bx-music:hover .bx-mu-vol, .room .bq-juke .bx-music:focus-within .bx-mu-vol { display: flex; }
+.room .bq-juke .bx-mu-scapes button, .room .bq-juke .bx-mu-skip button {
+  padding: 3px var(--s-2); font: 500 var(--t-xs)/1 var(--f-mono); color: var(--bone2);
+  background: rgba(8,10,12,.35); border: 1px solid rgba(242,239,232,.16); border-radius: var(--r-sm);
+}
+.room .bq-juke .bx-mu-scapes button[aria-pressed=true] { border-color: var(--amber); color: var(--amber); background: rgba(229,162,74,.10); }
+.room .bq-juke .bx-mu-change { border: 0; background: none; padding: 0; height: auto; color: var(--smoke); text-decoration: underline; text-underline-offset: 3px; }
+.room .bq-juke .bx-mu-change:hover { color: var(--amber); }
+.room .bq-juke .bx-mu-vol, .room .bq-juke .bx-mu-vol span,
+.room .bq-juke .bx-mu-hint, .room .bq-juke .bx-mu-empty, .room .bq-juke .bx-mu-add {
+  font: 400 var(--t-xs)/1.3 var(--f-ui); color: var(--smoke);
+}
 
-/* your glass, with what it means and the button that goes with it. Full = a glass you still owe */
-.room .bx-round { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); padding: 0 var(--s-1); }
-.room .bx-round p { margin: 0; font: 400 var(--t-sm)/1.35 var(--f-ui); color: var(--cream2); }
-.room .bx-round .btn { height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); font: 600 var(--t-sm)/1 var(--f-ui); color: var(--cream); background: none; border: 1px solid rgba(201,161,95,.6); }
-.room .bx-round .btn[hidden] { display: none; }
-.room .bx-glass { position: relative; inset: auto; display: block; width: 32px; height: 40px; padding: 0; border: 0; border-radius: 0; opacity: 1; overflow: visible; cursor: default; clip-path: polygon(0 0, 100% 0, 91% 100%, 9% 100%); background: linear-gradient(rgba(244,232,212,.13), rgba(244,232,212,.07)); box-shadow: inset 0 0 0 1px rgba(244,232,212,.28); }
-.room .bx-glass.full { cursor: pointer; background: linear-gradient(rgba(244,232,212,.1) 0 18%, rgba(244,232,212,.62) 18% 20%, rgba(190,208,205,.34) 20%, rgba(150,175,175,.24)); box-shadow: inset 0 0 0 1px rgba(244,232,212,.5); }
-.room .bx-glass::before, .room .bx-glass::after { display: none; }
-
-/* this week's caps, in a row. A cap is a crimped disc; a day studied is a ring; a bare day a dashed ring. Every place keeps its letter */
-.room .bx-k { font: 600 var(--t-xs)/1.3 var(--f-head); letter-spacing: .14em; color: var(--cream2); }
-.room .bx-mono { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
-.room .bq-caps { display: flex; flex-direction: column; padding: 0 var(--s-1); }
-.room .bq-caps .bx-pips.m { flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; min-height: 40px; margin: var(--s-2) 0 var(--s-1); align-items: center; }
-.room .bq-caps .bx-pips.m i { position: relative; display: block; width: 40px; height: 40px; margin: 0; transform: none; background: none; border: 0; outline: 0; font: 600 var(--t-xs)/40px var(--f-ui); font-style: normal; text-align: center; color: var(--cream3); animation: none; }
-.room .bq-caps .bx-pips.m i::before { content: ""; position: absolute; inset: 4px; box-sizing: border-box; border-radius: 50%; border: 1px dashed rgba(244,232,212,.3); background: none; }
-/* the nights: a place set (still to come: an empty dashed ring), a ring poured as far as the night got (studied,
-   short of a cap: amber up to its minutes), bare wood (missed: no ring, the letter struck), a cap (won), and
-   tonight in a thick brass ring with its letter in bold */
-.room .bq-caps .bx-pips.m i.on::before { border: 1px solid rgba(240,196,110,.75); background: linear-gradient(to top, rgba(240,196,110,.62) calc(var(--f, 0) * 100%), rgba(240,196,110,.08) 0); }
-.room .bq-caps .bx-pips.m i.is-past:not(.on)::before { display: none; }
-.room .bq-caps .bx-pips.m i.is-past:not(.on) .bx-d { opacity: .75; text-decoration: line-through; text-decoration-color: rgba(244,232,212,.45); }
-.room .bq-caps .bx-pips.m i.is-today::before { border: 2px solid var(--brass); inset: 2px; }
-.room .bq-caps .bx-pips.m i.is-today .bx-d { font-weight: 700; color: var(--cream); }
-.room .bq-caps .bx-pips.m i.has-cap::after { display: none; }
-.room .bq-caps .bx-pips.m i.has-cap::before { display: none; }
-.room .bq-caps .bx-d { position: relative; pointer-events: none; }
-.room .bq-caps .has-cap .bx-d { color: #fff6e8; text-shadow: 0 1px 1px rgba(60,10,5,.8); }
-.room .bq-caps .bx-daycap { appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; position: absolute; inset: 0; cursor: pointer; border-radius: 50%; }
-.room .bq-caps .bx-daycap svg { display: block; width: 40px; height: 40px; transform: rotate(var(--r)); filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
-.room .bq-caps .bx-daycap:focus-visible { outline: 2px solid var(--cream); outline-offset: 1px; }
-
-/* tonight: the one number that keeps you for one more block, by the jukebox. The minutes big, a pour along the
-   goal (a segment per 20 min, the last one as long as what's left of the goal), and what's left in the bar's words.
-   It moves once, when a block ends; a met goal foams once. Nothing here loops. */
-.room .bq-tonight { display: grid; gap: var(--s-2); padding: var(--s-4); border-radius: var(--r-md); background: rgba(201,161,95,.06); box-shadow: inset 0 0 0 1px rgba(201,161,95,.24); }
+/* Station 2: Tonight's Pour */
+.room .bx-k { font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; color: var(--amber); }
+.room .bx-mono { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-mono); color: var(--bone2); }
+.room .bq-tonight {
+  display: grid; gap: var(--s-2); padding: var(--s-3) var(--s-6); border-radius: 0;
+  background: none; box-shadow: none; border-bottom: 1px solid rgba(229,162,74,.16);
+}
 .room .bq-tonight .bx-k { order: 1; }
-.room .bq-tonight .bx-mono { order: 4; margin: 0; font: 400 var(--t-sm)/1.3 var(--f-ui); color: var(--cream2); }
-.room .bq-tonight .bx-now { font: 600 var(--t-sm)/1 var(--f-ui); color: var(--cream); }
-.room .bq-tonight .bx-pips.h { order: 3; display: flex; gap: 3px; height: 14px; margin: 0; }
-.room .bq-tonight .bx-pips.h i, .room .bq-tonight .bx-pips.h i.on:last-child { position: relative; flex: var(--w) 1 0; width: auto; height: 100%; margin: 0; overflow: hidden; transform: none; border: 0; border-radius: 2px; background: rgba(244,232,212,.08); box-shadow: inset 0 0 0 1px rgba(244,232,212,.2); animation: none; }
-.room .bq-tonight .bx-pips.h i::before { content: ""; position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--f)); background: linear-gradient(#f0c46e, #c98a2b); box-shadow: inset 0 2px 0 rgba(255,246,222,.55); }
+.room .bq-tonight .bx-togo { order: 2; margin: 0; font: 400 var(--t-lg)/1.2 var(--f-read); color: var(--bone); text-wrap: balance; }
+.room .bq-tonight .bx-left { font: 400 var(--t-xl)/1 var(--f-read); color: var(--amber-soft); }
+.room .bq-tonight .bx-togo.is-met { color: var(--amber); }
+.room .bq-tonight .bx-pips.h { order: 3; display: flex; gap: 3px; height: 12px; margin: 0; }
+.room .bq-tonight .bx-pips.h i, .room .bq-tonight .bx-pips.h i.on:last-child {
+  position: relative; flex: var(--w) 1 0; width: auto; height: 100%; margin: 0; overflow: hidden;
+  transform: none; border: 0; border-radius: 2px;
+  background: rgba(242,239,232,.07); box-shadow: inset 0 0 0 1px rgba(242,239,232,.14); animation: none;
+}
+.room .bq-tonight .bx-pips.h i::before {
+  content: ""; position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--f));
+  background: linear-gradient(180deg, #f2be6b, #c77d24);
+  box-shadow: inset 0 1px 0 rgba(255,244,218,.5);
+}
 .room .bq-tonight .bx-pips.h i::after, .room .bq-tonight .bx-pips.h i[data-new]::after { content: none; }
 .room .bq-tonight .bx-pips.h i[data-new]::before { animation: bq-pour .7s cubic-bezier(.2, 0, 0, 1) both; animation-delay: calc(var(--k, 0) * 90ms); }
 @keyframes bq-pour { from { transform: scaleX(var(--f0, 0)); } }
 .room[data-event~="goal"] .bq-tonight .bx-pips.h i { animation: bq-foam .6s ease-out both; animation-delay: calc(var(--k, 0) * 55ms); }
 @keyframes bq-foam { 40% { filter: brightness(1.35); } }
-.room .bq-tonight .bx-togo { order: 2; margin: 0; font: 400 var(--t-lg)/1.2 var(--f-read); color: var(--cream); text-wrap: balance; }
-.room .bq-tonight .bx-left { font: 400 var(--t-xl)/1 var(--f-read); }
-.room .bq-tonight .bx-togo.is-met { color: #f0c46e; }
-/* before the first block: no "0 of", just the way in */
-.room .bq-tonight .bx-invite { order: 4; margin: 0; font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--cream2); }
+.room .bq-tonight .bx-mono { order: 4; margin: 0; font: 400 var(--t-xs)/1.3 var(--f-mono); color: var(--smoke); }
+.room .bq-tonight .bx-now { font: 600 var(--t-xs)/1 var(--f-mono); color: var(--bone); }
+.room .bq-tonight .bx-invite { order: 4; margin: 0; font: italic 400 var(--t-sm)/1.4 var(--f-read); color: var(--bone2); }
 .room .bq-tonight:has(.bx-invite) .bx-mono { display: none; }
-@media (prefers-reduced-motion: reduce) { .room .bq-tonight .bx-pips.h i[data-new]::before, .room[data-event~="goal"] .bq-tonight .bx-pips.h i { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .room .bq-tonight .bx-pips.h i[data-new]::before, .room[data-event~="goal"] .bq-tonight .bx-pips.h i { animation: none; }
+}
 
-/* the house record: said only when it's in reach, once, as the night's mark goes up */
-.room .bx-record { margin: var(--s-1) 0 0; font: italic 400 var(--t-md)/1.35 var(--f-read); color: var(--cream); }
-.room [data-slot="streak"]:has([data-new]) .bx-record { animation: rm-tick-pop .5s ease-out .6s both; }
+/* Station 3: This Week's Caps (clickable keepsakes in one crisp row) */
+.room .bq-caps {
+  display: flex; flex-direction: column; padding: var(--s-3) var(--s-6);
+  border-bottom: 1px solid rgba(229,162,74,.16);
+}
+.room .bq-caps .bx-pips.m {
+  flex: none; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0; min-height: 40px; margin: var(--s-2) 0 var(--s-1); align-items: center; justify-items: center;
+}
+.room .bq-caps .bx-pips.m i {
+  position: relative; display: block; width: 40px; height: 40px; margin: 0; transform: none;
+  background: none; border: 0; outline: 0; font: 600 var(--t-xs)/40px var(--f-mono);
+  font-style: normal; text-align: center; color: var(--smoke); animation: none;
+}
+.room .bq-caps .bx-pips.m i::before {
+  content: ""; position: absolute; inset: 4px; box-sizing: border-box; border-radius: 50%;
+  border: 1px dashed rgba(242,239,232,.24); background: none;
+}
+.room .bq-caps .bx-pips.m i.on::before {
+  border: 1px solid rgba(229,162,74,.78);
+  background: linear-gradient(to top, rgba(229,162,74,.56) calc(var(--f, 0) * 100%), rgba(229,162,74,.08) 0);
+}
+.room .bq-caps .bx-pips.m i.is-past:not(.on)::before { display: none; }
+.room .bq-caps .bx-pips.m i.is-past:not(.on) .bx-d { opacity: .6; text-decoration: line-through; text-decoration-color: rgba(242,239,232,.35); }
+.room .bq-caps .bx-pips.m i.is-today::before { border: 2px solid var(--amber); inset: 2px; box-shadow: 0 0 10px rgba(229,162,74,.28); }
+.room .bq-caps .bx-pips.m i.is-today .bx-d { font-weight: 700; color: var(--bone); }
+.room .bq-caps .bx-pips.m i.has-cap::after, .room .bq-caps .bx-pips.m i.has-cap::before { display: none; }
+.room .bq-caps .bx-d { position: relative; pointer-events: none; }
+.room .bq-caps .has-cap .bx-d { color: #fff8f2; text-shadow: 0 1px 2px rgba(20,5,3,.9); }
+.room .bq-caps .bx-daycap {
+  appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit;
+  position: absolute; inset: 0; cursor: pointer; border-radius: 50%;
+}
+.room .bq-caps .bx-daycap svg { display: block; width: 40px; height: 40px; transform: rotate(var(--r)); filter: drop-shadow(0 2px 4px rgba(0,0,0,.75)); }
+.room .bq-caps .bx-daycap:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
 
-/* the run of nights, under the week it belongs to: how many in a row, the house record, a word when it's in
-   reach, and how long until the next trophy for the back room, one plain line each */
-.room .bq-run { display: grid; gap: var(--s-1); padding: var(--s-2) var(--s-1) 0; border-top: 1px solid rgba(201,161,95,.2); }
+/* Station 4: House Record & Next Trophy */
+.room .bq-run {
+  display: grid; gap: var(--s-1); padding: var(--s-3) var(--s-6);
+  border-bottom: 1px solid rgba(229,162,74,.16);
+}
 .room .bq-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 var(--s-3); }
 .room .bq-run .bx-pips.h { display: none; }
 .room .bq-row .bx-mono { text-align: right; }
-.room .bq-run .bx-chalk { position: static; width: auto; height: auto; transform: none; appearance: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit; display: flex; width: 100%; justify-content: space-between; align-items: baseline; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
+.room .bq-run .bx-chalk {
+  position: static; width: 100%; height: auto; transform: none; appearance: none;
+  margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: inherit;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font: 400 var(--t-xs)/1.4 var(--f-mono); color: var(--bone2);
+}
 .room .bq-run .ch-in, .room .bq-run .ch-fade { display: contents; }
 .room .bq-run :is(.ch-prev, .ch-cur, .ch-dust, .ch-ul, .ch-rag, .ch-star) { display: none; }
 .room .bq-run .ch-n { position: static; display: inline-flex; gap: var(--s-1); font: inherit; color: inherit; }
-.room .bq-run .ch-n span, .room .bq-run .ch-lab, .room .bq-run .ch-best, .room .bq-run .ch-best b { position: static; margin: 0; letter-spacing: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream2); }
+.room .bq-run .ch-n span, .room .bq-run .ch-lab, .room .bq-run .ch-best, .room .bq-run .ch-best b {
+  position: static; margin: 0; letter-spacing: 0; font: 400 var(--t-xs)/1.4 var(--f-mono); color: var(--bone2);
+}
+.room .bx-record { margin: var(--s-1) 0 0; font: italic 400 var(--t-md)/1.35 var(--f-read); color: var(--amber-soft); }
+.room [data-slot="streak"]:has([data-new]) .bx-record { animation: rm-tick-pop .5s ease-out .6s both; }
 .room .bq-die { margin: var(--s-2) 0 0; padding: 0; background: none; border: 0; }
 .room .bq-die > .bx-k, .room .bq-die .bx-cab-row, .room .bq-die > .bx-mono { display: none; }
-/* the next trophy: a plain small line under the record, set apart so the record stays the moment */
-.room .bx-next { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--cream3); }
+.room .bx-next { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--smoke); }
 
-/* the back room: a card table. Record cards lie on the felt, on the same paper as the book */
-.room.is-back::before { background: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNDAiIGhlaWdodD0iMjQwIj48ZmlsdGVyIGlkPSJuIiB4PSIwIiB5PSIwIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMS4xIiBudW1PY3RhdmVzPSIyIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PGZlQ29sb3JNYXRyaXggdmFsdWVzPSIwIDAgMCAwIDAuNTUgMCAwIDAgMCAwLjc1IDAgMCAwIDAgMC42MiAwIDAgMCAwLjIgMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNuKSIvPjwvc3ZnPg==") center / 240px, radial-gradient(70% 70% at 50% 40%, #1d3a2c, #0b1712); }
-.room.is-back::after { background: radial-gradient(100% 80% at 50% 40%, transparent 50%, rgba(3,6,4,.55)); }
+/* Station 5: Your Glass on the Counter (hydration ritual) */
+.room .bq-glass { padding: var(--s-3) var(--s-6) var(--s-4); margin-top: auto; }
+.room .bx-round { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); padding: 0; }
+.room .bx-round p { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--bone2); }
+.room .bx-round .btn {
+  height: 30px; padding: 0 var(--s-3); border-radius: var(--r-sm);
+  font: 600 var(--t-xs)/1 var(--f-ui); color: var(--rain); background: rgba(99,197,214,.08);
+  border: 1px solid rgba(99,197,214,.5);
+}
+.room .bx-round .btn:hover { background: var(--rain); color: #080b0d; }
+.room .bx-round .btn[hidden] { display: none; }
+.room .bx-glass {
+  position: relative; inset: auto; display: block; width: 28px; height: 36px; padding: 0; border: 0;
+  border-radius: 0 0 3px 3px; opacity: 1; overflow: visible; cursor: default;
+  clip-path: polygon(2% 0, 98% 0, 88% 100%, 12% 100%);
+  background: linear-gradient(rgba(242,239,232,.12), rgba(242,239,232,.04) 78%, rgba(242,239,232,.22) 80%, rgba(242,239,232,.14) 100%);
+  box-shadow: inset 0 0 0 1px rgba(242,239,232,.26);
+}
+.room .bx-glass.full {
+  cursor: pointer;
+  background: linear-gradient(rgba(242,239,232,.08) 0 18%, rgba(185,240,248,.8) 18% 21%, rgba(99,197,214,.42) 21% 78%, rgba(242,239,232,.26) 80%, rgba(242,239,232,.16) 100%);
+  box-shadow: inset 0 0 0 1px rgba(185,240,248,.62);
+}
+.room .bx-glass::before, .room .bx-glass::after { display: none; }
+
+/* The Back Room: Nocturnal smoked-glass archive — 100% consistent with the front room */
+.room.is-back::before {
+  background:
+    radial-gradient(80% 70% at 50% 15%, rgba(229,162,74,.08), transparent 60%),
+    radial-gradient(70% 70% at 20% 80%, rgba(16,64,72,.28), transparent 65%),
+    linear-gradient(180deg, #070d10, #0a0c0e);
+}
 .room .bx-backroom { margin-top: 0; padding-bottom: var(--s-12); }
-.room .bx-backhead { align-items: center; min-height: 72px; margin-bottom: var(--s-4); }
+.room .bx-backhead { align-items: center; min-height: 68px; margin-bottom: var(--s-4); padding-bottom: var(--s-3); border-bottom: 1px solid rgba(242,239,232,.09); }
 .room .bx-back { columns: 2 420px; column-gap: var(--s-6); }
-.room .bx-back > .card { --surface: #e9dec8; --surface-2: #dfd2b8; --bg-2: #dfd2b8; --ink: var(--pen); --ink-2: var(--pen2); --muted: var(--pen3); --line: rgba(75,52,30,.26); --line-2: rgba(75,52,30,.42); --bx-k: var(--ox); --bx-text: var(--pen2); --bx-dim: var(--pen3); --bx-faint: var(--pen3); --bx-label: var(--pen); --ks-wood: #8a6a44;
-  --lesson: #4545b8; --probe: #96540a; --checkpoint: #b0245a; --reading: #0b6f5e; --project: #7437ab; --mock: #0b5f9e; --topic: var(--ox);
-  margin: 0 0 var(--s-6); padding: var(--s-6); color: var(--pen); border: 0; border-radius: var(--r-sm); background: var(--tex-paper) center / 320px, var(--paper); box-shadow: 0 1px 0 #f7efdf inset, 0 2px 3px rgba(0,0,0,.45), 0 16px 24px -12px rgba(0,0,0,.7); }
-.room .bx-back > .card .card-title, .room .bx-back > .card .bx-k { font: 600 var(--t-xs)/1.3 var(--f-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--ox); }
-.room .bx-back > .card .card-sub { margin-top: var(--s-1); font: 400 var(--t-sm)/1.4 var(--f-ui); color: var(--pen3); }
-.room .bx-back > .card h3 { font: 400 var(--t-lg)/1.25 var(--f-read); letter-spacing: 0; text-transform: none; color: var(--pen); }
-.room .bx-back > .card p, .room .bx-back > .card li { color: var(--pen2); }
-.room .bx-back > .card .bx-chk, .room .bx-back > .card .ks-sum { font: 400 var(--t-sm)/1.45 var(--f-ui); color: var(--pen3); }
-.room .bx-back > .card .btn-ghost { color: var(--pen); border-color: rgba(75,52,30,.45); background: transparent; border-radius: var(--r-sm); }
-
-/* on paper, the engine's own parts (a disabled Grade, its reason, a chip) use the book's ink */
-.room .bq-pages, .room .bx-back > .card { --ink: var(--pen); --ink-2: var(--pen2); --muted: var(--pen3); --off-ink: var(--pen2); --line: rgba(75,52,30,.26); --line-2: rgba(75,52,30,.46); }
-.room .bx-back > .topic-dormant { opacity: 1; }   /* the paper stays readable; its label says it has not started */
+.room .bx-back > .card {
+  --surface: #111518; --surface-2: #181d21; --bg-2: #181d21;
+  --ink: var(--bone); --ink-2: var(--bone2); --muted: var(--smoke);
+  --line: rgba(242,239,232,.11); --line-2: rgba(242,239,232,.20);
+  --bx-k: var(--amber); --bx-text: var(--bone2); --bx-dim: var(--smoke); --bx-faint: var(--smoke); --bx-label: var(--bone);
+  --ks-wood: rgba(229,162,74,.38);
+  margin: 0 0 var(--s-6); padding: var(--s-6); color: var(--bone);
+  border: 1px solid rgba(242,239,232,.10); border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(19,23,27,.92), rgba(13,16,19,.95));
+  box-shadow: inset 0 1px 0 rgba(242,239,232,.06), 0 18px 36px -18px rgba(0,0,0,.8);
+}
+.room .bx-back > .card .card-title, .room .bx-back > .card .bx-k {
+  font: 600 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--amber);
+}
+.room .bx-back > .card .card-sub { margin-top: var(--s-1); font: 400 var(--t-sm)/1.4 var(--f-ui); color: var(--smoke); }
+.room .bx-back > .card h3 { font: 400 var(--t-lg)/1.25 var(--f-read); letter-spacing: 0; text-transform: none; color: var(--bone); }
+.room .bx-back > .card p, .room .bx-back > .card li { color: var(--bone2); }
+.room .bx-back > .card .bx-chk, .room .bx-back > .card .ks-sum { font: 400 var(--t-xs)/1.45 var(--f-mono); color: var(--smoke); }
+.room .bx-back > .card .btn-ghost { color: var(--bone); border-color: rgba(242,239,232,.22); background: transparent; border-radius: var(--r-sm); }
+.room .bx-back > .card .btn-ghost:hover { border-color: var(--amber); color: var(--amber); }
+.room .bx-back > .topic-dormant { opacity: .88; }

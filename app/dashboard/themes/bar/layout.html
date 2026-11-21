@@ -1,9 +1,175 @@
-<!-- The bar: you look down at the counter. On it lie the book (the job, its replies, the follow-up) and the mat
-     where the voices talk; by your right hand the jukebox, tonight's pour toward a cap, this week's nights, the run with what's next for the
-     back room, and your glass.
-     The finish line, locked tasks and the other trophies are in the back room (THEMES.md, the front-room budget). -->
+<!-- The bar: Hopper Nighthawks × Blade Runner × Ginza Jazz Kissa.
+     An architectural backlit barback diorama behind the neon sign: distant rain-blurred city bokeh,
+     volumetric brass pendant light cones, liquid-filled amber/emerald/crimson bottles with specular glass
+     highlights and shelf reflections. Grows across data-tier="0..5" from real proof & dies; the next
+     stage waits as a faint dashed silhouette. -->
 <div class="bq">
   <header class="bq-head">
+    <div class="bq-backbar" aria-hidden="true">
+      <svg class="bq-shelf-svg" viewBox="0 0 1200 104" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <!-- Warm backbar under-shelf & mirror radiance -->
+          <linearGradient id="t-mirror-glow" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stop-color="#e5a24a" stop-opacity="0.34"/>
+            <stop offset="38%" stop-color="#c97b2c" stop-opacity="0.11"/>
+            <stop offset="100%" stop-color="#070d10" stop-opacity="0"/>
+          </linearGradient>
+          <!-- Volumetric pendant lamp light cone -->
+          <linearGradient id="t-cone" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffd996" stop-opacity="0.28"/>
+            <stop offset="45%" stop-color="#e5a24a" stop-opacity="0.09"/>
+            <stop offset="100%" stop-color="#e5a24a" stop-opacity="0"/>
+          </linearGradient>
+          <!-- Polished brass rail -->
+          <linearGradient id="t-brass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#e5a24a" stop-opacity="0.06"/>
+            <stop offset="22%" stop-color="#f5d39c" stop-opacity="0.52"/>
+            <stop offset="50%" stop-color="#e5a24a" stop-opacity="0.65"/>
+            <stop offset="78%" stop-color="#f5d39c" stop-opacity="0.52"/>
+            <stop offset="100%" stop-color="#e5a24a" stop-opacity="0.06"/>
+          </linearGradient>
+          <!-- Liquid fills inside translucent glass bottles -->
+          <linearGradient id="t-liq-amber" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f3b659" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#8c4212" stop-opacity="0.72"/>
+          </linearGradient>
+          <linearGradient id="t-liq-emerald" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3fa88c" stop-opacity="0.48"/>
+            <stop offset="100%" stop-color="#12453b" stop-opacity="0.72"/>
+          </linearGradient>
+          <linearGradient id="t-liq-crimson" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#de4d33" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#69160d" stop-opacity="0.78"/>
+          </linearGradient>
+          <linearGradient id="t-brass-shaker" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#6b4e24" stop-opacity="0.7"/>
+            <stop offset="40%" stop-color="#f3cf8c" stop-opacity="0.82"/>
+            <stop offset="100%" stop-color="#3d2a12" stop-opacity="0.75"/>
+          </linearGradient>
+          <!-- Soft nocturnal city bokeh (Blade Runner rain-window horizon) -->
+          <radialGradient id="t-bokeh-a" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffb86c" stop-opacity="0.42"/>
+            <stop offset="55%" stop-color="#e58a3c" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#e58a3c" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="t-bokeh-c" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#63c5d6" stop-opacity="0.34"/>
+            <stop offset="55%" stop-color="#2c7a8c" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#2c7a8c" stop-opacity="0"/>
+          </radialGradient>
+          <!-- Shelf reflection fade -->
+          <linearGradient id="t-refl" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#e5a24a" stop-opacity="0.24"/>
+            <stop offset="100%" stop-color="#080b0d" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Distant nocturnal city bokeh through rain-streaked glass (full-width horizon) -->
+        <g class="bb-city">
+          <circle cx="95" cy="42" r="24" fill="url(#t-bokeh-a)"/>
+          <circle cx="215" cy="34" r="22" fill="url(#t-bokeh-c)"/>
+          <circle cx="332" cy="54" r="14" fill="url(#t-bokeh-a)"/>
+          <circle cx="486" cy="28" r="26" fill="url(#t-bokeh-c)"/>
+          <circle cx="670" cy="40" r="20" fill="url(#t-bokeh-a)"/>
+          <circle cx="812" cy="30" r="24" fill="url(#t-bokeh-c)"/>
+          <circle cx="965" cy="46" r="22" fill="url(#t-bokeh-a)"/>
+          <circle cx="1105" cy="36" r="24" fill="url(#t-bokeh-c)"/>
+          <!-- Faint rain-glass mullions across the full bar -->
+          <line x1="240" y1="0" x2="240" y2="86" stroke="#63c5d6" stroke-opacity="0.06" stroke-width="1"/>
+          <line x1="480" y1="0" x2="480" y2="86" stroke="#63c5d6" stroke-opacity="0.06" stroke-width="1"/>
+          <line x1="720" y1="0" x2="720" y2="86" stroke="#63c5d6" stroke-opacity="0.06" stroke-width="1"/>
+          <line x1="960" y1="0" x2="960" y2="86" stroke="#63c5d6" stroke-opacity="0.06" stroke-width="1"/>
+        </g>
+
+        <!-- Full-width seamless backlit mirror radiance (no hard box edges) -->
+        <rect class="bb-glow" x="0" y="6" width="1200" height="80" fill="url(#t-mirror-glow)"/>
+
+        <g transform="translate(30, 0)">
+        <!-- STAGE 1 (first proof / cap): Left whiskey & tall gin bottles -->
+        <g class="bb-s bb-s1">
+          <!-- Tall dark-amber whiskey bottle -->
+          <path d="M404 86 V44 C404 37 410 35 410 28 V18 H418 V28 C418 35 424 37 424 44 V86 Z" fill="#0d0f12" stroke="#e5a24a" stroke-opacity="0.48" stroke-width="1"/>
+          <path class="bb-fill" d="M406 85 V52 H422 V85 Z" fill="url(#t-liq-amber)"/>
+          <rect class="bb-fill" x="408" y="56" width="12" height="14" fill="#f2efe8" fill-opacity="0.14" stroke="#e5a24a" stroke-opacity="0.32" stroke-width="0.6"/>
+          <line class="bb-fill" x1="408" y1="45" x2="408" y2="82" stroke="#fff4dc" stroke-opacity="0.28" stroke-width="1.2"/>
+          <rect class="bb-fill" x="410" y="16" width="8" height="4" fill="#e5a24a" fill-opacity="0.55"/>
+          <!-- Squat bourbon bottle -->
+          <path d="M434 86 V54 C434 48 440 46 440 40 V31 H448 V40 C448 46 454 48 454 54 V86 Z" fill="#0d0f12" stroke="#e5a24a" stroke-opacity="0.45" stroke-width="1"/>
+          <path class="bb-fill" d="M436 85 V60 H452 V85 Z" fill="url(#t-liq-crimson)"/>
+          <line class="bb-fill" x1="438" y1="54" x2="438" y2="82" stroke="#fff4dc" stroke-opacity="0.25" stroke-width="1.2"/>
+          <!-- Tall slender bottle -->
+          <path d="M464 86 V38 C464 32 469 30 469 22 V12 H475 V22 C475 30 480 32 480 38 V86 Z" fill="#0d0f12" stroke="#e5a24a" stroke-opacity="0.45" stroke-width="1"/>
+          <path class="bb-fill" d="M466 85 V48 H478 V85 Z" fill="url(#t-liq-amber)"/>
+          <line class="bb-fill" x1="468" y1="39" x2="468" y2="82" stroke="#fff4dc" stroke-opacity="0.25" stroke-width="1"/>
+        </g>
+
+        <!-- STAGE 2 (3 proofs / 1 week): Hanging brass pendant lamp #1 + crystal coupe glasses -->
+        <g class="bb-s bb-s2">
+          <!-- Volumetric tungsten cone from pendant lamp #1 -->
+          <polygon class="bb-fill" points="512,24 544,24 612,96 444,96" fill="url(#t-cone)"/>
+          <line x1="528" y1="0" x2="528" y2="14" stroke="#e5a24a" stroke-opacity="0.55" stroke-width="1.2"/>
+          <path d="M510 24 C510 15 518 12 528 12 C538 12 546 15 546 24 Z" fill="#18130e" stroke="#e5a24a" stroke-opacity="0.72" stroke-width="1"/>
+          <ellipse class="bb-fill" cx="528" cy="24" rx="16" ry="2.2" fill="#ffd996" fill-opacity="0.72"/>
+          <!-- Two crystal coupe glasses -->
+          <path d="M502 86 H518 M510 86 V67 M499 54 H521 C521 63 516 67 510 67 C504 67 499 63 499 54 Z" fill="none" stroke="#f5d39c" stroke-opacity="0.55" stroke-width="1.1"/>
+          <path class="bb-fill" d="M501 58 H519 C518 64 514 66 510 66 C506 66 502 64 501 58 Z" fill="#e5a24a" fill-opacity="0.28"/>
+          <path d="M534 86 H550 M542 86 V67 M531 54 H553 C553 63 548 67 542 67 C536 67 531 63 531 54 Z" fill="none" stroke="#f5d39c" stroke-opacity="0.55" stroke-width="1.1"/>
+          <path class="bb-fill" d="M533 58 H551 C550 64 546 66 542 66 C538 66 534 64 533 58 Z" fill="#e5a24a" fill-opacity="0.22"/>
+        </g>
+
+        <!-- STAGE 3 (1 die / 6 proofs): Faceted crystal decanter + emerald herbal bottle -->
+        <g class="bb-s bb-s3">
+          <!-- Crystal decanter with stopper -->
+          <path d="M582 86 V56 L590 42 V32 H602 V42 L610 56 V86 Z" fill="#0d0f12" stroke="#f5d39c" stroke-opacity="0.58" stroke-width="1.1"/>
+          <polygon class="bb-fill" points="592,24 600,24 602,31 590,31" fill="#f5d39c" fill-opacity="0.38" stroke="#f5d39c" stroke-opacity="0.6" stroke-width="0.8"/>
+          <path class="bb-fill" d="M584 85 V60 H608 V85 Z" fill="url(#t-liq-amber)"/>
+          <line class="bb-fill" x1="588" y1="56" x2="588" y2="83" stroke="#fff4dc" stroke-opacity="0.35" stroke-width="1.4"/>
+          <line class="bb-fill" x1="604" y1="56" x2="604" y2="83" stroke="#fff4dc" stroke-opacity="0.18" stroke-width="1"/>
+          <!-- Emerald bottle -->
+          <path d="M622 86 V42 C622 36 627 34 627 26 V16 H635 V26 C635 34 640 36 640 42 V86 Z" fill="#0d0f12" stroke="#63c5d6" stroke-opacity="0.46" stroke-width="1"/>
+          <path class="bb-fill" d="M624 85 V48 H638 V85 Z" fill="url(#t-liq-emerald)"/>
+          <line class="bb-fill" x1="627" y1="42" x2="627" y2="82" stroke="#d4f7f0" stroke-opacity="0.28" stroke-width="1.2"/>
+        </g>
+
+        <!-- STAGE 4 (2 dies / 12 proofs): Pendant lamp #2 + brass shaker + rocks tumbler -->
+        <g class="bb-s bb-s4">
+          <!-- Volumetric tungsten cone from pendant lamp #2 -->
+          <polygon class="bb-fill" points="698,24 730,24 798,96 630,96" fill="url(#t-cone)"/>
+          <line x1="714" y1="0" x2="714" y2="14" stroke="#e5a24a" stroke-opacity="0.55" stroke-width="1.2"/>
+          <path d="M696 24 C696 15 704 12 714 12 C724 12 732 15 732 24 Z" fill="#18130e" stroke="#e5a24a" stroke-opacity="0.72" stroke-width="1"/>
+          <ellipse class="bb-fill" cx="714" cy="24" rx="16" ry="2.2" fill="#ffd996" fill-opacity="0.72"/>
+          <!-- Brass cobbler shaker -->
+          <path d="M668 86 L665 54 L672 44 H682 L689 54 L686 86 Z" fill="#0d0f12" stroke="#f5d39c" stroke-opacity="0.6" stroke-width="1"/>
+          <path class="bb-fill" d="M668 85 L666 55 L673 45 H681 L688 55 L685 85 Z" fill="url(#t-brass-shaker)"/>
+          <rect x="673" y="38" width="8" height="6" rx="1" fill="#18130e" stroke="#f5d39c" stroke-opacity="0.65" stroke-width="0.9"/>
+          <!-- Heavy-bottom rocks glass with amber pour & ice cube -->
+          <path d="M704 62 H724 L722 86 H706 Z" fill="none" stroke="#f5d39c" stroke-opacity="0.58" stroke-width="1.1"/>
+          <path class="bb-fill" d="M706 72 H722 L721 82 H707 Z" fill="url(#t-liq-amber)"/>
+          <rect class="bb-fill" x="710" y="70" width="7" height="7" fill="#fff4dc" fill-opacity="0.22" stroke="#fff4dc" stroke-opacity="0.45" stroke-width="0.6"/>
+        </g>
+
+        <!-- STAGE 5 (4 dies / 25 proofs): Reserve top-shelf collection -->
+        <g class="bb-s bb-s5">
+          <!-- Tall dark reserve -->
+          <path d="M752 86 V36 C752 30 758 28 758 20 V11 H766 V20 C766 28 772 30 772 36 V86 Z" fill="#0d0f12" stroke="#e5a24a" stroke-opacity="0.58" stroke-width="1.1"/>
+          <path class="bb-fill" d="M754 85 V46 H770 V85 Z" fill="url(#t-liq-crimson)"/>
+          <line class="bb-fill" x1="757" y1="36" x2="757" y2="82" stroke="#fff4dc" stroke-opacity="0.3" stroke-width="1.2"/>
+          <!-- Mid amber bottle -->
+          <path d="M782 86 V44 C782 38 787 36 787 29 V21 H795 V29 C795 36 800 38 800 44 V86 Z" fill="#0d0f12" stroke="#e5a24a" stroke-opacity="0.54" stroke-width="1.1"/>
+          <path class="bb-fill" d="M784 85 V52 H798 V85 Z" fill="url(#t-liq-amber)"/>
+          <line class="bb-fill" x1="787" y1="44" x2="787" y2="82" stroke="#fff4dc" stroke-opacity="0.26" stroke-width="1.1"/>
+          <!-- Tall green chartreuse -->
+          <path d="M810 86 V48 C810 42 815 40 815 34 V26 H823 V34 C823 40 828 42 828 48 V86 Z" fill="#0d0f12" stroke="#63c5d6" stroke-opacity="0.48" stroke-width="1"/>
+          <path class="bb-fill" d="M812 85 V56 H826 V85 Z" fill="url(#t-liq-emerald)"/>
+        </g>
+        </g>
+
+        <!-- Polished walnut shelf + warm specular reflection strip + brass bottle guard rail -->
+        <rect x="0" y="86" width="1200" height="18" fill="url(#t-refl)"/>
+        <line x1="0" y1="86" x2="1200" y2="86" stroke="url(#t-brass)" stroke-width="1.6"/>
+        <line x1="360" y1="74" x2="880" y2="74" stroke="#e5a24a" stroke-opacity="0.22" stroke-width="1"/>
+      </svg>
+    </div>
     <div class="bq-sign" data-slot="name"></div>
     <div class="bq-tabs" data-slot="rooms"></div>
   </header>

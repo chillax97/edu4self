@@ -2121,6 +2121,24 @@
     } else if (S.lastEnd && Date.now() - S.lastEnd < 20 * 60000) {
       add(65, "gpu", "You stopped " + Math.max(1, Math.round((Date.now() - S.lastEnd) / 60000)) + " minutes ago. The die is still warm. Another 25?", "warm-die");
     }
+    if (hero && followUpFor(hero.task))
+      add(87, "critic", "One question standing between you and a pass on " + (hero.task.label || hero.task.title) + ". Answer it clean, from memory.", "fu-open");
+    if (hero && DATA.derived && DATA.derived.stuck && DATA.derived.stuck[hero.task.id])
+      add(83, "logic", "Three failed runs on " + (hero.task.label || hero.task.title) + ". Step back for a minute or pull a hint — grinding the same slip doesn't move the needle.", "stuck-open");
+    if (DATA.derived && DATA.derived.recall && DATA.derived.recall.items && DATA.derived.recall.items.length && !DATA.derived.recall.done_today)
+      add(78, "nostalgia", "Cold memory check waiting on " + W("counter") + ". Pulling it back after a few days is where the real glue sets.", "recall-due");
+    if (hero && hero.topic && hero.topic.milestones) {
+      var curMs = hero.topic.milestones.find(function (m) { return (m.steps || []).some(function (s) { return !s.done; }); });
+      if (curMs && curMs.steps.filter(function (s) { return !s.done; }).length === 1)
+        add(76, "volition", "One step left on " + curMs.title + ". Finish this and the whole milestone closes.", "ms-last");
+    }
+    var cal = DATA.derived && DATA.derived.calibration;
+    if (cal && cal.rated >= 3) {
+      if (cal.solid && cal.solid.n >= 3 && cal.solid.passed / cal.solid.n < 0.7)
+        add(68, "critic", "You called it 'solid' " + cal.solid.n + " times and " + (cal.solid.n - cal.solid.passed) + " missed. Test it cold before you trust the feeling.", "cal-over");
+      else if (cal.shaky && cal.shaky.n >= 3 && cal.shaky.passed / cal.shaky.n >= 0.8)
+        add(68, "logic", "You called " + cal.shaky.n + " answers 'shaky' and passed " + cal.shaky.passed + " of them. You know more than it feels like.", "cal-under");
+    }
     if (S.best && S.todayMins > S.best) add(85, "volition", "New record: " + hm(S.todayMins) + " in one day. The old best was " + hm(S.best) + ".", "record");
     var dates = {
       "10-31": ["regular", LINE("halloween", "Halloween. Someone came dressed as a deadline. Everyone recognised him at once.")],
@@ -2217,6 +2235,51 @@
     if (isBar() && DATA && !DATA.error && barRoom() === "front") render();
   }
 
+  // Bar progression tier (0..5) from real proof, caps, weeks, and shipped dies.
+  function roomTier() {
+    var proofs = 0;
+    ((DATA && DATA.state && DATA.state.topics) || []).forEach(function (tp) {
+      (tp.history || []).forEach(function (h) { if (h.evidence) proofs++; });
+    });
+    var items = ksData().items || [], caps = 0, weeks = 0;
+    items.forEach(function (it) { if (it.kind === "day") caps++; else if (it.kind === "week") weeks++; });
+    var dies = dieNow().shipped || 0;
+    if (dies >= 4 || proofs >= 25) return 5;
+    if (dies >= 2 || proofs >= 12) return 4;
+    if (dies >= 1 || proofs >= 6) return 3;
+    if (proofs >= 3 || weeks >= 1) return 2;
+    if (proofs >= 1 || caps >= 1) return 1;
+    return 0;
+  }
+
+  // Tomorrow's coaster: a 1-line note from tonight's you to tomorrow's you.
+  var COASTER_KEY = "edu.coaster.v1";
+  var coasterOpen = false;
+  function loadCoaster() { try { return JSON.parse(localStorage.getItem(COASTER_KEY) || "null"); } catch (_) { return null; } }
+  function saveCoaster(c) { try { if (c) localStorage.setItem(COASTER_KEY, JSON.stringify(c)); else localStorage.removeItem(COASTER_KEY); } catch (_) {} }
+  function coasterHTML() {
+    var c = loadCoaster(), today = dayKey(new Date()), met = tonight().mins >= DAY_GOAL_MIN;
+    if (c && c.text && c.date < today) {
+      return '<div class="bx-coaster is-return"><span class="bx-coaster-k">From your last coaster</span>' +
+        '<p class="bx-coaster-txt">"' + esc(c.text) + '"</p>' +
+        '<button class="btn btn-link bx-coaster-act" type="button" data-coaster-clear>Clear</button></div>';
+    }
+    if (!met) return "";
+    if (c && c.text && c.date === today && !coasterOpen) {
+      return '<div class="bx-coaster is-saved"><span class="bx-coaster-k">Left on a coaster for tomorrow</span>' +
+        '<p class="bx-coaster-txt">"' + esc(c.text) + '"</p>' +
+        '<button class="btn btn-link bx-coaster-act" type="button" data-coaster-edit>Edit</button></div>';
+    }
+    if (coasterOpen) {
+      var val = (c && c.date === today && c.text) || "";
+      return '<form class="bx-coaster is-edit" data-coaster-form>' +
+        '<span class="bx-coaster-k">Leave a coaster for tomorrow</span>' +
+        '<div class="bx-coaster-row"><input type="text" maxlength="140" name="note" value="' + esc(val) + '" placeholder="Where to start cold tomorrow…">' +
+        '<button class="btn btn-ghost btn-sm" type="submit">Leave it</button></div></form>';
+    }
+    return '<div class="bx-coaster is-ask"><button class="btn btn-link bx-coaster-act" type="button" data-coaster-edit>Leave a coaster for tomorrow…</button></div>';
+  }
+
   function barJob(hero) {
     if (!hero) return '<div class="bx-job is-empty"><div class="bx-k">' + esc(W("job")) + '</div><h2>Nothing waiting on you.</h2><p>' +
       (claudeOK() ? (pendingCount() ? gradeButton() : '<button class="btn btn-topic btn-sm" type="button" data-newtopic>+ Start a new topic</button>')
@@ -2229,13 +2292,26 @@
       '<div class="bx-meta">' + job.facts + "</div>" +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
       (pend ? '<div class="bx-sent">' + sentWord(pend) + " " + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : fu ? followUpBox(t, fu, true) : stuckNudge(t, true)) +
+      coasterHTML() +
       "</div>";
   }
 
   var repliesOpen = false;
   document.addEventListener("click", function (ev) {
+    if (ev.target.closest("[data-coaster-edit]")) { coasterOpen = true; render(); var inp = $('[data-coaster-form] input'); if (inp) inp.focus(); return; }
+    if (ev.target.closest("[data-coaster-clear]")) { saveCoaster(null); coasterOpen = false; render(); return; }
     if (!ev.target.closest("[data-replies-more]")) return;
     repliesOpen = !repliesOpen;
+    render();
+  });
+  document.addEventListener("submit", function (ev) {
+    var f = ev.target.closest("[data-coaster-form]");
+    if (!f) return;
+    ev.preventDefault();
+    var txt = (f.note && f.note.value || "").trim();
+    if (txt) saveCoaster({ text: txt, date: dayKey(new Date()) });
+    else saveCoaster(null);
+    coasterOpen = false;
     render();
   });
   function barReplies(hero) {
@@ -2534,7 +2610,7 @@
     });
     var box = document.createElement("div");
     box.appendChild(tpl.content);
-    return '<div class="room t-' + esc(THEME.meta.id) + (active ? " is-running" : "") + '">' + box.innerHTML + "</div>";
+    return '<div class="room t-' + esc(THEME.meta.id) + (active ? " is-running" : "") + '" data-tier="' + roomTier() + '">' + box.innerHTML + "</div>";
   }
 
   // cheap refresh of the parts that change between polls, without redrawing the room
@@ -2660,6 +2736,7 @@
     armBlinks();
     var r = $(".room");
     if (!r) return;
+    r.setAttribute("data-tier", String(roomTier()));
     $$(".room .bx-pips.h i, .room .bx-pips.m i, .room .bx-cab .die i, .room .bx-bottles i").forEach(function (e) {
       e.style.setProperty("--k", Array.prototype.indexOf.call(e.parentNode.children, e));
     });
