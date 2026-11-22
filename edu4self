@@ -24,6 +24,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 import webbrowser
@@ -266,6 +267,8 @@ def cmd_serve(args):
         httpd = server.make_server(vault, port)
     except OSError as exc:
         sys.exit(port_taken_message(port, exc))
+    if os.environ.get("EDU4SELF_REMINDERS") != "0":
+        threading.Thread(target=server.reminder_loop, daemon=True).start()
     url = "http://127.0.0.1:%d/" % port
     # flush: with output going to a log or pipe (an agent in the background, launchd) it would sit in the buffer
     print("edu4self %s on %s (vault %s). Ctrl-C stops it." % (server.VERSION, url, vault), flush=True)
