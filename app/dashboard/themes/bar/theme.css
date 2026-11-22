@@ -93,7 +93,7 @@
   letter-spacing: .06em; color: rgba(242,239,232,.46); text-shadow: none;
   transition: color .4s ease, text-shadow .4s ease; overflow-wrap: anywhere;
 }
-.room:not(.is-running) .bq-sign .bx-neon.rotates { animation: bx-flicker 7s infinite; }
+.room:not(.is-running) .bx-neon.rotates, .room:not(.is-running) .bq-sign .bx-neon.rotates { animation: bx-flicker 7s infinite; }
 .room .bx-neon small {
   display: block; margin-top: var(--s-1);
   font: 600 var(--t-xs)/1 var(--f-head); letter-spacing: .24em; text-transform: uppercase;
