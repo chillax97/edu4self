@@ -54,8 +54,10 @@
 }
 .room:has(.bx-neon.is-lit) .bq-backbar { opacity: 1; }
 .room .bq-shelf-svg { display: block; width: 100%; height: 100%; }
-/* Living Backbar: earned stages glow with filled liquid & specular glass; NEXT stage waits as a dashed silhouette */
-.room .bb-s { opacity: 0; transition: opacity .6s ease; }
+/* Living Backbar: earned stages glow with filled liquid & specular glass; NEXT stage waits as a dashed silhouette.
+   Only hide unearned stages when data-tier is present (so a cached app.js never leaves the shelf blank). */
+.room .bb-s { transition: opacity .6s ease; }
+.room[data-tier] .bb-s { opacity: 0; }
 .room .bb-glow { opacity: .42; transition: opacity .6s ease; }
 .room[data-tier="1"] .bb-glow, .room[data-tier="2"] .bb-glow { opacity: .68; }
 .room[data-tier="3"] .bb-glow, .room[data-tier="4"] .bb-glow { opacity: .88; }
