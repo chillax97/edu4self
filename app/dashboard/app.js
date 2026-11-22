@@ -350,7 +350,7 @@
       el.innerHTML = '<span class="pill is-offline"><span class="led"></span>Can\'t reach the dashboard server. Retrying…</span>';
       return;
     }
-    var pending = DATA.inbox ? DATA.inbox.pending.length : 0;
+    var pending = pendingCount();
     var html = '<span class="pill" title="When Claude last updated your progress"><span class="led"></span>Updated by Claude ' + esc(ago(DATA.state && DATA.state.updated)) + '</span>';
     if (pending) {
       html += '<span class="pill is-wait" title="Submissions Claude hasn\'t graded yet">⏳ ' + pending + ' waiting for Claude</span>';
