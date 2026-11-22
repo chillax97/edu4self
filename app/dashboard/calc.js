@@ -22,7 +22,9 @@
     while (i < src.length) {
       var c = src[i], rest = src.slice(i);
       if (/\s/.test(c)) { i++; continue; }
-      if ((m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(rest))) { out.push({ t: "num", v: parseFloat(m[0]), s: m[0] }); i += m[0].length; continue; }
+      if ((m = /^(?:(?:\d{1,3}(?:,\d{3})+|\d+)\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(rest))) {
+        out.push({ t: "num", v: parseFloat(m[0].replace(/,/g, "")), s: m[0] }); i += m[0].length; continue;
+      }
       if ((m = /^[A-Za-z]+/.exec(rest))) {
         var u = UNITS[m[0].toLowerCase()];
         if (u === undefined) fail("Couldn't read that: \"" + m[0] + "\" isn't a number or a unit.");

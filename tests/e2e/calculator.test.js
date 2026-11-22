@@ -54,16 +54,18 @@ test("with the flag the form has one: sums, units, powers and plain errors", asy
     await calc(page, "2*32*128*2");
     assert.deepEqual(await history(page), ["2*32*128*2 = 16,384 (16 KiB)"]);
     assert.equal(await page.$eval(".calc-input", (e) => e.value), "", "the line is cleared for the next sum");
+    await calc(page, "16,384 / 2");
+    assert.equal((await history(page))[1], "16,384 / 2 = 8,192 (8 KiB)");
     await calc(page, "(1+2)*3^2");
     await calc(page, "4 MiB");
     await calc(page, "3 GB / 2**10");
-    assert.deepEqual((await history(page)).slice(1), ["(1+2)*3^2 = 27", "4 MiB = 4,194,304 (4 MiB)", "3 GB / 2**10 = 2,929,687.5 (≈ 2.93e6)"]);
+    assert.deepEqual((await history(page)).slice(2), ["(1+2)*3^2 = 27", "4 MiB = 4,194,304 (4 MiB)", "3 GB / 2**10 = 2,929,687.5 (≈ 2.93e6)"]);
     for (const [bad, msg] of [["1/0", /^Can't divide by zero\.$/], ["2**", /^Couldn't read that: something is missing at the end\.$/],
                               ["(1+2", /^Couldn't read that: check the brackets\.$/], ["alert(1)", /^Couldn't read that: "alert" isn't a number or a unit\.$/]]) {
       await calc(page, bad);
       assert.match(await errorText(page), msg, bad);
     }
-    assert.equal((await history(page)).length, 4, "errors add nothing to the history");
+    assert.equal((await history(page)).length, 5, "errors add nothing to the history");
     assert.equal(await page.$eval("#submit", (e) => e.hidden), false, "Enter in the calculator doesn't send the form");
     assert.equal(await page.$eval("#sub-error", (e) => e.hidden), true);
     // a result goes back into the line; Escape clears the line first, then closes the form
@@ -75,7 +77,7 @@ test("with the flag the form has one: sums, units, powers and plain errors", asy
     await page.keyboard.press("Escape");
     await page.waitForSelector("#submit", { hidden: true });
     await openForm(page, "hlw-lesson-01");
-    assert.equal((await history(page)).length, 4, "the working is still there when the form is opened again");
+    assert.equal((await history(page)).length, 5, "the working is still there when the form is opened again");
     assert.deepEqual(page.errors, []);
   } finally { await closePage(page); }
 });
