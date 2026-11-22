@@ -120,6 +120,8 @@ tbody tr:hover { background: rgba(229,162,74,.06); }
 .quiz button.opt:hover:not(:disabled) {
   background: rgba(229,162,74,.12); border-color: rgba(229,162,74,.65); color: #fff8ec; transform: none;
 }
+.quiz button.opt.is-right { border-color: #8ad6a7; color: #8ad6a7; background: rgba(138,214,167,.10); opacity: 1; }
+.quiz button.opt.is-wrong { border-color: #f07d67; color: #f07d67; background: rgba(240,125,103,.10); opacity: 1; }
 .quiz button:disabled { opacity: .62; }
 .quiz textarea, .quiz input[type=text] {
   background: rgba(7,9,11,.85); color: #f2efe8;

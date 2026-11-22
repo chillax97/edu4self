@@ -29,16 +29,24 @@
 
     if (btn.classList.contains('opt')) {
       var ok = btn.dataset.correct === '1';
-      q.querySelectorAll('button.opt').forEach(function (b) { b.disabled = true; });
+      q.querySelectorAll('button.opt').forEach(function (b) {
+        b.disabled = true;
+        if (b === btn) b.classList.add(ok ? 'is-right' : 'is-wrong');
+        else if (!ok && b.dataset.correct === '1') b.classList.add('is-right');
+      });
       reveal(q, ok, ok ? 'correct.' : 'no.');
       return;
     }
     if (btn.classList.contains('check') && q.dataset.text !== undefined) {
-      var norm = function (x) { return String(x).replace(/\s+/g, '').replace(/"/g, "'"); };
+      var ci = q.dataset.case !== '1';
+      var norm = function (x) {
+        var s = String(x).replace(/\s+/g, '').replace(/"/g, "'");
+        return ci ? s.toLowerCase() : s;
+      };
       var field = q.querySelector('textarea, input[type=text]');
       var accepted = q.dataset.text.split('||').map(norm);
       var okText = accepted.indexOf(norm(field.value)) !== -1;
-      reveal(q, okText, okText ? 'correct.' : (field.value.trim() ? 'no.' : 'type what it prints first.'));
+      reveal(q, okText, okText ? 'correct.' : (field.value.trim() ? 'no.' : 'type an answer first.'));
       return;
     }
     if (btn.classList.contains('check')) {
@@ -51,5 +59,12 @@
       return;
     }
     if (btn.classList.contains('show')) { reveal(q, false, 'answer shown, no credit.'); }
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter') return;
+    var inp = ev.target.closest('.quiz input[type=text]');
+    if (!inp) return;
+    var check = inp.closest('.quiz').querySelector('button.check');
+    if (check) { ev.preventDefault(); check.click(); }
   });
 })();

@@ -63,6 +63,8 @@ tbody tr:hover{background:var(--panel)}
   border:1px solid var(--ink); background:var(--ink); color:var(--bg); border-radius:4px}
 .quiz button.opt{background:var(--bg); color:var(--ink); border-color:var(--rule); text-align:left}
 .quiz button.opt:hover{border-color:var(--ink)}
+.quiz button.opt.is-right{border-color:var(--good); color:var(--good); opacity:1}
+.quiz button.opt.is-wrong{border-color:var(--bad); color:var(--bad); opacity:1}
 .quiz button:disabled{opacity:.55; cursor:default}
 .quiz .verdict{font-family:var(--mono); font-size:.78rem; margin-top:.7rem; display:none}
 .quiz .verdict.ok{color:var(--good); display:block}
