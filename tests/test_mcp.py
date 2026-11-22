@@ -98,11 +98,31 @@ class McpTest(unittest.TestCase):
         res, _ = tool(self.port, "get_next_task", topic="nope")
         self.assertTrue(res["isError"])
         self.assertIn("no topic", res["content"][0]["text"])
+        res, _ = tool(self.port, "get_proven", limit=True)
+        self.assertTrue(res["isError"])
         res, _ = tool(self.port, "leave_note", text="   ")
         self.assertTrue(res["isError"])
         r = talk(self.port, ("tools/call", {"name": "submit_answers", "arguments": {}}), ("bogus/method", {}))
         self.assertEqual(r[1]["error"]["code"], -32602)
         self.assertEqual(r[2]["error"]["code"], -32601)
+
+    def test_submitted_tasks_are_skipped_in_next_task_and_progress(self):
+        inbox = os.path.join(self.vault, "_system", "inbox.jsonl")
+        before = open(inbox, encoding="utf-8").read()
+        try:
+            _, n0 = tool(self.port, "get_next_task", topic=self.topic)
+            first_id = n0["topics"][0]["todo"][0]["id"]
+            with open(inbox, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"id": "sub1", "ts": "2026-11-22T10:00:00Z", "topic": self.topic,
+                                     "task": first_id, "kind": "answers", "title": "t"}) + "\n")
+            _, n1 = tool(self.port, "get_next_task", topic=self.topic)
+            self.assertNotIn(first_id, [t["id"] for t in n1["topics"][0]["todo"]])
+            _, p1 = tool(self.port, "get_progress")
+            nxt = p1["topics"][0]["next"]
+            self.assertNotEqual(nxt["id"] if nxt else None, first_id)
+        finally:
+            with open(inbox, "w", encoding="utf-8") as fh:
+                fh.write(before)
 
     def test_says_how_to_start_the_dashboard_when_it_is_off(self):
         res = talk(free_port(), ("tools/call", {"name": "get_progress", "arguments": {}}))[1]["result"]

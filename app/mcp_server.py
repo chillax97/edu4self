@@ -138,9 +138,10 @@ def get_progress(d, port, now):
     trophies = {}
     for i in d.get("keepsakes", {}).get("items", []):
         trophies[i.get("plural") or i.get("name")] = trophies.get(i.get("plural") or i.get("name"), 0) + 1
+    pending = {e.get("task") for e in d.get("inbox", {}).get("pending", []) if e.get("kind") != "note" and e.get("task")}
     topics = []
     for t in d["state"].get("topics", []):
-        todo = [q for q in t.get("queue", []) if q.get("status") == "todo"]
+        todo = [q for q in t.get("queue", []) if q.get("status") == "todo" and q.get("id") not in pending]
         topics.append({"id": t.get("id"), "title": t.get("title"), "milestone": _milestone(t),
                        "next": _task(port, todo[0]) if todo else None,
                        "proven": len([h for h in t.get("history", []) if h.get("evidence")])})
@@ -158,9 +159,10 @@ def get_progress(d, port, now):
 
 
 def get_next_task(d, port, now, topic=None):
+    pending = {e.get("task") for e in d.get("inbox", {}).get("pending", []) if e.get("kind") != "note" and e.get("task")}
     out = []
     for t in _topics(d, topic):
-        todo = [_task(port, q) for q in t.get("queue", []) if q.get("status") == "todo"][:3]
+        todo = [_task(port, q) for q in t.get("queue", []) if q.get("status") == "todo" and q.get("id") not in pending][:3]
         locked = [{"title": q.get("title"), "unlocks": q.get("unlock")} for q in t.get("queue", []) if q.get("status") == "locked"][:3]
         out.append({"topic": t.get("id"), "title": t.get("title"), "todo": todo, "coming_later": locked})
     return {"topics": out}
@@ -191,7 +193,7 @@ def call(dash, name, args, client, now=None):
     if "error" in d:
         raise RuntimeError(d["error"])
     kw = {k: v for k, v in args.items() if k in ("topic", "limit")}
-    if "limit" in kw and not (isinstance(kw["limit"], int) and 1 <= kw["limit"] <= 100):
+    if "limit" in kw and not (isinstance(kw["limit"], int) and not isinstance(kw["limit"], bool) and 1 <= kw["limit"] <= 100):
         raise ValueError("limit must be a whole number from 1 to 100")
     out = fns[name](d, dash.port, now, **kw)
     out["privacy"] = PRIVACY
