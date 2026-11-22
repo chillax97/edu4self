@@ -267,6 +267,14 @@ class SetupTwiceTest(Cmd):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("isn't empty", r.stderr)
 
+    def test_doctor_flags_broken_config_json(self):
+        vault = os.path.join(self.tmp, "badcfg")
+        self.assertEqual(self.run_cli("init", vault, "--name", "Kim", "--port", str(self.free)).returncode, 0)
+        with open(os.path.join(vault, "_system", "config.json"), "w", encoding="utf-8") as fh:
+            fh.write("{not json")
+        r = self.run_cli("doctor", "--vault", vault, "--port", str(self.free))
+        self.assertIn("vault check failed", r.stdout)
+
 
 class FakeResponse(io.BytesIO):
     def __enter__(self):

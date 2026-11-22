@@ -235,25 +235,29 @@ def check_themes(vault, quiet=False):
     return ok
 
 
-def check_config(vault):
+def check_config(vault, quiet=False):
     """config.json with the same rules the server uses. A bad file doesn't break the dashboard (it falls
     back to defaults), so without this an agent's mistake would go unnoticed."""
     import server
     server.configure(vault, DEFAULT_PORT)
     raw = server.read_text(server.CONFIG)
     if not raw.strip():
-        print("config.json: none, defaults in use")
+        if not quiet:
+            print("config.json: none, defaults in use")
         return True
     try:
         cfg = server.clean_config(json.loads(raw))
     except ValueError as exc:
-        print("config.json: FAILED: %s" % exc)
+        if not quiet:
+            print("config.json: FAILED: %s" % exc)
         return False
     for track in cfg["music"]["files"]:
         if not os.path.isfile(os.path.join(server.MUSIC_DIR, track["file"])):
-            print("config.json: FAILED: music file %s isn't in _system/music/" % track["file"])
+            if not quiet:
+                print("config.json: FAILED: music file %s isn't in _system/music/" % track["file"])
             return False
-    print("config.json: OK")
+    if not quiet:
+        print("config.json: OK")
     return True
 
 
@@ -745,11 +749,11 @@ def cmd_doctor(args):
         say("✓", "vault: %s" % vault)
         r1 = run([sys.executable, os.path.join(APP, "validate_state.py"), vault])
         r2 = run([sys.executable, os.path.join(APP, "check_links.py"), vault])
-        if r1.returncode or r2.returncode or not check_themes(vault, quiet=True):
+        if r1.returncode or r2.returncode or not check_config(vault, quiet=True) or not check_themes(vault, quiet=True):
             bad += 1
             say("✗", "vault check failed. Ask Claude to fix it, or run ./edu4self check to see why")
         else:
-            say("✓", "state.json, links and rooms are valid")
+            say("✓", "state.json, config.json, links and rooms are valid")
     else:
         bad += 1
         say("✗", "no vault yet: ./edu4self init ~/learn")
