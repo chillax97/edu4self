@@ -129,12 +129,12 @@ test("classic view greets by name and has every card", async () => {
   }
   assert.ok(!titles.some((t) => t.includes("readiness")), "no gate card when no topic has a gate");
   assert.equal(await page.$eval("#footer-port", (e) => e.textContent), "127.0.0.1:" + PORT);
-  // the mission link opens the note as text, since Obsidian is off by default
+  // the mission link opens the note as a readable page, since Obsidian is off by default
   const href = await page.$eval(".topic-links a", (a) => a.getAttribute("href"));
   assert.equal(href, "/vault/how-learning-works/MISSION.md");
   const r = await fetch(new URL(href, server.url));
   assert.equal(r.status, 200);
-  assert.match(r.headers.get("content-type"), /^text\/plain/);
+  assert.match(r.headers.get("content-type"), /^text\/html/);
   assert.deepEqual(page.errors, []);
   await closePage(page);
 });

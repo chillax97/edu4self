@@ -786,6 +786,21 @@
       fields: [], honor: false, button: "Send note", noteLabel: "Your note", noteRequired: true });
   }
 
+  function draftKey(ctx) { return "edu.draft." + (ctx.kind || "") + "." + ctx.task; }
+  function readDraft(ctx) {
+    if (!ctx || !ctx.task) return null;
+    try { return JSON.parse(localStorage.getItem(draftKey(ctx)) || "null"); } catch (e) { return null; }
+  }
+  function writeDraft() {
+    if (!submitCtx || !submitCtx.task) return;
+    var d = {};
+    $$("#sub-fields textarea").forEach(function (ta, i) { d[i] = ta.value; });
+    try { localStorage.setItem(draftKey(submitCtx), JSON.stringify(d)); } catch (e) {}
+  }
+  function clearDraft(ctx) {
+    try { localStorage.removeItem(draftKey(ctx)); } catch (e) {}
+  }
+
   function renderSubmitForm(o) {
     var form = $("#submit-form");
     form.reset();
@@ -800,6 +815,8 @@
       return '<label class="field"><span class="field-label">' + esc(label) + '</span>' +
         '<textarea name="f' + i + '" data-label="' + esc(label) + '" rows="' + (/why|rewrite|fix|complexity/i.test(label) ? 3 : 2) + '" placeholder="Your answer, or &quot;I don\'t know&quot;"></textarea></label>';
     }).join("");
+    var draft = readDraft(submitCtx);
+    if (draft) $$("#sub-fields textarea").forEach(function (ta, i) { if (draft[i] != null) ta.value = draft[i]; });
     var noteLabel = form.querySelector('textarea[name="__note"]').previousElementSibling;
     noteLabel.innerHTML = o.noteLabel ? esc(o.noteLabel) : 'Anything else? <em>optional</em>';
     form.querySelector('textarea[name="__note"]').rows = o.noteRequired ? 6 : 2;
@@ -846,11 +863,13 @@
     if (submitCtx.probe && !honor) return fail("Tick the box to confirm you did it unaided. If you did get help, don't submit this one. Send Claude a note instead and you'll get a fresh probe.");
 
     var btn = $("#sub-send");
+    var sentCtx = submitCtx;
     btn.disabled = true; btn.textContent = "Saving…";
     postInbox({ topic: submitCtx.topic, task: submitCtx.task, kind: submitCtx.kind, ref: submitCtx.ref, title: submitCtx.title, fields: fields, note: note, honor: honor, confidence: sure ? sure.value : undefined, recall: submitCtx.recall, calc: calcSent() })
       .then(function () {
         delete calcHistory[submitCtx.task];
         if (submitCtx.kind === "follow-up") delete fuDraft[submitCtx.task];
+        clearDraft(sentCtx);
         closeOverlay($("#submit"));
         savedToast();
         load();
@@ -1766,7 +1785,7 @@
     } catch (e) {}
     paintWater();
     if (isBar()) {
-      barSay("bartender", "slides a glass of water down the bar. <span class=\"bx-chk\">" + mins + " min in · click the glass once you've drunk it</span>", true);
+      barSay("bartender", LINE("water_served", "slides a " + W("glass") + " of water your way.") + " <span class=\"bx-chk\">" + mins + " min in · click the glass once you've drunk it</span>", true);
       setTimeout(function () { barSay("physical", esc(waterLine((active && active.served) || 1))); }, 900);
     } else {
       waterToast = toast('<span>💧</span><span><b>Water.</b> ' + mins + ' minutes in. Take a sip, then back to it. <button class="btn btn-soft btn-sm" type="button" data-drink>Drank it</button></span>', 12000);
@@ -2115,17 +2134,17 @@
       if (active.block === "play") add(80, "regular", LINE("play", "A play block. The regular at the end of the bar raises his glass. Fun is on the schedule too."), "a-play");
       if (active.block === "practice") add(80, "encyclopedia", "Practice hour. Brute force first, then make it good. Nobody gets it clean on the first try.", "a-practice");
       if (Math.floor((S.total + active.minutes) / (DIE_TILES * TILE_MIN)) > Math.floor(S.total / (DIE_TILES * TILE_MIN)))
-        add(86, "gpu", "Finish this block and die #" + d.n + " ships. Don't stop early.", "a-ship");
+        add(86, "gpu", "Finish this block and " + W("die") + " #" + d.n + " " + W("shipped") + ". Don't stop early.", "a-ship");
       var owedFor = active.water && (active.served || 0) > (active.drunk || 0) ? el - (active.served || 0) * active.water : 0;
       if (owedFor > 5) add(91, "physical", "There's still a " + W("glass") + " on " + W("counter") + ". It's getting warm.", "a-warm");
     } else if (S.lastEnd && Date.now() - S.lastEnd < 20 * 60000) {
-      add(65, "gpu", "You stopped " + Math.max(1, Math.round((Date.now() - S.lastEnd) / 60000)) + " minutes ago. The die is still warm. Another 25?", "warm-die");
+      add(65, "gpu", "You stopped " + Math.max(1, Math.round((Date.now() - S.lastEnd) / 60000)) + " minutes ago. The " + W("die") + " is still warm. Another 25?", "warm-die");
     }
     if (hero && followUpFor(hero.task))
       add(87, "critic", "One question standing between you and a pass on " + (hero.task.label || hero.task.title) + ". Answer it clean, from memory.", "fu-open");
     if (hero && DATA.derived && DATA.derived.stuck && DATA.derived.stuck[hero.task.id])
       add(83, "logic", "Three failed runs on " + (hero.task.label || hero.task.title) + ". Step back for a minute or pull a hint — grinding the same slip doesn't move the needle.", "stuck-open");
-    if (DATA.derived && DATA.derived.recall && DATA.derived.recall.items && DATA.derived.recall.items.length && !DATA.derived.recall.done_today)
+    if (DATA.derived && DATA.derived.recall && DATA.derived.recall.questions && DATA.derived.recall.questions.length && !DATA.derived.recall.sent_today)
       add(78, "nostalgia", "Cold memory check waiting on " + W("counter") + ". Pulling it back after a few days is where the real glue sets.", "recall-due");
     if (hero && hero.topic && hero.topic.milestones) {
       var curMs = hero.topic.milestones.find(function (m) { return (m.steps || []).some(function (s) { return !s.done; }); });
@@ -2159,17 +2178,17 @@
     if (t.glasses >= 4) add(60, "physical", fill(LINE("hydrated", "{n} {glasses} tonight. Better hydrated than most people at their desks."), { n: t.glasses, glasses: W("glasses") }), "glasses");
     if (S.todayMins >= 240) add(55, "physical", hm(S.todayMins) + " today. Stand up, roll your shoulders, look at something farther away than the screen.", "heavy");
     if (hr >= 20 && S.todayMins && Object.keys(S.types).every(function (k) { return FUN_BLOCKS[k]; }))
-      add(52, "critic", "Today was all " + Object.keys(S.types).map(blockLabel).join(" and ") + ". Fair. One lesson block would make the die a little prouder.", "only-fun");
+      add(52, "critic", "Today was all " + Object.keys(S.types).map(blockLabel).join(" and ") + ". Fair. One lesson block would make the " + W("die") + " a little prouder.", "only-fun");
     var tod = hr >= 5 && hr < 9 ? ["volition", "Before nine and already here. The day hasn't had a chance to get in the way."]
       : hr < 12 && hr >= 9 ? ["logic", "Morning brain. Best hours of the day for new material, worst hours for scrolling."]
       : hr >= 12 && hr < 14 ? ["physical", "Lunch hour. Eat something that isn't caffeine."]
       : hr >= 14 && hr < 17 ? ["physical", "Afternoon slump hours. Twenty-five minutes of focus beats them better than coffee does."]
       : hr >= 17 && hr < 21 ? ["regular", LINE("evening", "Evening. The bar fills up around now. Nobody else here brought homework.")]
       : hr >= 21 ? ["volition", "The good hours. Everyone else is scrolling."]
-      : hr < 2 ? ["physical", "Past midnight. The die doesn't care what time it is. Your memory does: sleep is when it saves."]
+      : hr < 2 ? ["physical", "Past midnight. The " + W("die") + " doesn't care what time it is. Your memory does: sleep is when it saves."]
       : ["critic", "It's " + hhmm(Date.now()) + ". One block and bed, or just bed. Not scrolling."];
     add(50, tod[0], tod[1], "tod");
-    if (wd === 1 && t.hit <= 1) add(45, "encyclopedia", "Monday. The week is a blank die. Etch the first tile.", "monday");
+    if (wd === 1 && t.hit <= 1) add(45, "encyclopedia", "Monday. The week is a blank " + W("die") + ". Etch the first " + W("tile") + ".", "monday");
     if (wd === 5 && hr >= 18) add(46, "regular", LINE("friday", "Friday night, and you're at a bar studying. The regulars respect it. Quietly."), "friday");
     if ((wd === 6 || wd === 0) && hr < 18) add(44, "regular", "Weekend. Nobody is grading speed today.", "weekend");
     if (wd === 0 && hr >= 12 && t.hit < WEEK_GOAL_DAYS) add(73, "volition", "Sunday. " + t.hit + " of " + WEEK_GOAL_DAYS + " nights. The week closes at midnight.", "sunday");
@@ -3346,10 +3365,28 @@
         esc(e.since == null ? "first run" : sinceText(e.since)) + "</span><small>" + esc(when) + "</small></li>";
     }).join("") + "</ol>";
   }
+  function linkify(s) {
+    return s.replace(/https?:\/\/[^\s<>"']+/g, function (u) {
+      var href = u.replace(/[.,;:!?)]+$/, ""), tail = u.slice(href.length), own = false;
+      try { own = new URL(href, location.href).host === location.host; } catch (e) {}
+      return '<a href="' + href + '"' + (own ? "" : ' target="_blank" rel="noopener"') + ">" + href + "</a>" + tail;
+    });
+  }
+  function fenceText(s, textFn) {
+    var out = "", last = 0, m, re = /```([\s\S]*?)```/g;
+    while ((m = re.exec(s))) {
+      out += textFn(s.slice(last, m.index));
+      out += "<pre><code>" + m[1].replace(/^\n+|\n+$/g, "") + "</code></pre>";
+      last = re.lastIndex;
+    }
+    return out + textFn(s.slice(last));
+  }
   function hintText(t) {
-    return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").split("\n").map(function (l) {
-      return /^\s*-\s+/.test(l) ? "<li>" + l.replace(/^\s*-\s+/, "") + "</li>" : l.trim() ? "<p>" + l.trim() + "</p>" : "";
-    }).join("").replace(/(<li>[\s\S]*?<\/li>)(?!<li>)/g, "<ul>$1</ul>").replace(/<\/ul><ul>/g, "");
+    return fenceText(esc(t), function (p) {
+      return linkify(p).replace(/`([^`]+)`/g, "<code>$1</code>").split("\n").map(function (l) {
+        return /^\s*-\s+/.test(l) ? "<li>" + l.replace(/^\s*-\s+/, "") + "</li>" : l.trim() ? "<p>" + l.trim() + "</p>" : "";
+      }).join("").replace(/(<li>[\s\S]*?<\/li>)(?!<li>)/g, "<ul>$1</ul>").replace(/<\/ul><ul>/g, "");
+    });
   }
   var hintsTask = null;
   function paintHints(list) {
@@ -3406,8 +3443,11 @@
 
   // replies are plain text with a little markdown: paragraphs, **bold**, `code`, and - lists
   function clText(t) {
-    return esc(t).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>")
-      .split(/\n{2,}/).map(function (p) { return "<p>" + p.replace(/\n/g, "<br>") + "</p>"; }).join("");
+    return fenceText(esc(t), function (p) {
+      if (!p) return "";
+      return linkify(p).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>")
+        .split(/\n{2,}/).map(function (q) { return "<p>" + q.replace(/\n/g, "<br>") + "</p>"; }).join("");
+    });
   }
   function paintClaude() {
     var log = $("#cl-log");
@@ -3705,7 +3745,7 @@
       '<label class="set-check"><input type="checkbox" id="set-mu-auto"' + (m.autoplay ? " checked" : "") + "> Start playing when the bar opens (browsers still need one click first)</label>" +
 
       '<h3 id="set-bar">Sign, jokes and voices</h3>' +
-      fieldRow("Names on the neon sign", '<textarea id="set-names" rows="5">' + esc(c.bar.names.map(function (n) {
+      fieldRow("Names on the sign", '<textarea id="set-names" rows="5">' + esc(c.bar.names.map(function (n) {
         var l = Array.isArray(n[1]) ? n[1] : n[1] ? [n[1]] : [];
         return n[0] + (l.length ? " | " + l[0] : "") + l.slice(1).map(function (x) { return "\n| " + x; }).join("");
       }).join("\n")) + "</textarea>",
@@ -3977,6 +4017,12 @@
     if (top.id === "onboarding") finishOnboarding(); else closeOverlay(top);
   });
   $("#submit-form").addEventListener("submit", submitForm);
+  $("#submit-form").addEventListener("input", function (ev) { if (ev.target.closest("#sub-fields")) writeDraft(); });
+  $("#submit-form").addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter" || !(ev.ctrlKey || ev.metaKey)) return;
+    ev.preventDefault();
+    $("#sub-send").click();
+  });
   $("#btn-help").addEventListener("click", function () { openHelp(); });
   $("#footer-help").addEventListener("click", function (ev) { ev.preventDefault(); openHelp(); });
   $("#btn-note").addEventListener("click", openNote);
