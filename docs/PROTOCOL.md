@@ -105,7 +105,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    welcome back after a gap. Grade each answer right, partly or missed against what its task taught (its `from` task's key,
    when it has one).
    A missed one is knowledge that has faded: pull the next recall check on that material forward in
-   `PLAN.md` (the next slot of its track) and say so. Keep feedback on a comeback short and warm.
+   `PLAN.md` (the next slot of its track) and say so; it can also lower a region's level (section 3). Keep feedback on a comeback short and warm.
 3. Do the topic bookkeeping (formats in the plugin's `new-topic/FORMATS.md`, adapted from
    Matt Pocock's `teach` skill, credited there): a learning record in `<topic>/learning-records/` when the result is non-obvious,
    glossary entries only for terms proven without notes, and a line in `<topic>/Dashboard.md`.
@@ -113,7 +113,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    - append the processed entry ids to `processed_inbox`;
    - move finished tasks to `status: "done"`, unlock or add the next ones (the plugin's
      `write-lesson` and `write-probe` skills write new ones);
-   - update `milestones` (step `done`, the `current` step), `regions` (levels move only on evidence),
+   - update `milestones` (step `done`, the `current` step), `regions` (levels move only on evidence, and are earned as section 3 says),
      the optional `gate`, and `history` (`evidence: true` only for demonstrated learning, never for
      reading or effort; `levels` whenever the grade moves a region level; `inbox`: the id of the entry it grades, so the progress page can show how
      often "solid" really passed);
@@ -122,7 +122,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
    - write the `coach` note: `date`, a `headline` and a `body` addressed to the learner. The
      `headline` is the verdict in one sentence of at most 15 words. The `body` is at most 40 words in
      2 sentences: the one thing to do differently, then what's next. It never repeats a voice. No
-     flattery, here or in the voices: say what held and what is missing, plainly ("Not quite: why would
+     flattery, here or in the voices: say what held and what missed, if anything, plainly ("Not quite: why would
      X happen if Y were true?" beats "Great try!");
    - dress it for the room: voices, jokes and any lesson styling stay in the learner's room theme (see
      [THEMES.md](THEMES.md#the-one-rule-stay-in-the-room)); core words like "Lesson 01" stay plain;

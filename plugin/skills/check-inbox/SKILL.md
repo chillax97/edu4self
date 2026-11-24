@@ -10,7 +10,7 @@ and editing `_system/state.json`, which only you write.
 2. Read [PROTOCOL.md](./PROTOCOL.md) in this folder, then follow its section 1 ("check my inbox") exactly:
    pending entries, grading, topic bookkeeping in the formats of [FORMATS.md](../new-topic/FORMATS.md),
    the `state.json` update (including `coach` and `coach.voices`), and the check.
-   Sections 1 and 7 hold every grading rule: the answer key and its checklist (`points`, `errors`), the
+   Sections 1, 3 and 7 hold every grading rule: the answer key and its checklist (`points`, `errors`), the
    pass rule, "same meaning counts", the one follow-up, and `levels`. Read them before the first grade and
    follow them as written; this file doesn't repeat them, so there is one version of each rule.
    When the plan's next unit isn't written yet (PROTOCOL.md section 5: two ready, always), write it with
