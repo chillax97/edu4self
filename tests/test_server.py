@@ -107,10 +107,10 @@ class ServerTest(unittest.TestCase):
                   "/vault/.obsidian/app.json", "/fonts/../server.py", "/../app/server.py"):
             self.assertEqual(self.req("GET", p)[0], 404, p)
 
-    def test_markdown_is_plain_text_until_obsidian_is_on(self):
+    def test_markdown_is_a_page_until_obsidian_is_on(self):
         code, _, r = self.req("GET", "/vault/how-learning-works/MISSION.md")
         self.assertEqual(code, 200)
-        self.assertTrue(r.getheader("Content-Type").startswith("text/plain"))
+        self.assertTrue(r.getheader("Content-Type").startswith("text/html"))
         cfg = server.load_config()[0]
         cfg["obsidian"] = {"enabled": True, "vault": "My Vault"}
         server.save_config(cfg)

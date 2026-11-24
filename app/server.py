@@ -1011,6 +1011,80 @@ def with_lesson_theme(page):
     return page[:i] + link + page[i:] if i >= 0 else link + page
 
 
+def md_page(text, name=""):
+    m = re.match(r"\A---\r?\n.*?\r?\n---\r?\n?", text, re.S)
+    if m:
+        text = text[m.end():]
+
+    def inline(s):
+        s = html.escape(s)
+        s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+        return re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+
+    out, para, items, kind = [], [], [], None
+    title = ""
+    in_fence = False
+    fence = []
+
+    def flush():
+        nonlocal para, items, kind
+        if para:
+            out.append("<p>" + " ".join(para) + "</p>")
+        if items:
+            tag = "ol" if kind == "ol" else "ul"
+            out.append("<%s>%s</%s>" % (tag, "".join(items), tag))
+        para, items, kind = [], [], None
+
+    for line in text.splitlines():
+        if line.startswith("```"):
+            if in_fence:
+                out.append("<pre><code>" + "\n".join(fence) + "</code></pre>")
+                fence = []
+            else:
+                flush()
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            fence.append(html.escape(line))
+            continue
+        line = line.strip()
+        if not line:
+            flush()
+            continue
+        hm = re.match(r"^(#{1,3})\s+(.*)$", line)
+        if hm:
+            flush()
+            level = len(hm.group(1))
+            if level == 1 and not title:
+                title = html.escape(hm.group(2))
+            out.append("<h%d>%s</h%d>" % (level, inline(hm.group(2)), level))
+            continue
+        om = re.match(r"^\d+\.\s+(.*)$", line)
+        if om:
+            if kind != "ol":
+                flush()
+                kind = "ol"
+            items.append("<li>" + inline(om.group(1)) + "</li>")
+            continue
+        um = re.match(r"^[-*]\s+(.*)$", line)
+        if um:
+            if kind != "ul":
+                flush()
+                kind = "ul"
+            items.append("<li>" + inline(um.group(1)) + "</li>")
+            continue
+        if kind:
+            flush()
+        para.append(inline(line))
+    if in_fence and fence:
+        out.append("<pre><code>" + "\n".join(fence) + "</code></pre>")
+    flush()
+    page = ('<!doctype html><html><head><meta charset="utf-8"><title>' + (title or html.escape(name) or "Markdown") +
+            '</title><link rel="stylesheet" href="/theme/lesson.css"></head><body><div class="wrap">' +
+            "".join(out) + "</div></body></html>")
+    return page.encode("utf-8")
+
+
 # Hand-written quizzes put the right answer in the same place most of the time (second, in one real vault:
 # 19 of 27), and a learner learns the place instead of the answer. So every lesson page shuffles each
 # quiz's options when it opens. A quiz with data-fixed keeps its order ("all of the above" and the like).
@@ -1133,7 +1207,7 @@ def claude_args(prompt, resume, kind="chat"):
         tools += ["WebSearch", "WebFetch"]
     # edu_trace.py runs inside every checker, and trace/ is the learner's record: neither is Claude's to change
     locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json",
-              "_system/edu_trace.py", "**/trace/**"]
+              "_system/edu_trace.py", "**/trace/**", "_system/inbox.jsonl", "_system/blocks.jsonl", "_system/music/**"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in FENCED:
         deny += ["WebSearch", "WebFetch"]
@@ -1714,6 +1788,12 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
+        if target.endswith(".md") and "raw=1" not in query:
+            with open(target, "rb") as fh:
+                page = md_page(fh.read().decode("utf-8", errors="replace"), parts[-1])
+            if not (load_config()[0]["theme_lessons"] and active_lesson_css()):
+                page = page.replace(b'<link rel="stylesheet" href="/theme/lesson.css">', b"")
+            return self.send_text("text/html; charset=utf-8", page, {"Content-Security-Policy": VAULT_CSP})
         # Pages in the vault (lessons, maybe shared by someone) run in a sandbox: their own blank
         # origin, so they can't read the API, change settings or start Claude. Their scripts still run.
         if target.endswith((".html", ".htm")):
