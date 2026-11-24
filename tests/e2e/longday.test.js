@@ -53,12 +53,14 @@ test("three nights studied without a cap reads plainly, not as a contradiction",
   await closePage(page);
 });
 
-test("the moves under the lesson all look like the same kind of control", async () => {
+test("the lesson has one main action, and the other moves are quiet links", async () => {
   const page = await open();
   const looks = await page.$$eval('.room [data-slot="replies"] li:not(.is-quiet):not(.is-rest) .bx-r, .room [data-slot="replies"] .bx-rest button', (l) =>
     l.map((e) => { const s = getComputedStyle(e); return { text: e.textContent.trim().slice(0, 20), line: s.textDecorationLine, border: s.borderTopStyle, bg: s.backgroundColor }; }));
   assert.ok(looks.length >= 3, "the lesson's moves are there: " + JSON.stringify(looks));
-  // one pattern: every move is a link (underlined, no box), the first just bigger
-  for (const x of looks) assert.ok(/underline/.test(x.line) && x.border === "none", `${x.text} looks like a link: ${JSON.stringify(x)}`);
+  const [main, ...rest] = looks;
+  assert.ok(main.bg !== "rgba(0, 0, 0, 0)" && main.bg !== "transparent", `the first move is a filled button: ${JSON.stringify(main)}`);
+  assert.ok(main.text.startsWith("Open lesson"), `the filled button opens the lesson: ${JSON.stringify(main)}`);
+  for (const x of rest) assert.ok(/underline/.test(x.line) && x.border === "none", `${x.text} is a quiet link: ${JSON.stringify(x)}`);
   await closePage(page);
 });

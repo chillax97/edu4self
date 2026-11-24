@@ -11,6 +11,9 @@ const sys = (...p) => path.join(v.vault, "_system", ...p);
 const ymd = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const monday = () => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
 const weekDay = (i) => { const d = monday(); d.setDate(d.getDate() + i); return d; };
+const PIN = new Date(2026, 10, 20, 21, 0, 0, 0);
+const pinMonday = () => { const d = new Date(PIN); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+const pinDay = (i) => { const d = pinMonday(); d.setDate(d.getDate() + i); return d; };
 const block = (d, minutes) => ({ id: "b" + d.getTime() + minutes, ts: d.toISOString(), started: new Date(d.getTime() - minutes * 60000).toISOString(), block: "lessons", minutes });
 
 // a fresh record: these blocks and the trophies they earn, nothing left from the test before
@@ -62,17 +65,24 @@ test("no keepsakes this week: seven bare places, no caps, and the line says so",
 });
 
 test("some days: a cap exactly on the days with a real keepsake, in one row, each day still named", async () => {
-  seed([block(weekDay(0), 50), block(weekDay(2), 50), block(weekDay(4), 20)]);   // the 20 minutes showed up but won nothing
-  const page = await open();
+  seed([block(pinDay(0), 50), block(pinDay(2), 50), block(pinDay(3), 20)]);
+  const page = await open({ hour: 21, date: "2026-11-20" });
   const c = await caps(page), real = await dayCaps();
   assert.deepEqual(c.filter((x) => x.cap).map((x) => x.day), real);
-  assert.deepEqual(real, [ymd(weekDay(0)), ymd(weekDay(2))]);
-  assert.ok(c[4].on && !c[4].cap, "a day studied below the goal is marked, without a cap");
+  assert.deepEqual(real, [ymd(pinDay(0)), ymd(pinDay(2))]);
+  assert.ok(c[3].on && !c[3].cap, "a day studied below the goal is marked, without a cap");
   assert.equal(new Set(c.map((x) => Math.round(x.top))).size, 1, "the nights sit in one row");
-  // told apart by shape as well as colour: a cap is a drawing, a bare day is a ring with no drawing
-  const looks = await page.$$eval('.room [data-slot="week"] .bx-pips.m i', (l) => l.map((e) => getComputedStyle(e, "::before").borderTopStyle));
-  assert.equal(looks[1], "dashed", "a bare day is a dashed ring");
-  assert.equal(looks[4], "solid", "a day studied is a solid ring");
+  const shapes = await page.$$eval('.room [data-slot="week"] .bx-pips.m i', (l) => l.map((e) => ({
+    cls: [...e.classList],
+    beforeDisplay: getComputedStyle(e, "::before").display,
+    beforeBorder: getComputedStyle(e, "::before").borderTopStyle,
+    dLine: getComputedStyle(e.querySelector(".bx-d")).textDecorationLine,
+  })));
+  assert.equal(shapes[1].beforeDisplay, "none", `a past day with no study has no ring: ${JSON.stringify(shapes[1])}`);
+  assert.match(shapes[1].dLine, /line-through/, `a past bare day is struck through: ${JSON.stringify(shapes[1])}`);
+  assert.ok(shapes[4].cls.includes("is-today"), `today is marked: ${JSON.stringify(shapes[4])}`);
+  assert.equal(shapes[5].beforeBorder, "dashed", `a future day is a dashed ring: ${JSON.stringify(shapes[5])}`);
+  assert.equal(shapes.filter((s) => s.cls.includes("has-cap")).length, real.length, "each real keepsake day is marked has-cap");
   assert.match(await page.$eval('.room [data-slot="week"]', (e) => e.innerText), /2 bottle caps/i);
   await page.click(`.room [data-ks="day-${real[0]}"]`);
   await page.waitForSelector("#ks-detail:not([hidden])");
