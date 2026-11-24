@@ -105,6 +105,21 @@ jobs:
           python-version: "3.13"
       - run: python tests/first_run.py
 
+  login-service:
+    name: login service (setup, status, restart, uninstall) · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python tests/service_run.py
+
   browser:
     name: browser tests (Chrome)
     runs-on: ubuntu-latest
