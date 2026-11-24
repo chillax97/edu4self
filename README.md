@@ -3,7 +3,7 @@
 **A learning dashboard that runs on your computer, with Claude Code as your tutor. Hand it to your
 agent and it sets itself up around you.**
 
-![The bar room: your skills talk, the jukebox plays, a focus block is running](docs/images/bar.png)
+![The bar room: your skills talk about tonight's lesson, the jukebox waits for a focus block](docs/images/bar.png)
 
 You pick what to learn. Claude writes short lessons, tests what you know, and grades your answers
 against a key it wrote before you answered. When one point is thin, it asks you one follow-up

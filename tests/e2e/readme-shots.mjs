@@ -7,6 +7,7 @@ const ROOMS = ["bar", "library", "space", "train", "tea"];
 const PAGE = { width: 1440, height: 900, hour: 21, date: "2026-11-20" };
 
 const v = makeVault("Kim");
+v.env.EDU4SELF_CLAUDE = path.join(ENGINE, "tests", "fake_claude.py");
 const server = await startServer(v, await freePort());
 const browser = await launch();
 const saved = [];
