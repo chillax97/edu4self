@@ -275,7 +275,7 @@ test("A4.3 tool lines and the check fold into a closed Details block", async () 
     await page.waitForFunction(() => { const b = document.querySelector("#btn-grade"); return b && !b.disabled; }, { timeout: 12000 });
     await page.click("#btn-grade");
     await page.waitForSelector("#claude:not([hidden])");
-    await page.waitForFunction(() => /Check OK/.test(document.querySelector("#cl-log")?.innerText || ""), { timeout: 25000 });
+    await page.waitForFunction(() => /Check OK/.test(document.querySelector("#cl-log")?.textContent || ""), { timeout: 25000 });
     const info = await page.evaluate(() => {
       const log = document.querySelector("#cl-log");
       const details = [...log.querySelectorAll("details")].find((d) => (d.querySelector("summary")?.textContent || "").trim() === "Details");
