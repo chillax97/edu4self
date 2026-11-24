@@ -121,7 +121,9 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
      learner has answered right several times;
    - write the `coach` note: `date`, a `headline` and a `body` addressed to the learner. The
      `headline` is the verdict in one sentence of at most 15 words. The `body` is at most 40 words in
-     2 sentences: the one thing to do differently, then what's next. It never repeats a voice;
+     2 sentences: the one thing to do differently, then what's next. It never repeats a voice. No
+     flattery, here or in the voices: say what held and what is missing, plainly ("Not quite: why would
+     X happen if Y were true?" beats "Great try!");
    - dress it for the room: voices, jokes and any lesson styling stay in the learner's room theme (see
      [THEMES.md](THEMES.md#the-one-rule-stay-in-the-room)); core words like "Lesson 01" stay plain;
    - optionally `coach.voices`: lines `{voice, text}` that the room's characters say about this
@@ -179,6 +181,10 @@ pending submission, across all topics, becomes **Up next**.
   files; question labels are at most 1000 characters. Tasks carry no dates: spacing comes from the
   order in `PLAN.md` (section 5), and a task unlocks when the units before it are done.
 - `regions[].level`: 0 not yet · 1 heard of · 2 understand · 3 use independently · 4 public evidence.
+  Levels are earned. One pass (or a calibration probe) can place a region at 2 at most. Level 3 needs a
+  second pass on that region from work done at least 3 days after the first, without the lesson open: a
+  recall check, a checkpoint or a recall warm-up. A missed recall on a region at 3 or above moves it back
+  to 2 (write it in `levels`).
 - `history[]`: `{date: YYYY-MM-DD, kind, title, detail, evidence: bool, record?: "learning-records/…md",
   inbox?: "<inbox entry id>", levels?: {"<region code>": [before, after]}, points?: {"<point id>": true | false}, errors?: [text]}`. `inbox` links a
   grade to the submission it grades; with `evidence` it counts as a pass for "How sure vs how it went".
