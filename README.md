@@ -225,7 +225,7 @@ edu4self/               the code (this repo)            ~/learn/                
   edu4self                the command line                _system/inbox.jsonl     your submissions
   template/               what a new vault starts as      _system/blocks.jsonl    your focus blocks
   plugin/                 Claude Code skills              _system/config.json     your Settings
-  docs/                   protocol, customizing, rooms    _system/music/          your jukebox track
+  docs/                   protocol, customizing, rooms    _system/music/          your jukebox tracks
                                                           themes/                 rooms you made
                                                           gifts/                  what Claude made you
                                                           _system/keepsakes.json  your trophies

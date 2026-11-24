@@ -139,7 +139,7 @@ When the learner says **"check my inbox"** (or at the start of any teaching sess
 5. Update `PLAN.md` (section 5): repair units for the gaps this grading found, cuts for what was
    mastered, a line under "Changes".
 6. Run `edu4self check` (from the edu4self folder, or the full command in the vault's `CLAUDE.md`).
-   It must print two passing lines and exit 0. If it fails, fix `state.json` before replying.
+   It must exit 0. If it fails, fix `state.json` before replying.
 
 The dashboard notices a change to the vault's files within a few seconds and shows "Claude updated your dashboard" when `updated` changes.
 
@@ -215,7 +215,8 @@ pending submission, across all topics, becomes **Up next**.
 
 ## 4. Rules that keep the system honest
 
-- `state.json` has exactly one writer. If something on the dashboard is wrong, fix it here.
+- `state.json` has exactly one writer. If something on the dashboard is wrong, fix it here. (The engine's
+  check may undo a pass the checklist doesn't allow, section 1.)
 - Evidence means demonstrated ability. Reading, time spent and "I understand now" are not evidence.
 - A pass needs every required point and no error. A grade that names a gap or an error is not a pass.
 - Same meaning counts. A point said in other words, or framed differently from the lecture or the key,

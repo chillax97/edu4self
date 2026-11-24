@@ -39,10 +39,12 @@ _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
 _system/keepsakes.json trophies won, with a copy of each one's drawing (server only)
 _system/reminders.json which away mails went out and which weeks were recapped (server only)
+_system/dashboard.json the dashboard's address, for a stuck checker's link (server only)
 _system/keys/          answer keys, <topic>/<task-id>.md, written with each lesson or probe (tutor only, never served)
+_system/edu_trace.py   copied in by the server; every checker imports it to save its runs
 recaps/                the Sunday recaps, one markdown file a week
 gifts/                 pages Claude made when a week or a die was won
-_system/music/         one audio file
+_system/music/         the jukebox tracks (up to 100)
 _system/logs/          service output (when installed)
 <topic>/               MISSION.md, lessons/*.html, probes/*.md, reference/*.html, learning-records/*.md, …
 CLAUDE.md, AGENTS.md   tutor instructions, with this vault's paths and port filled in
@@ -52,6 +54,8 @@ PLAN.md                the running plan: every upcoming unit, in order, across t
 **Single writer per file.** `state.json` is written only by the tutor. The logs are appended only by the
 server. `config.json` is written by the server (from Settings) or by hand. Nothing writes the topic
 folders except the tutor. This is what makes the system easy to reason about and safe to sync.
+One exception: after a run started from the dashboard, the server runs `edu4self check --overrule`, which
+turns a pass the answer key's checklist doesn't allow back into not passed in `state.json`.
 
 ## HTTP API
 
@@ -60,14 +64,17 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | method | path | body | result |
 |---|---|---|---|
 | GET | `/api/state` | | state, derived counts, pending inbox, blocks, config, server info |
+| GET | `/api/stamp` | | `{stamp}`, a fingerprint of state.json, the inbox, the blocks, the settings and the trace/ runs |
 | GET | `/api/config` | | `{config, defaults, error}` |
 | GET | `/api/health` | | `{ok, now, version}` |
 | GET | `/vault/<path>` | | a vault file (not `_system/`, no dot-folders); `.md` opens in Obsidian when enabled |
 | GET | `/music` | | the configured track, with Range support (206/416) |
 | POST | `/api/inbox` | `{topic, task, kind, title, fields, note, honor, confidence?, recall?, calc?}` | 201 `{id}`; 400 without `confidence` on answers or done, or with a bad `calc` (at most 50 `{expr, result}`) |
+| GET | `/api/traces` | | `{runs, hints, exercises, bytes}`, what the work record holds |
 | GET | `/api/hints?task=` | | `{task, hints}`, a body only once opened; 404 without `HINTS.md` |
 | POST | `/api/hints` | `{task, n}` | opens hint n and notes it in `trace/` |
 | GET | `/api/attempts?task=` | | `{events: [{kind: run, ts, passed, since} \| {kind: hint, ts, n, title}], fails_in_a_row, stuck, next_hint}`; 404 without an exercise |
+| POST | `/api/traces/delete` | `{confirm: true}` | 200 `{ok, deleted}`; deletes only the files the work record wrote; 400 without `confirm` |
 | POST | `/api/withdraw` | `{id}` | 200, or 404 if not pending |
 | POST | `/api/blocks` | `{block, minutes, started, task?, water_served?, water_drunk?}` | 201 new, 200 duplicate |
 | GET | `/api/themes` | | `{themes: [{id, name, icon, about, lessons, builtin, errors}], active}` |
@@ -75,10 +82,11 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 | GET | `/theme/lesson.css` | | the active room's lesson styles |
 | POST | `/api/presence` | `{block_until}` | a block is running until then (or `null`); holds reminders |
 | GET | `/card?id=` | | a printable card for one trophy, in its room's colours; 404 if unknown |
+| GET | `/favicon.ico` | | the page's icon |
 | POST | `/api/config` | `{config}`, or `{reset: true}`, optional `remove_music` | 200 `{config}`, 400 `{error}` |
 | POST | `/api/music` | raw audio, `X-Filename` header | 201 `{config}`; 413 over 1 GB; 415 not audio |
 | GET | `/api/claude?since=N[&recheck=1]` | | `{available, logged_in, problem, detail, busy, kind, conversation, events[N:], next}` |
-| POST | `/api/claude` | `{kind: grade\|chat\|topic, text}` | 202; 409 busy; 503 no Claude Code, or signed out |
+| POST | `/api/claude` | `{kind: grade\|chat\|topic\|first, text}` | 202; 409 busy; 503 no Claude Code, or signed out |
 | POST | `/api/claude/stop`, `/api/claude/reset` | `{}` | stop the run; forget the conversation |
 
 **Claude from the page.** `/api/claude` starts `claude -p` in the vault, one run at a time, and turns its

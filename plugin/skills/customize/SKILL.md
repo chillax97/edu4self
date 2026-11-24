@@ -18,6 +18,11 @@ there. Then, if they want you to do it:
      true/false (lessons take the room's look). A new room ("make it a lighthouse") is files, not a
      setting: follow `docs/THEMES.md` in the edu4self engine to its last step. Its first rule applies to everything you write: stay in the room (characters, jokes, names, labels, sounds), with core learning words left plain.
    - `goals`: `day_minutes` 10–960, `week_days` 1–7
+   - `streak.rest_days`: days that never break the streak, e.g. `["sat", "sun"]`, not all seven (see
+     `docs/CUSTOMIZING.md`)
+   - `room_sounds`: true/false (small sounds with the room's motion; see `docs/CUSTOMIZING.md`)
+   - `gifts`: true/false (Claude makes a gift when a week or a die is won; see `docs/CUSTOMIZING.md`)
+   - `reminders.mail`: true/false (away mails; needs `./edu4self mail setup`; see `docs/CUSTOMIZING.md`)
    - `blocks.presets`: 1–4 durations, 1–240 min. `blocks.kinds`: 1–8 of `{id, label, color, minutes?}`;
      `id` is lowercase `[a-z][a-z0-9_-]{0,23}` and must stay the same for existing kinds (old blocks
      refer to it); `color` is `#rrggbb` or one of lesson, probe, checkpoint, reading, project, mock,
@@ -27,9 +32,10 @@ there. Then, if they want you to do it:
    - `bar.names`: 1–20 of `[name, tagline]`; `bar.gags`: true/false; `bar.lines`: up to 100 of
      `{voice, text}`; `bar.voices`: `{voice_id: {name?, color?}}`. Voice ids: bartender, logic,
      volition, gpu, encyclopedia, physical, nostalgia, critic, regular, jukebox
-   - `music`: `{source, scape, stream: {url, name}, file, title, subtitle, autoplay}`. `source` is
-     `scape` (built in, offline; `scape` is `night`, `rain` or `noise`), `radio` (`stream.url`, http or
-     https) or `file`. A `file` must already be in `_system/music/`: the learner uploads their own in
-     Settings → Music. Never download or copy music for them.
+   - `music`: `{source, scape, stream: {url, name}, files, file, title, subtitle, autoplay}`. `source`
+     is `scape` (built in, offline; `scape` is `night`, `rain` or `noise`), `radio` (`stream.url`, http
+     or https) or `file`. `files` is up to 100 `{file, title}` (see `docs/CUSTOMIZING.md`); a `file` must
+     already be in `_system/music/`: the learner uploads their own in Settings → Music. Never download
+     or copy music for them.
 3. Run the check command from the vault's `CLAUDE.md` (it fails on a bad `config.json` and says why), then `curl -s http://127.0.0.1:<port>/api/config`
    and confirm `"error": null`. The dashboard picks the change up within a few seconds.
