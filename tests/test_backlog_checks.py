@@ -130,7 +130,7 @@ class MarkdownServedReadableTest(unittest.TestCase):
         cls.tmp = tempfile.mkdtemp(prefix="edu4self-backlog-md-")
         cls.vault, _ = make_vault(cls.tmp)
         cls.probe = os.path.join(cls.vault, "how-learning-works", "probes", "x.md")
-        with open(cls.probe, "w", encoding="utf-8") as fh:
+        with open(cls.probe, "w", encoding="utf-8", newline="") as fh:
             fh.write(PROBE)
         cls.httpd = None
         cls.start_error = None
