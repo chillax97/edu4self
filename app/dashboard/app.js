@@ -350,8 +350,10 @@
       el.innerHTML = '<span class="pill is-offline"><span class="led"></span>Can\'t reach the dashboard server. Retrying…</span>';
       return;
     }
-    var pending = pendingCount();
-    var html = '<span class="pill" title="When Claude last updated your progress"><span class="led"></span>Updated by Claude ' + esc(ago(DATA.state && DATA.state.updated)) + '</span>';
+    var pending = pendingCount(), topics = (DATA.state && DATA.state.topics) || [];
+    var html = topics.some(function (t) { return (t.history || []).length; })
+      ? '<span class="pill" title="When Claude last updated your progress"><span class="led"></span>Updated by Claude ' + esc(ago(DATA.state && DATA.state.updated)) + '</span>'
+      : '';
     if (pending) {
       html += '<span class="pill is-wait" title="Submissions Claude hasn\'t graded yet">⏳ ' + pending + ' waiting for Claude</span>';
     }
@@ -438,6 +440,7 @@
     }).join("");
     var eta;
     if (!left) eta = "<b>" + esc(ms.id) + " done.</b> On to the next one.";
+    else if (!allBlocks().length) eta = "Your first focus block sets the pace and gives you a date.";
     else if (pace < 0.25) eta = "No focus blocks in the last 4 weeks, so no date yet. One block gives you one.";
     else {
       var at = function (h) { return shortDate(new Date(Date.now() + hours / h * 7 * 864e5)); };
@@ -965,9 +968,10 @@
     $("#ft-kicker").textContent = ftKicker();
     $("#ob-skip").hidden = obStep === 2;
     var next = $("#ob-next");
-    next.textContent = obStep === 0 ? "Hide it and test me" : obStep === 1 ? ($("#ft-answer").value.trim() ? "Check my answer" : "I don't remember") : "Try the example lesson";
-    next.classList.toggle("btn-primary", obStep !== 2);
-    next.classList.toggle("btn-ghost", obStep === 2);
+    var hasText = !!$("#ft-answer").value.trim(), ghost = obStep === 2 || (obStep === 1 && !hasText);
+    next.textContent = obStep === 0 ? "Hide it and test me" : obStep === 1 ? (hasText ? "Check my answer" : "I don't remember") : "Try the example lesson";
+    next.classList.toggle("btn-primary", !ghost);
+    next.classList.toggle("btn-ghost", ghost);
     if (obStep === 2) paintFirstGrade();
   }
   function obNext() {
@@ -1055,7 +1059,7 @@
     } else if (!CL.known) {
       html = '<p class="ft-g-line">That was the quick check: it looks for key words, so it can be fooled. Checking whether Claude is ready to grade it…</p>';
     } else if (claudeOK()) {
-      html = '<p class="ft-g-line">That was only the quick check: it looks for key words, so it can be fooled. <b>Your real grade comes from Claude</b>, who reads what you meant. Only Claude can keep it as proof.</p>' +
+      html = '<p class="ft-g-line">That was only the quick check: it looks for key words, so it can be fooled. <b>Your real grade comes from Claude</b>. Claude reads what you meant. It counts as a warm-up, not proof yet: proof is when you can still say it days later.</p>' +
         '<button class="btn btn-topic" type="button" id="ft-grade-go"' + (CL.busy ? " disabled" : "") + ">✦ Have Claude grade it</button>" +
         '<p class="ft-g-small">Claude grades just this answer. It uses a little of your Claude plan.' + (CL.busy ? " Claude is busy with something else right now." : "") + "</p>";
     } else {
@@ -1068,7 +1072,13 @@
     box.hidden = !html;
     var go = $("#ft-grade-go"); if (go) go.onclick = firstGradeGo;
   }
-  $("#ft-answer").addEventListener("input", function () { if (obStep === 1) $("#ob-next").textContent = this.value.trim() ? "Check my answer" : "I don't remember"; });
+  $("#ft-answer").addEventListener("input", function () {
+    if (obStep !== 1) return;
+    var hasText = !!this.value.trim(), next = $("#ob-next");
+    next.textContent = hasText ? "Check my answer" : "I don't remember";
+    next.classList.toggle("btn-primary", hasText);
+    next.classList.toggle("btn-ghost", !hasText);
+  });
   $("#ft-answer").addEventListener("keydown", function (ev) { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); obNext(); } });
   $("#ob-skip").addEventListener("click", function () { finishOnboarding(); });
   $("#ft-own").addEventListener("submit", function (ev) {
@@ -2806,7 +2816,7 @@
       h += '<b class="ch-n"><span' + (day ? " data-new" : "") + ">" + n + '</span><small class="ch-lab">' + esc(streakWords(n)) + "</small></b>";
       if (day && MILESTONES.indexOf(n) >= 0) h += '<u class="ch-ul"></u>';
     }
-    h += '</span><small class="ch-best"><i class="ch-star"' + (newBest ? " data-new" : "") + "></i>" + esc(W("streak_best")) + " <b" + (newBest ? " data-new" : "") + ">" + best + "</b></small>" +
+    h += "</span>" + (best ? '<small class="ch-best"><i class="ch-star"' + (newBest ? " data-new" : "") + "></i>" + esc(W("streak_best")) + " <b" + (newBest ? " data-new" : "") + ">" + best + "</b></small>" : "") +
       '<i class="ch-rag"></i></span>';
     return '<span class="bx-chalk"' + (kind === "wipe" ? " data-wipe" : "") + ' role="img" aria-label="' + esc(n + " " + streakWords(n) + ". " + W("streak_best") + ": " + best) + '.">' + h + "</span>";
   }

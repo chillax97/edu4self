@@ -79,7 +79,7 @@ test("first try with Claude: quick check at once, the answer in the inbox, Claud
   assert.match(await page.$eval("#ft-verdict", (e) => e.textContent), /All three key points/);
   assert.equal((await page.$$(".ft-keys .is-hit")).length, 3);
   await page.waitForSelector("#ft-grade-go");
-  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /quick check.*can be fooled.*real grade comes from Claude.*Only Claude can keep it as proof/s);
+  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /quick check.*can be fooled.*real grade comes from Claude.*warm-up, not proof yet.*days later/s);
   assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /uses a little of your Claude plan/, "the cost is next to the button");
   const saved = inbox(v).filter((e) => e.task === "first-try");
   assert.equal(saved.length, 1);
