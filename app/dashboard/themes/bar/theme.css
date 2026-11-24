@@ -231,13 +231,19 @@
 .room .bq-pages .fu-actions { display: flex; gap: var(--s-3); flex-wrap: nowrap; align-items: center; }
 .room .bq-pages .fu-note { margin: 0; font: 400 var(--t-xs)/1.35 var(--f-ui); color: var(--smoke); opacity: 1; }
 .room .bq-pages .btn {
-  --primary: var(--ember); --primary-ink: #fff8f4;
   height: 40px; flex: none; padding: 0 var(--s-4); border-radius: var(--r-sm);
   font: 600 var(--t-sm)/1 var(--f-ui); letter-spacing: .02em;
 }
 .room .bq-pages .btn-ghost {
   height: 32px; padding: 0 var(--s-3); color: var(--bone2); background: none;
   border: 1px solid rgba(242,239,232,.22);
+}
+.room .bq-pages .bx-recall .btn-topic {
+  height: 32px; padding: 0 var(--s-3); color: var(--amber-soft); background: transparent;
+  border: 1px solid rgba(229,162,74,.65);
+}
+.room .bq-pages .bx-recall .btn-topic:hover {
+  background: rgba(229,162,74,.14); border-color: var(--amber); color: var(--bone);
 }
 
 /* Replies: Your move on the right half when no follow-up; primary action elevated to crisp high-contrast CTA */
@@ -267,14 +273,14 @@
 .room .bq-pages .bx-replies li:first-of-type:not(.is-plain) { margin-bottom: var(--s-2); }
 .room .bq-pages .bx-replies li:first-of-type:not(.is-plain) .bx-r {
   display: inline-flex; align-items: center; padding: 10px 20px; border-radius: var(--r-sm);
-  background: var(--bone); color: #090b0d; text-decoration: none;
+  background: var(--primary); color: var(--primary-ink); text-decoration: none;
   font: 600 var(--t-sm)/1.2 var(--f-ui); letter-spacing: .02em;
-  box-shadow: 0 6px 22px -6px rgba(229,162,74,.32);
+  box-shadow: 0 6px 22px -6px rgba(229,162,74,.42);
   transition: background .15s ease, transform .15s ease;
 }
 .room .bq-pages .bx-replies li:first-of-type:not(.is-plain) .bx-r:hover,
 .room .bq-pages .bx-replies li:first-of-type:not(.is-plain) .bx-r:focus-visible {
-  background: var(--amber); color: #090b0d; transform: translateY(-1px);
+  background: var(--amber-soft); color: var(--primary-ink); transform: translateY(-1px);
 }
 .room .bq-pages .bx-r:hover, .room .bq-pages .bx-r:focus-visible {
   color: var(--amber); text-decoration-color: var(--amber); background: none; transform: none;
@@ -334,7 +340,7 @@
 }
 .room .bq-mat .bx-chk { display: none; }
 .room .bq-mat .fold { --fold: 3; }
-.room .bq-mat .bx-line:first-child .fold-2 { --fold: 2; }
+.room .bq-mat .bx-line:first-child .fold-2 { --fold: 5; }
 .room .bq-mat .fold-more, .room .bq-mat .bx-more {
   height: 24px; margin-top: var(--s-2); padding: 0 var(--s-2); box-sizing: border-box;
   display: inline-flex; align-items: center; border-radius: var(--r-sm);
@@ -396,14 +402,38 @@
 .room .bq-juke .btn { height: 32px; padding: 0 var(--s-3); border-radius: var(--r-sm); font: 600 var(--t-xs)/1 var(--f-ui); color: var(--bone); background: transparent; border: 1px solid rgba(229,162,74,.4); }
 .room .bq-juke [data-blk-stop] { justify-self: end; margin-top: var(--s-1); padding: 0 var(--s-1); border-color: transparent; color: var(--smoke); }
 .room .bq-juke [data-blk-stop]:hover { color: var(--ember); }
-.room .bq-juke .blk-idle { display: grid; gap: var(--s-2); }
+.room .bq-juke .blk-idle {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--s-2);
+}
+.room .bq-juke .blk-bar:not([hidden]) { display: contents; }
+.room .bq-juke .blk-chosen {
+  grid-column: 1; grid-row: 1; display: flex; align-items: center; gap: var(--s-2);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 500 var(--t-sm)/1.3 var(--f-ui); color: var(--bone);
+}
+.room .bq-juke .blk-pickers {
+  grid-column: 1 / -1; grid-row: 2; display: grid; gap: var(--s-2);
+  padding-top: var(--s-2); border-top: 1px solid rgba(229,162,74,.14);
+}
+.room .bq-juke .blk-pickers[hidden] { display: none; }
 .room .bq-juke .blk-row { gap: var(--s-1); }
 .room .bq-juke .blk-opt { padding: var(--s-1) var(--s-2); border-radius: var(--r-sm); font: 500 var(--t-xs)/1.3 var(--f-mono); color: var(--bone2); background: rgba(8,10,12,.45); border: 1px solid rgba(242,239,232,.16); }
-.room .bq-juke .blk-opt[aria-pressed="true"] { color: #090b0d; background: var(--amber); border-color: var(--amber); font-weight: 700; }
+.room .bq-juke .blk-opt[aria-pressed="true"] { color: var(--amber-soft); background: rgba(229,162,74,.12); border-color: var(--amber); font-weight: 600; }
 .room .bq-juke .blk-custom input { width: 56px; font: inherit; }
 .room .bq-juke .blk-lab { width: auto; align-self: center; margin-right: var(--s-1); font: 500 var(--t-xs)/1.3 var(--f-mono); color: var(--smoke); }
-.room .bq-juke .blk-start { width: 100%; height: 40px; color: #fff8f4; background: var(--ember); border-color: var(--ember); font: 600 var(--t-sm)/1 var(--f-ui); letter-spacing: .03em; text-transform: none; }
-.room .bq-juke .blk-start:hover { background: #c9381c; }
+.room .bq-juke .blk-start {
+  grid-column: 2; grid-row: 1; width: auto; height: 30px; margin: 0; padding: 0 var(--s-3);
+  color: var(--bone); background: transparent; border: 1px solid rgba(229,162,74,.45);
+  border-radius: var(--r-sm); font: 600 var(--t-xs)/1 var(--f-ui); letter-spacing: .02em; text-transform: none;
+}
+.room .bq-juke .blk-start:hover { background: rgba(229,162,74,.14); border-color: var(--amber); color: var(--bone); }
+.room .bq-juke .blk-start:disabled { opacity: .45; cursor: not-allowed; }
+.room .bq-juke .blk-change {
+  grid-column: 3; grid-row: 1; height: auto; padding: 0; border: 0; background: none;
+  font: 400 var(--t-xs)/1.3 var(--f-ui); color: var(--smoke);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.room .bq-juke .blk-change:hover { color: var(--amber); }
 
 /* Music controls: ALWAYS visible (zero layout jump on hover!) */
 .room .bq-juke .bx-music { margin: var(--s-3) 0 0; padding: var(--s-3) 0 0; gap: var(--s-2); background: none; border: 0; border-top: 1px solid rgba(229,162,74,.14); }
@@ -523,6 +553,8 @@
 .room .bx-next { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--smoke); }
 
 /* Station 5: Your Glass on the Counter (hydration ritual) */
+.room:not(.is-running) .bq-run { border-bottom: 0; }
+.room:not(.is-running) .bq-glass { display: none; }
 .room .bq-glass { padding: var(--s-3) var(--s-6) var(--s-4); margin-top: auto; }
 .room .bx-round { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); padding: 0; }
 .room .bx-round p { margin: 0; font: 400 var(--t-xs)/1.4 var(--f-ui); color: var(--bone2); }

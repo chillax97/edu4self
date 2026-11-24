@@ -413,6 +413,8 @@ button.add-topic:hover { border-color: var(--topic); background: color-mix(in sr
 .blk-pill b { font: 700 var(--t-sm)/1 var(--mono); font-variant-numeric: tabular-nums; }
 .blk-sw { width: 8px; height: 8px; border-radius: var(--r-sm); background: var(--c); flex: none; }
 .blk-idle { display: grid; gap: var(--s-2); }
+.blk-bar[hidden], .blk-pickers[hidden] { display: none; }
+.blk-pickers { display: grid; gap: var(--s-2); }
 .blk-row { display: flex; flex-wrap: wrap; gap: var(--s-1); }
 .blk-opt {
   --c: var(--topic);
@@ -821,7 +823,7 @@ body:has(.overlay-drawer:not([hidden])) .toaster { right: auto; left: 24px; }   
 /* folded lines: one line each (the host's note: its headline, then two lines), opened in place */
 .fold { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--fold, 1); overflow: hidden; }
 .fold-2 { --fold: 2; }
-.is-open > .fold, .is-open .fold { display: block; overflow: visible; }
+.is-open > .fold, .is-open .fold, .is-fit > .fold, .is-fit .fold { display: block; overflow: visible; }
 [data-clip] { cursor: pointer; }
 [data-clip][role="button"]:focus-visible { outline: 2px solid var(--vc, var(--accent, currentColor)); outline-offset: 3px; }
 .fold-more { display: block; width: max-content; cursor: pointer; font: 600 var(--t-xs)/1.5 var(--sans); text-decoration: underline; text-underline-offset: 3px; opacity: .85; }

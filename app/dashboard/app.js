@@ -293,7 +293,6 @@
         if (stage.back) store(BACK_KEY, dayKey(new Date()));
       }
       var patched = paintRoom(app, renderBar(hero, topics, live));
-      markFolds();
       roomBeats(patched);
       if (topics[0]) document.documentElement.style.setProperty("--topic", topics[0].color);
       mountBlockCard();
@@ -301,6 +300,7 @@
       paintWater();
       renderStatus();
       musicSync();
+      markFolds();
       shelfNews();
       return;
     }
@@ -1145,7 +1145,7 @@
   var RACK_NODES = 4;  // 4 rows fill one tray (320 hours), W("tray")
   var pickedDie = null;
   var BASE_TITLE = document.title;
-  var pick = { block: "lessons", minutes: 50 };
+  var pick = { block: "lessons", minutes: 50 }, pickOpen = false;
   var active = null, endTimer = null, tickTimer = null, audio = null, celebrateNext = null, saving = null;
   var blockEl = document.createElement("section");
   blockEl.className = "card blk-card";
@@ -1182,13 +1182,16 @@
     return list.sort(function (a, b) { return a.started < b.started ? -1 : 1; });
   }
 
+  function compactBlock() { return !!blockEl.closest(".bq-juke"); }
+
   function mountBlockCard() {
     var slot = $("#blk-slot");
     if (!slot) return;
     var focused = blockEl.contains(document.activeElement) ? document.activeElement : null;
     if (!blockEl.firstChild) paintBlockCard();
-    else if (active && !blockEl.querySelector(".blk-water") !== roundHere()) paintControls();   // the room decides where the water line sits
+    else if (active && !blockEl.querySelector(".blk-water") !== roundHere()) paintControls();
     slot.replaceWith(blockEl);
+    if (!active) paintPick();
     paintDie();
     if (focused) focused.focus();
   }
@@ -1216,34 +1219,54 @@
     }
     var custom = PRESETS.indexOf(pick.minutes) < 0;
     el.innerHTML = '<div class="blk-idle">' +
-      '<div class="blk-row" role="group" aria-label="Block">' + Object.keys(BLOCKS).map(function (id) {
-        return '<button class="blk-opt" type="button" style="--c:' + blockColor(id) + '" data-blk="' + id + '" aria-pressed="' + (pick.block === id) + '">' +
-          '<span class="blk-sw"></span>' + esc(BLOCKS[id].label) + '</button>';
-      }).join("") + '</div>' +
-      '<div class="blk-row" role="group" aria-label="Duration">' + PRESETS.map(function (m) {
-        return '<button class="blk-opt" type="button" data-min="' + m + '" aria-pressed="' + (pick.minutes === m) + '">' + m + ' min</button>';
-      }).join("") +
-        '<label class="blk-opt blk-custom" aria-pressed="' + custom + '"><input type="number" min="1" max="240" inputmode="numeric" placeholder="Custom" aria-label="Custom minutes" data-custom value="' + (custom ? pick.minutes : "") + '"> min</label>' +
+      '<div class="blk-bar" data-blk-bar hidden>' +
+        '<span class="blk-chosen" data-blk-chosen></span>' +
+        '<button class="btn btn-link blk-change" type="button" data-blk-change aria-expanded="false">Change</button>' +
       '</div>' +
-      '<div class="blk-row" role="group" aria-label="Water rounds"><span class="blk-lab">💧 Water</span>' + [15, 30, 0].map(function (v) {
-        return '<button class="blk-opt" type="button" data-water="' + v + '" aria-pressed="' + (waterEvery() === v) + '">' + (v ? "every " + v + " min" : "off") + '</button>';
-      }).join("") + '</div>' +
+      '<div class="blk-pickers" data-blk-pickers>' +
+        '<div class="blk-row" role="group" aria-label="Block">' + Object.keys(BLOCKS).map(function (id) {
+          return '<button class="blk-opt" type="button" style="--c:' + blockColor(id) + '" data-blk="' + id + '" aria-pressed="' + (pick.block === id) + '">' +
+            '<span class="blk-sw"></span>' + esc(BLOCKS[id].label) + '</button>';
+        }).join("") + '</div>' +
+        '<div class="blk-row" role="group" aria-label="Duration">' + PRESETS.map(function (m) {
+          return '<button class="blk-opt" type="button" data-min="' + m + '" aria-pressed="' + (pick.minutes === m) + '">' + m + ' min</button>';
+        }).join("") +
+          '<label class="blk-opt blk-custom" aria-pressed="' + custom + '"><input type="number" min="1" max="240" inputmode="numeric" placeholder="Custom" aria-label="Custom minutes" data-custom value="' + (custom ? pick.minutes : "") + '"> min</label>' +
+        '</div>' +
+        '<div class="blk-row" role="group" aria-label="Water rounds"><span class="blk-lab">💧 Water</span>' + [15, 30, 0].map(function (v) {
+          return '<button class="blk-opt" type="button" data-water="' + v + '" aria-pressed="' + (waterEvery() === v) + '">' + (v ? "every " + v + " min" : "off") + '</button>';
+        }).join("") + '</div>' +
+      '</div>' +
       '<button class="btn btn-topic blk-start" type="button" data-blk-start></button></div>';
     paintPick();
   }
 
-  // update the pressed states in place so focus and typing survive
   function paintPick() {
+    var compact = compactBlock();
     blockEl.querySelectorAll("[data-blk]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.blk === pick.block)); });
     blockEl.querySelectorAll("[data-min]").forEach(function (b) { b.setAttribute("aria-pressed", String(Number(b.dataset.min) === pick.minutes)); });
     var c = blockEl.querySelector(".blk-custom");
     if (c) c.setAttribute("aria-pressed", String(PRESETS.indexOf(pick.minutes) < 0));
+    var ok = pick.minutes >= 1 && pick.minutes <= 240;
+    var bar = blockEl.querySelector("[data-blk-bar]"), pickers = blockEl.querySelector("[data-blk-pickers]");
+    var chosen = blockEl.querySelector("[data-blk-chosen]"), change = blockEl.querySelector("[data-blk-change]");
+    if (bar) bar.hidden = !compact;
+    if (pickers) pickers.hidden = compact && !pickOpen;
+    if (chosen) {
+      chosen.innerHTML = '<span class="blk-sw" style="--c:' + blockColor(pick.block) + '"></span>' +
+        esc(blockLabel(pick.block)) + " · " + (ok ? pick.minutes + " min" : "1–240 min");
+    }
+    if (change) {
+      change.textContent = pickOpen ? "Done" : "Change";
+      change.setAttribute("aria-expanded", String(pickOpen));
+    }
     var start = blockEl.querySelector("[data-blk-start]");
     if (start) {
-      var ok = pick.minutes >= 1 && pick.minutes <= 240;
+      var fullLabel = ok ? "Start " + pick.minutes + " min of " + blockLabel(pick.block) : "Pick 1 to 240 minutes";
       start.disabled = !ok;
       start.style.setProperty("--topic", blockColor(pick.block));
-      start.textContent = ok ? "Start " + pick.minutes + " min of " + blockLabel(pick.block) : "Pick 1 to 240 minutes";
+      start.textContent = compact ? "Start" : fullLabel;
+      start.setAttribute("aria-label", fullLabel);
     }
   }
 
@@ -1476,6 +1499,7 @@
   function startBlock(task) {
     var m = pick.minutes;
     if (!(m >= 1 && m <= 240)) return;
+    pickOpen = false;
     unlockAudio();
     try { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); } catch (e) {}
     var now = Date.now();
@@ -1702,8 +1726,9 @@
   }
 
   blockEl.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-blk],[data-min],[data-blk-start],[data-blk-stop],[data-gpu],[data-water],.blk-custom");
+    var el = ev.target.closest("[data-blk],[data-min],[data-blk-start],[data-blk-stop],[data-blk-change],[data-gpu],[data-water],.blk-custom");
     if (!el) return;
+    if (el.hasAttribute("data-blk-change")) { pickOpen = !pickOpen; paintPick(); return; }
     if (el.dataset.gpu) { pickedDie = Number(el.dataset.gpu); paintDie(); return; }
     if (el.dataset.water) {
       store(WATER_KEY, el.dataset.water);
@@ -2417,7 +2442,35 @@
 
   var foldOpen = {};
   function markFolds() {
-    document.querySelectorAll("[data-fold]").forEach(function (box) {
+    var boxes = document.querySelectorAll("[data-fold]");
+    boxes.forEach(function (box) { box.classList.remove("is-fit"); });
+    var slots = [];
+    boxes.forEach(function (box) {
+      var slot = box.closest('[data-slot="voices"]');
+      if (slot && slots.indexOf(slot) < 0) slots.push(slot);
+    });
+    slots.forEach(function (slot) {
+      var sRect = slot.getBoundingClientRect();
+      if (!sRect.height) return;
+      var visible = Array.prototype.slice.call(slot.children).filter(function (c) { return !c.hidden && c.getBoundingClientRect().height > 0; });
+      var usedBottom = visible.reduce(function (m, c) { return Math.max(m, c.getBoundingClientRect().bottom); }, sRect.top);
+      var spare = Math.max(0, sRect.bottom - usedBottom);
+      visible.forEach(function (box) {
+        if (!box.hasAttribute("data-fold") || box.classList.contains("is-open")) return;
+        var f = box.querySelector(".fold");
+        if (!f || f.scrollHeight <= f.clientHeight + 1) return;
+        var more = box.querySelector(".fold-more");
+        var extra = f.scrollHeight - f.clientHeight;
+        var inBox = Math.max(0, box.getBoundingClientRect().bottom - f.getBoundingClientRect().bottom);
+        var room = Math.max(inBox, more ? 28 : 0);
+        var grow = Math.max(0, extra - room);
+        if (grow <= spare + 1) {
+          box.classList.add("is-fit");
+          spare = Math.max(0, spare - grow);
+        }
+      });
+    });
+    boxes.forEach(function (box) {
       var f = box.querySelector(".fold"), more = box.querySelector(".fold-more");
       if (!f) return;
       var open = box.classList.contains("is-open"), cut = open || f.scrollHeight > f.clientHeight + 1;
