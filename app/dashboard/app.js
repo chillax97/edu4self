@@ -2338,12 +2338,12 @@
     function li(cls) { if (rest && short) { folded++; cls += " is-rest"; } return cls.trim() ? '<li class="' + cls.trim() + '">' : "<li>"; }
     // short: the words without the script's [brackets] and "quotes"
     function plainWords(html) { return short ? html.replace(/>\[(.+?)\.?\]/, ">$1").replace(/>"(.+?)"/, ">$1") : html; }
-    function act(html) { n++; R.push(li("") + '<b class="bx-n">' + n + ".</b>" + plainWords(html).replace(/^<(a|button) /, '<$1 data-n="' + n + '" ') + "</li>"); }
+    function act(html, cls) { n++; R.push(li(cls || "") + '<b class="bx-n">' + n + ".</b>" + plainWords(html).replace(/^<(a|button) /, '<$1 data-n="' + n + '" ') + "</li>"); }
     function quiet(html) { R.push(li("is-quiet") + '<b class="bx-n">–</b><span>' + html + "</span></li>"); }
     function chk(s) { return ' <span class="bx-chk">' + s + "</span>"; }
     if (hero) {
       var job = jobModel(hero), t = job.task, meta = job.meta, pend = job.pend, fu = job.fu;
-      if (t.href) { var href = resolveHref(t.href); act('<a class="btn btn-link bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>"); }
+      if (t.href) { var href = resolveHref(t.href); act('<a class="btn btn-link bx-r" href="' + esc(href) + '"' + openTarget(href) + ">[" + esc(meta.open) + (/^obsidian:/.test(href) ? " in Obsidian" : "") + ".] ↗</a>", fu && !pend ? "is-plain" : ""); }
       if (pend) act('<button class="btn btn-link bx-r" type="button" data-withdraw="' + esc(pend.id) + '">[Withdraw the ' + (pend.kind === "follow-up" ? "reply" : "submission") + ".]" + chk("only before Claude grades it") + "</button>");
       else {
         if (t.submit && !fu) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(t.id) + '">[' + esc(meta.submit) + ".]</button>");
