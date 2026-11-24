@@ -76,7 +76,20 @@ def key_points(topic, h):
             text = fh.read()
     except OSError:
         return None
-    return re.findall(r"(?m)^\s*[-*]\s+(\d+[a-z]+)\.\s", text)
+    ids, in_required = [], False
+    for line in text.splitlines():
+        t = line.strip()
+        if t.startswith("Required"):
+            in_required = True
+            continue
+        if t.startswith(("Wrong answers", "Not required", "## ")):
+            in_required = False
+            continue
+        if in_required:
+            m = re.match(r"[-*]\s+(\d+[a-z]*)\.\s", t)
+            if m:
+                ids.append(m.group(1))
+    return ids
 
 
 def check_levels(topic, h):
