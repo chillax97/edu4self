@@ -1011,6 +1011,29 @@ def with_lesson_theme(page):
     return page[:i] + link + page[i:] if i >= 0 else link + page
 
 
+def task_for_path(path):
+    for topic in read_state_safe().get("topics", []):
+        for task in topic.get("queue", []):
+            if task.get("status") != "done" and urllib.parse.unquote(task.get("href") or "") == path:
+                return task
+    return None
+
+
+def with_back_bar(page, task):
+    if not task:
+        return page
+    links = '<a href="/" target="_top">← Dashboard</a>'
+    if "submit" in task:
+        links += ' <a href="/#submit=%s" target="_top">Submit answers →</a>' % urllib.parse.quote(task["id"], safe="")
+    snippet = ('<style>body{padding-bottom:48px}nav[data-edu-back]{font-family:system-ui,sans-serif;'
+               "position:fixed;bottom:0;left:0;right:0;background:#ffffff;color:#1a1a1a;"
+               "border-top:1px solid #d0d0d0;padding:8px 16px;font-size:14px;z-index:2147483647}"
+               "nav[data-edu-back] a{color:#1a1a1a;text-decoration:underline}</style>"
+               '<nav data-edu-back>' + links + "</nav>").encode("utf-8")
+    i = page.lower().rfind(b"</body>")
+    return page[:i] + snippet + page[i:] if i >= 0 else page + snippet
+
+
 def md_page(text, name=""):
     m = re.match(r"\A---\r?\n.*?\r?\n---\r?\n?", text, re.S)
     if m:
@@ -1080,7 +1103,8 @@ def md_page(text, name=""):
         out.append("<pre><code>" + "\n".join(fence) + "</code></pre>")
     flush()
     page = ('<!doctype html><html><head><meta charset="utf-8"><title>' + (title or html.escape(name) or "Markdown") +
-            '</title><link rel="stylesheet" href="/theme/lesson.css"></head><body><div class="wrap">' +
+            '</title><link rel="stylesheet" href="/theme/lesson.css">'
+            '<style>.wrap{max-width:46rem;margin:auto}</style></head><body><div class="wrap">' +
             "".join(out) + "</div></body></html>")
     return page.encode("utf-8")
 
@@ -1793,6 +1817,7 @@ class Handler(BaseHTTPRequestHandler):
                 page = md_page(fh.read().decode("utf-8", errors="replace"), parts[-1])
             if not (load_config()[0]["theme_lessons"] and active_lesson_css()):
                 page = page.replace(b'<link rel="stylesheet" href="/theme/lesson.css">', b"")
+            page = with_back_bar(page, task_for_path("/vault/" + "/".join(parts)))
             return self.send_text("text/html; charset=utf-8", page, {"Content-Security-Policy": VAULT_CSP})
         # Pages in the vault (lessons, maybe shared by someone) run in a sandbox: their own blank
         # origin, so they can't read the API, change settings or start Claude. Their scripts still run.
@@ -1801,6 +1826,7 @@ class Handler(BaseHTTPRequestHandler):
                 page = with_quiz_shuffle(fh.read())
             if load_config()[0]["theme_lessons"] and active_lesson_css():
                 page = with_lesson_theme(page)
+            page = with_back_bar(page, task_for_path("/vault/" + "/".join(parts)))
             return self.send_text("text/html; charset=utf-8", page, {"Content-Security-Policy": VAULT_CSP})
         if target.endswith(".svg"):
             return self.send_file(target, {"Content-Security-Policy": VAULT_CSP})
