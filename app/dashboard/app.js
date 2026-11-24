@@ -885,7 +885,10 @@
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not save"); return j; }); });
   }
   function savedToast() {
-    toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade it now when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
+    toast("<span>✓</span><span><b>Saved to your inbox.</b> " + (claudeOK() ? "Press ✦ Grade when you're ready." : "Next, in Claude Code say \"check my inbox\".") + "</span>", 7000);
+  }
+  function dismissSavedToast() {
+    toasts.slice().forEach(function (t) { if (/Saved to your inbox/.test(t.el.textContent)) t.close(); });
   }
 
   // The follow-up question on a task's card: one reply box, sent as a "follow-up" inbox entry (PROTOCOL.md section 3).
@@ -1013,6 +1016,7 @@
   }
   function firstGradeGo() {
     if (!FT.id || !claudeOK() || CL.busy) return;
+    dismissSavedToast();
     FT.phase = "busy"; FT.since = CL.next; paintFirstGrade();
     CL.gen++;
     fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "first" }) })   // grade-only: just this answer, no planning
@@ -1654,9 +1658,10 @@
     $("#blk-done-chip").style.setProperty("--c", "var(--green)");
     $("#blk-done-chip").textContent = first.topic.title + " · " + first.h.date;
     $("#blk-done-title").textContent = fresh.length > 1 ? "Proved, " + fresh.length + " times." : "Proved.";
-    $("#blk-done-body").textContent = first.h.title + (first.h.detail ? ". " + first.h.detail : "");
+    $("#blk-done-body").textContent = first.h.title + (first.h.detail ? (/[.!?]$/.test(first.h.title) ? " " : ". ") + first.h.detail : "");
     $("#blk-done-die").innerHTML = '<ul class="proof-list">' + fresh.slice(1).map(function (x) { return "<li>" + esc(x.h.title) + "</li>"; }).join("") + "</ul>" +
       '<p class="proof-foot">This is the part that counts: not time spent, but something you can now do. It is on your evidence log for good.</p>';
+    if (!$("#claude").hidden) closeOverlay($("#claude"));
     openOverlay("blk-done");
     setTimeout(function () { $("#blk-done .btn").focus(); }, 60);
     chime();
@@ -3327,6 +3332,7 @@
     }).catch(function () {});
   }
   function claudeSend(kind, text) {
+    if (kind === "grade" || kind === "first") dismissSavedToast();
     openClaude();
     var st = $("#cl-status");
     CL.gen++;
@@ -3462,16 +3468,29 @@
   function paintClaude() {
     var log = $("#cl-log");
     if (!log) return;
-    var html = "", tools = [];
-    function flush() { if (tools.length) { html += '<div class="cl-tools">' + tools.map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("") + "</div>"; tools = []; } }
+    var html = "";
+    function note(e) { return '<div class="cl-note cl-' + e.kind + '">' + esc(e.text) + "</div>"; }
+    function bubble(e) {
+      return e.kind === "you" ? '<div class="cl-msg cl-you">' + clText(e.text) + "</div>"
+        : '<div class="cl-msg cl-claude">' + clText(e.text) + "</div>";
+    }
+    var runs = [];
     CL.events.forEach(function (e) {
-      if (e.kind === "tool") return tools.push(e.text);
-      flush();
-      if (e.kind === "you") html += '<div class="cl-msg cl-you">' + clText(e.text) + "</div>";
-      else if (e.kind === "text") html += '<div class="cl-msg cl-claude">' + clText(e.text) + "</div>";
-      else html += '<div class="cl-note cl-' + e.kind + '">' + esc(e.text) + "</div>";
+      if (e.kind === "you" || !runs.length) runs.push([]);
+      runs[runs.length - 1].push(e);
     });
-    flush();
+    runs.forEach(function (events) {
+      var shown = "", tools = [], folded = [];
+      events.forEach(function (e) {
+        if (e.kind === "tool") tools.push(e.text);
+        else if (e.kind === "done") folded.push(e);
+        else if (e.kind === "check" && /^Check OK/.test(e.text)) folded.push(e);
+        else shown += e.kind === "you" || e.kind === "text" ? bubble(e) : note(e);
+      });
+      html += shown;
+      var body = (tools.length ? '<div class="cl-tools">' + tools.map(function (t) { return "<span>" + esc(t) + "</span>"; }).join("") + "</div>" : "") + folded.map(note).join("");
+      if (body) html += '<details class="cl-details"><summary>Details</summary>' + body + "</details>";
+    });
     if (!CL.events.length) html = '<div class="cl-empty">' + (claudeOK()
       ? "Nothing here yet. Try “what should I work on tonight?”, or press <b>Grade my inbox</b>."
       : CL.problem === "signed_out" ? "Claude Code isn't signed in, so the page can't run it. In a terminal, run <code>claude auth login</code>, then come back."

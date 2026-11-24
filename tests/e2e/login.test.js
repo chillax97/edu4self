@@ -222,7 +222,7 @@ test("a run that fails doesn't end with 'Claude is done', even when the check af
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForSelector("#btn-grade:not([hidden]):not([disabled])");
   await page.click("#btn-grade");
-  await page.waitForFunction(() => /Check OK/.test(document.querySelector("#cl-log").innerText), { timeout: 15000 });
+  await page.waitForFunction(() => /Check OK/.test(document.querySelector("#cl-log").textContent), { timeout: 15000 });
   await page.waitForFunction(() => { const t = document.querySelector("#toast"); return t && !t.hidden && /Claude/.test(t.innerText); }, { timeout: 15000 });
   const toast = await page.$eval("#toast", (e) => e.innerText);
   assert.doesNotMatch(toast, /done/i);

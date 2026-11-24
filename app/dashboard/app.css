@@ -735,11 +735,17 @@ textarea:focus { outline: none; border-color: var(--ink-2); box-shadow: 0 0 0 3p
 .cl-msg { max-width: 92%; padding: var(--s-2) var(--s-3); border-radius: var(--r-lg); font-size: var(--t-sm); line-height: 1.5; overflow-wrap: anywhere; }
 .cl-msg p { margin: 0 0 var(--s-2); } .cl-msg p:last-child { margin: 0; }
 .cl-msg code { font: var(--t-xs) var(--mono); padding: 1px var(--s-1); border-radius: var(--r-sm); background: color-mix(in srgb, var(--ink) 8%, transparent); }
-.cl-you { align-self: flex-end; background: var(--topic); color: var(--c-grey-100); border-bottom-right-radius: var(--r-md); }
+.cl-you { align-self: flex-end; background: var(--topic); color: var(--c-grey-0); border-bottom-right-radius: var(--r-md); }
 .cl-you code { background: rgba(255,255,255,.2); }
 .cl-claude { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--line); border-bottom-left-radius: var(--r-md); }
 .cl-tools { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--s-1); font: var(--t-xs)/1.45 var(--mono); color: var(--muted); }
 .cl-tools span::before { content: "· "; }
+.cl-details { align-self: stretch; padding: 0 var(--s-1); font-size: var(--t-xs); color: var(--muted); }
+.cl-details summary { cursor: pointer; padding: 2px 0; font-weight: 600; list-style: none; }
+.cl-details summary::-webkit-details-marker { display: none; }
+.cl-details summary::after { content: " +"; font-weight: 400; }
+.cl-details[open] summary::after { content: " –"; }
+.cl-details .cl-note { margin-top: 2px; }
 .cl-note { align-self: center; font-size: var(--t-xs); color: var(--muted); padding: 2px var(--s-2); border-radius: var(--r-lg); background: var(--surface-2); }
 .cl-check { color: var(--lesson); }
 .cl-error { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 8%, var(--surface)); border-radius: var(--r-md); align-self: stretch; text-align: left; padding: var(--s-2) var(--s-3); font-size: var(--t-sm); }

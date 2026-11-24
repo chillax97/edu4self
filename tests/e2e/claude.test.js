@@ -55,7 +55,7 @@ test("submit, then Grade: Claude grades in the page and the dashboard updates", 
   await page.waitForSelector("#claude:not([hidden])");
   await page.waitForSelector(".cl-working");
   await waitIdle(page);
-  const log = await page.$eval("#cl-log", (e) => e.innerText);
+  const log = await page.$eval("#cl-log", (e) => e.textContent);
   assert.match(log, /Reading _system\/inbox\.jsonl/);
   assert.match(log, /Graded 1 submission/);
   assert.match(log, /Check OK/);
