@@ -302,11 +302,13 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
         await page.click("#cl-send");
         await page.waitForSelector(".cl-you", { timeout: 12000 });
         const contrast = await page.$eval(".cl-you", (e) => {
+          const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
           const parse = (c) => {
-            const m = c.match(/rgba?\(([^)]+)\)/);
-            if (!m) return null;
-            const p = m[1].split(",").map((x) => parseFloat(x));
-            return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = c;
+            ctx.fillRect(0, 0, 1, 1);
+            const d = ctx.getImageData(0, 0, 1, 1).data;
+            return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 };
           };
           const blend = (top, bottom) => ({
             r: top.r * top.a + bottom.r * (1 - top.a),
