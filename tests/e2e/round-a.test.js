@@ -173,6 +173,13 @@ test("A3.1 no history means no Updated by Claude in the top bar", async () => {
   }));
 });
 
+test("A3.1 a fresh vault's setup entry does not count as Claude's work", async () => {
+  await withServe({}, (s) => withPage(s, { view: "bar", width: 1440, height: 900 }, async (page) => {
+    await page.waitForSelector("#app > :not(#loading)", { timeout: 8000 });
+    assert.doesNotMatch(await page.$eval(".topbar", (e) => e.innerText), /Updated by Claude/);
+  }));
+});
+
 test("A3.2 a history entry brings the Updated by Claude pill", async () => {
   await withServe({ seed: (v) => {
     clearHistory(v);
@@ -293,7 +300,7 @@ test("A4.3 tool lines and the check fold into a closed Details block", async () 
 
 test("A4.4 the learner's own bubble is readable in both looks", async () => {
   await withServe({ claude: true }, async (s) => {
-    for (const view of ["bar", "classic"]) {
+    for (const view of ["bar", "library", "space", "train", "tea", "classic"]) {
       await withPage(s, { view, width: 1440, height: 900 }, async (page) => {
         await page.waitForSelector("#btn-claude:not([hidden])", { timeout: 12000 });
         await page.click("#btn-claude");

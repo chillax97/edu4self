@@ -351,7 +351,7 @@
       return;
     }
     var pending = pendingCount(), topics = (DATA.state && DATA.state.topics) || [];
-    var html = topics.some(function (t) { return (t.history || []).length; })
+    var html = topics.some(function (t) { return (t.history || []).some(function (h) { return h.kind !== "setup"; }); })
       ? '<span class="pill" title="When Claude last updated your progress"><span class="led"></span>Updated by Claude ' + esc(ago(DATA.state && DATA.state.updated)) + '</span>'
       : '';
     if (pending) {
