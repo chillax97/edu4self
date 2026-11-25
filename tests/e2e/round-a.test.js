@@ -303,13 +303,12 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
         await page.waitForSelector(".cl-you", { timeout: 12000 });
         await page.waitForFunction(() => !document.querySelector(".cl-working") && /Done/.test(document.querySelector("#cl-log").textContent), { timeout: 20000 });
         const contrast = await page.$eval(".cl-you", (e) => {
-          const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
           const parse = (c) => {
-            ctx.clearRect(0, 0, 1, 1);
-            ctx.fillStyle = c;
-            ctx.fillRect(0, 0, 1, 1);
-            const d = ctx.getImageData(0, 0, 1, 1).data;
-            return { r: d[0], g: d[1], b: d[2], a: d[3] / 255 };
+            const srgb = /^color\(srgb\s+([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)(?:\s*\/\s*([\d.e+-]+))?\)$/.exec(c);
+            if (srgb) return { r: srgb[1] * 255, g: srgb[2] * 255, b: srgb[3] * 255, a: srgb[4] === undefined ? 1 : +srgb[4] };
+            const rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/.exec(c);
+            if (rgb) return { r: +rgb[1], g: +rgb[2], b: +rgb[3], a: rgb[4] === undefined ? 1 : +rgb[4] };
+            throw new Error("unparsed colour: " + c);
           };
           const blend = (top, bottom) => ({
             r: top.r * top.a + bottom.r * (1 - top.a),
@@ -334,9 +333,9 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
           };
           const fg = parse(getComputedStyle(e).color), bg = bgOf(e);
           const hi = Math.max(lum(fg), lum(bg)), lo = Math.min(lum(fg), lum(bg));
-          return (hi + 0.05) / (lo + 0.05);
+          return { ratio: (hi + 0.05) / (lo + 0.05), raw: getComputedStyle(e).color + " on " + getComputedStyle(e).backgroundColor };
         });
-        assert.ok(contrast >= 4.5, view + ": learner bubble contrast " + contrast.toFixed(2));
+        assert.ok(contrast.ratio >= 4.5, view + ": learner bubble contrast " + contrast.ratio.toFixed(2) + " (" + contrast.raw + ")");
       });
     }
   });
