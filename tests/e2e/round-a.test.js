@@ -301,6 +301,7 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
         await page.type("#cl-input", "hello");
         await page.click("#cl-send");
         await page.waitForSelector(".cl-you", { timeout: 12000 });
+        await page.waitForFunction(() => !document.querySelector(".cl-working") && /Done/.test(document.querySelector("#cl-log").textContent), { timeout: 20000 });
         const contrast = await page.$eval(".cl-you", (e) => {
           const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
           const parse = (c) => {
