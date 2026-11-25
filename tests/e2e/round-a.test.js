@@ -309,7 +309,9 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
         await page.click("#cl-send");
         await page.waitForSelector(".cl-you", { timeout: 12000 });
         await page.waitForFunction(() => !document.querySelector(".cl-working") && /Done/.test(document.querySelector("#cl-log").textContent), { timeout: 20000 });
-        const contrast = await page.$eval(".cl-you", (e) => {
+        const handle = await page.waitForFunction(() => {
+          const e = document.querySelector(".cl-you");
+          if (!e || !getComputedStyle(e).color) return null;
           const parse = (c) => {
             const srgb = /^color\(srgb\s+([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)(?:\s*\/\s*([\d.e+-]+))?\)$/.exec(c);
             if (srgb) return { r: srgb[1] * 255, g: srgb[2] * 255, b: srgb[3] * 255, a: srgb[4] === undefined ? 1 : +srgb[4] };
@@ -341,7 +343,8 @@ test("A4.4 the learner's own bubble is readable in both looks", async () => {
           const fg = parse(getComputedStyle(e).color), bg = bgOf(e);
           const hi = Math.max(lum(fg), lum(bg)), lo = Math.min(lum(fg), lum(bg));
           return { ratio: (hi + 0.05) / (lo + 0.05), raw: getComputedStyle(e).color + " on " + getComputedStyle(e).backgroundColor };
-        });
+        }, { timeout: 10000 });
+        const contrast = await handle.jsonValue();
         assert.ok(contrast.ratio >= 4.5, view + ": learner bubble contrast " + contrast.ratio.toFixed(2) + " (" + contrast.raw + ")");
       });
     }
