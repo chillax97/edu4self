@@ -4,6 +4,8 @@ For how-learning-works/lessons/0001-retrieval-beats-rereading.html. Written with
 
 ## 1. Retrieval strength vs storage strength
 
+Skill: storage-vs-retrieval-strength
+
 Required (each one must be in the answer, in any words):
 - 1a. Retrieval strength is how easily something comes to mind right now.
 - 1b. Storage strength is how deeply it is learned: how well it survives time.
@@ -17,6 +19,8 @@ Not required (never fail an answer for leaving these out):
 
 ## 2. Why rereading feels better while helping less
 
+Skill: rereading-familiarity
+
 Required:
 - 2a. Rereading makes the material familiar and easy to bring to mind right now (it raises retrieval strength), and that ease feels like learning.
 - 2b. It does little for long-term memory (storage strength), so the feeling of knowing is a poor guide to what will be remembered later.
@@ -29,6 +33,8 @@ Not required:
 - Roediger and Karpicke's numbers, the five-minute vs one-week result, the Dunlosky review.
 
 ## 3. One concrete way to practise retrieval this week
+
+Skill: plan-retrieval-practice
 
 This question has no single right answer: it asks for a plan of the learner's own.
 

@@ -8,6 +8,8 @@ grade it for what it tells you about where to start.
 
 ## 1. What you do after reading something you want to remember
 
+Skill: none
+
 Required:
 - 1a. A description of what they actually do (or "nothing", or "I don't know").
 
@@ -16,20 +18,28 @@ Not required:
 
 ## 2. Last time you tested yourself without looking
 
+Skill: none
+
 Required:
 - 2a. When, and on what, or a plain "never" / "I don't remember".
 
 ## 3. Something studied hard and then forgotten
+
+Skill: none
 
 Required:
 - 3a. How they studied it, in their own words.
 
 ## 4. Usual session length and how often
 
+Skill: none
+
 Required:
 - 4a. A length and a frequency, even rough ones.
 
 ## 5. What to learn next, and why
+
+Skill: none
 
 Required:
 - 5a. A subject, and a reason (a goal or a need) if they have one.

@@ -8,6 +8,9 @@ that pass raised (history[].levels) go back to their value before it, unless a l
 """
 import json, os, re, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import content
+
 if os.name == "nt":      # a pipe or file on Windows defaults to the legacy code page, which can't print ✓ or ·
     for _s in (sys.stdout, sys.stderr):
         if _s is not None and hasattr(_s, "reconfigure"):
@@ -328,6 +331,19 @@ if os.path.isdir(_keys):
 for link in s.get("linked_topics", []):
     if not os.path.isdir(link.get("root", "")):
         err("linked topic root missing: %s" % link.get("root"))
+
+try:
+    _content = content.load_content(ROOT, s)
+    for _tid, _tc in _content.items():
+        if _tc.graph is None:
+            continue
+        for _p in content.graph_problems(_tc.graph):
+            err("topic %s: %s" % (_tid, _p))
+    for _p in content.link_problems(s, _content):
+        err(_p)
+except content.ContentError as _exc:
+    for _p in _exc.problems:
+        err(_p)
 
 for n in notes:
     print("  note:", n)

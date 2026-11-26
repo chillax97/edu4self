@@ -1,0 +1,35 @@
+{
+ "schema": 1,
+ "topic": "how-learning-works",
+ "version": 1,
+ "regions": [
+  {"code": "A", "name": "Retrieval practice"},
+  {"code": "B", "name": "Spacing and review"}
+ ],
+ "skills": [
+  {
+   "id": "storage-vs-retrieval-strength",
+   "name": "Storage and retrieval strength",
+   "region": "A",
+   "can": "Explain how storage strength and retrieval strength differ, and why ease of recall is not the same as durable learning.",
+   "requires": []
+  },
+  {
+   "id": "rereading-familiarity",
+   "name": "Why rereading feels like learning",
+   "region": "A",
+   "can": "Explain why rereading raises retrieval strength and familiarity while barely moving storage strength.",
+   "requires": ["storage-vs-retrieval-strength"]
+  },
+  {
+   "id": "plan-retrieval-practice",
+   "name": "Plan a retrieval practice",
+   "region": "A",
+   "can": "Name a concrete way to practise producing material from memory before looking.",
+   "requires": ["storage-vs-retrieval-strength"]
+  }
+ ],
+ "changes": [
+  {"version": 1, "date": "2026-01-01", "why": "Skills for the example topic's lesson and probe."}
+ ]
+}

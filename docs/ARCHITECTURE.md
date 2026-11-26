@@ -57,6 +57,11 @@ folders except the tutor. This is what makes the system easy to reason about and
 One exception: after a run started from the dashboard, the server runs `edu4self check --overrule`, which
 turns a pass the answer key's checklist doesn't allow back into not passed in `state.json`.
 
+`<topic>/graph.json` is the topic's skill map: its regions, what each skill lets the learner do, and which
+skills it requires. It sits beside `MISSION.md` and is written by the tutor; `edu4self check` reads it
+together with the `Skill:` line in each answer-key section, so a question, its skill and its required points
+stay one record. A topic without a `graph.json` is checked as before.
+
 ## HTTP API
 
 All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from another origin are refused.
