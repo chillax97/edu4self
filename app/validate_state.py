@@ -332,18 +332,8 @@ for link in s.get("linked_topics", []):
     if not os.path.isdir(link.get("root", "")):
         err("linked topic root missing: %s" % link.get("root"))
 
-try:
-    _content = content.load_content(ROOT, s)
-    for _tid, _tc in _content.items():
-        if _tc.graph is None:
-            continue
-        for _p in content.graph_problems(_tc.graph):
-            err("topic %s: %s" % (_tid, _p))
-    for _p in content.link_problems(s, _content):
-        err(_p)
-except content.ContentError as _exc:
-    for _p in _exc.problems:
-        err(_p)
+for _p in content.problems(ROOT, s)[1]:
+    err(_p)
 
 for n in notes:
     print("  note:", n)

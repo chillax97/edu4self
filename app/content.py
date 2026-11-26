@@ -230,6 +230,14 @@ def parse_key(text: str) -> List[KeySection]:
     return sections
 
 
+def task_skills(topic: TopicContent, task_id: str) -> List[str]:
+    skills = []
+    for section in topic.keys.get(task_id, []):
+        if section.skill and section.skill not in skills:
+            skills.append(section.skill)
+    return skills
+
+
 def load_content(root: str, state: dict) -> Dict[str, TopicContent]:
     content = {}
     for topic in state.get("topics", []) or []:
@@ -328,3 +336,16 @@ def link_problems(state: dict, content: Dict[str, TopicContent]) -> List[str]:
                 problems.append("recall %s: key %r points to a missing section %d in %s.md"
                                 % (entry.get("id"), key, n, task))
     return problems
+
+
+def problems(root: str, state: dict) -> Tuple[Dict[str, TopicContent], List[str]]:
+    try:
+        loaded = load_content(root, state)
+    except ContentError as exc:
+        return {}, exc.problems
+    found = []
+    for tid, tc in loaded.items():
+        if tc.graph is not None:
+            found.extend("topic %s: %s" % (tid, p) for p in graph_problems(tc.graph))
+    found.extend(link_problems(state, loaded))
+    return loaded, found

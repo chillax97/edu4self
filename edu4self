@@ -8,6 +8,7 @@
     ./edu4self uninstall             stop doing that (your files stay)
     ./edu4self restart | status      restart the service / show what's running
     ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
+    ./edu4self progress              print per-skill levels, due dates and task readiness from grades (read-only)
     ./edu4self doctor                check everything and say how to fix what's wrong
     ./edu4self open                  open the dashboard in a browser
     ./edu4self mail setup|test|off   away mails and the Sunday recap (your own mail account)
@@ -259,6 +260,65 @@ def check_config(vault, quiet=False):
     if not quiet:
         print("config.json: OK")
     return True
+
+
+# ---------------------------------------------------------------- progress
+
+def read_jsonl(path):
+    entries = []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        pass
+    return entries
+
+
+def cmd_progress(args):
+    vault = need_vault(resolve(args)[0])
+    import content
+    import mastery
+    import progress
+    if getattr(args, "now", None):
+        try:
+            now = mastery.parse_iso(args.now)
+        except ValueError:
+            sys.exit("--now must be an ISO 8601 time with an offset, e.g. 2026-01-02T12:00:00+00:00")
+        if now.tzinfo is None:
+            sys.exit("--now must be an ISO 8601 time with an offset, e.g. 2026-01-02T12:00:00+00:00")
+    else:
+        now = datetime.now().astimezone()
+    try:
+        with open(os.path.join(vault, "_system", "state.json"), encoding="utf-8") as fh:
+            state = json.load(fh)
+    except (OSError, ValueError) as exc:
+        print("state.json: %s" % exc, file=sys.stderr)
+        return 1
+    loaded, problems = content.problems(vault, state)
+    if problems:
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1
+    if args.topic is not None:
+        known = {t.get("id") for t in state.get("topics") or [] if isinstance(t, dict)}
+        if args.topic not in known:
+            print("unknown topic: %s" % args.topic, file=sys.stderr)
+            return 1
+    grades = read_jsonl(os.path.join(vault, "_system", "grades.jsonl"))
+    inbox = read_jsonl(os.path.join(vault, "_system", "inbox.jsonl"))
+    body = progress.project(state, loaded, inbox, grades, now, args.topic)
+    out = {"schema": 1, "computed": now.isoformat(),
+           "model": {"name": "memory-v1", "bar": mastery.BAR, "learned_bar": mastery.LEARNED_BAR}}
+    out.update(body)
+    print(json.dumps(out, indent=1))
+    return 0
 
 
 # ---------------------------------------------------------------- serve
@@ -987,6 +1047,9 @@ def main(argv=None):
         if name == "check":
             p.add_argument("--overrule", action="store_true",
                            help="turn a pass the answer key's checklist doesn't allow into not passed, then check")
+    p = common(sub.add_parser("progress", help="compute progress from grades (read-only)"))
+    p.add_argument("--topic", help="only this topic id")
+    p.add_argument("--now", help="compute as of this ISO 8601 time with an offset")
     common(sub.add_parser("mcp", help="progress for AI tools over MCP (stdio)"), vault=False)
     p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
     p.add_argument("action", choices=("setup", "test", "off"))
@@ -1002,8 +1065,8 @@ def main(argv=None):
             print("Try it with:    ./edu4self serve --vault %s --port %d --open" % (shell_quote(vault), port))
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
-            "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "doctor": cmd_doctor,
-            "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
+            "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "progress": cmd_progress,
+            "doctor": cmd_doctor, "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
 
 
 if __name__ == "__main__":
