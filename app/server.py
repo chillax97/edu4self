@@ -38,8 +38,12 @@ DASH = os.path.join(APP, "dashboard")
 THEMES_DIR = os.path.join(DASH, "themes")
 sys.path.insert(0, APP)
 import claude_cli  # noqa: E402  (app/claude_cli.py: the command that runs Claude Code)
+import content
 import edu_trace  # noqa: E402  (app/edu_trace.py: what a checker run saves for the tutor)
+import evidence
 import keepsakes
+import mastery
+import progress
 import reminders  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
 import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
 
@@ -64,7 +68,7 @@ BLOCKS_LOCK = threading.Lock()
 CONFIG_LOCK = threading.Lock()
 
 # Set by configure(); module-level so the handler and the tests share them.
-ROOT = SYSTEM = STATE = INBOX = BLOCKS = CONFIG = MUSIC_DIR = None
+ROOT = SYSTEM = STATE = INBOX = BLOCKS = CONFIG = MUSIC_DIR = GRADES = GRADING = None
 PORT = 4747
 ALLOWED_HOSTS = set()
 ALLOWED_ORIGINS = set()
@@ -72,7 +76,7 @@ ALLOWED_ORIGINS = set()
 
 def configure(vault, port):
     """Point the server at a vault folder and a port."""
-    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES, REMINDERS
+    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, GRADES, GRADING, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES, REMINDERS
     ROOT = os.path.abspath(os.path.expanduser(vault))
     SYSTEM = os.path.join(ROOT, "_system")
     STATE = os.path.join(SYSTEM, "state.json")
@@ -80,6 +84,8 @@ def configure(vault, port):
     BLOCKS = os.path.join(SYSTEM, "blocks.jsonl")
     CONFIG = os.path.join(SYSTEM, "config.json")
     MUSIC_DIR = os.path.join(SYSTEM, "music")
+    GRADES = os.path.join(SYSTEM, "grades.jsonl")
+    GRADING = os.path.join(SYSTEM, "grading")
     KEEPSAKES = os.path.join(SYSTEM, "keepsakes.json")
     REMINDERS = os.path.join(SYSTEM, "reminders.json")
     PORT = int(port)
@@ -677,7 +683,11 @@ def change_stamp():
     checker runs in trace/ folders (size and time of each), plus the hour, for what turns with the clock. The page
     asks for it every few seconds and fetches /api/state only when it moves."""
     h = hashlib.sha1(datetime.now().astimezone().strftime("%Y-%m-%d %H").encode())
-    paths = [STATE, INBOX, BLOCKS, CONFIG]
+    paths = [STATE, INBOX, BLOCKS, CONFIG, GRADES, GRADING]
+    try:
+        paths += [os.path.join(GRADING, name) for name in sorted(os.listdir(GRADING))]
+    except OSError:
+        pass
     for base, dirs, files in os.walk(ROOT):
         dirs[:] = [d for d in dirs if not d.startswith(".") and d not in STAMP_SKIP
                    and not (base == ROOT and d in ("_system", "themes"))]
@@ -693,11 +703,14 @@ def change_stamp():
 
 
 def api_state():
+    report = evidence.ingest(ROOT, datetime.now().astimezone())
+    grading = {"rejected": report["rejected"], "waiting": report["waiting"]}
     raw = read_text(STATE)
     try:
         state = json.loads(raw)
     except ValueError as exc:
         return {"error": "state.json could not be parsed: %s" % exc, "config": load_config()[0],
+                "grading": grading,
                 "server": {"now": now_iso(), "version": VERSION, "port": PORT}}
     derived = {"topics": {}, "linked": []}
     for topic in state.get("topics", []):
@@ -727,6 +740,7 @@ def api_state():
         "config": cfg,
         "keepsakes": shelf_for_page(),
         "reminders": reminders_for_page(),
+        "grading": grading,
         "server": {"now": now_iso(), "state_mtime": mtime, "version": VERSION, "port": PORT,
                    "vault": os.path.basename(ROOT), "config_error": cfg_err},
     }
@@ -763,6 +777,8 @@ def clean_submission(body, state):
         raise ValueError("unknown topic")
     if not isinstance(task, str) or not re.match(r"^[A-Za-z0-9._-]{1,80}$", task):
         raise ValueError("bad task id")
+    if kind in ("dispute", "skip"):
+        return clean_episode(kind, body, topic, task, state)
     if kind not in KINDS:
         raise ValueError("bad kind")
     fields = body.get("fields") or {}
@@ -804,6 +820,52 @@ def clean_submission(body, state):
         entry["recall"] = ids
         if pick_recall(state, inbox_entries(), read_jsonl(BLOCKS), datetime.now().astimezone())["comeback"]:
             entry["comeback"] = True          # the welcome back after a gap, so the tutor knows
+    return entry
+
+
+def clean_episode(kind, body, topic, task, state):
+    note = body.get("note") or ""
+    if not isinstance(note, str) or len(note) > 8000:
+        raise ValueError("bad note")
+    entry = {"id": uuid.uuid4().hex[:10], "ts": now_iso(), "topic": topic, "task": task,
+             "kind": kind, "note": note, "fields": {}, "title": "", "honor": False}
+    entries = inbox_entries()
+    if topic == "general":
+        raise ValueError("unknown topic")
+    if kind == "dispute":
+        ref = body.get("ref")
+        if not isinstance(ref, str):
+            raise ValueError("bad grade id")
+        lines = mastery.kept_grades(read_jsonl(GRADES), topic, task)
+        if not any(line.get("id") == ref for line in lines):
+            raise ValueError("ref must be the latest grade of its attempt in this topic and task")
+        if any(e.get("kind") == "dispute" and e.get("ref") == ref for e in entries):
+            raise ValueError("that grade is already disputed")
+        entry["ref"] = ref
+        return entry
+    skill = body.get("skill")
+    if not isinstance(skill, str):
+        raise ValueError("bad skill id")
+    try:
+        loaded = content.load_content(ROOT, state)
+    except content.ContentError as exc:
+        raise ValueError("the topic's content is invalid: %s" % exc)
+    tc = loaded.get(topic)
+    graph = tc.graph if tc is not None else None
+    if graph is None:
+        raise ValueError("the topic has no graph.json")
+    found = next((s for s in graph.skills if s.id == skill), None)
+    if found is None:
+        raise ValueError("%s is not a skill in the topic's graph.json" % skill)
+    if found.retired:
+        raise ValueError("%s is retired" % skill)
+    if any(e.get("kind") == "skip" and e.get("topic") == topic and e.get("skill") == skill for e in entries):
+        raise ValueError("that skill is already skipped")
+    projection = progress.project(state, loaded, entries, read_jsonl(GRADES), datetime.now().astimezone(), topic)
+    row = (projection.get("topics") or {}).get(topic) or {}
+    if not any(skill in (t.get("needs") or []) for t in (row.get("tasks") or {}).values()):
+        raise ValueError("no task of this topic needs %s" % skill)
+    entry["skill"] = skill
     return entry
 
 
@@ -1231,7 +1293,8 @@ def claude_args(prompt, resume, kind="chat"):
         tools += ["WebSearch", "WebFetch"]
     # edu_trace.py runs inside every checker, and trace/ is the learner's record: neither is Claude's to change
     locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json",
-              "_system/edu_trace.py", "**/trace/**", "_system/inbox.jsonl", "_system/blocks.jsonl", "_system/music/**"]
+              "_system/edu_trace.py", "**/trace/**", "_system/inbox.jsonl", "_system/blocks.jsonl", "_system/music/**",
+              "_system/grades.jsonl"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in FENCED:
         deny += ["WebSearch", "WebFetch"]
@@ -1356,6 +1419,7 @@ def claude_watch(proc, kind):
                 claude_event("check", "Not passed: " + l[len("OVERRULED: not passed, "):])
         claude_event("check", ("Check OK" if check.returncode == 0 else "Check FAILED: " + " / ".join(lines[-3:])))
         RUN.update(proc=None, busy=False)
+    evidence.ingest(ROOT, datetime.now().astimezone())
     maybe_gift()   # a gift that waited for Claude to be free
 
 

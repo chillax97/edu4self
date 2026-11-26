@@ -36,6 +36,7 @@ class KeySection:
     n: int
     skill: Optional[str]
     skill_count: int
+    points: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,8 @@ class ContentError(Exception):
 SKILL_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 SECTION = re.compile(r"^##\s+(\d+)\.\s*")
 SKILL_LINE = re.compile(r"^Skill:\s*(.*?)\s*$")
+REQUIRED_LINE = re.compile(r"^Required\b")
+POINT_LINE = re.compile(r"^[-*]\s+(\d+[a-z]*)\.\s")
 
 
 def parse_graph(raw: dict) -> Graph:
@@ -203,6 +206,8 @@ def parse_key(text: str) -> List[KeySection]:
     sections = []
     current = None
     found = []
+    points = []
+    required = False
 
     def flush():
         if current is not None:
@@ -210,7 +215,7 @@ def parse_key(text: str) -> List[KeySection]:
             if len(found) == 1:
                 value = found[0]
                 skill = None if value.lower() == "none" else value
-            sections.append(KeySection(current, skill, len(found)))
+            sections.append(KeySection(current, skill, len(found), tuple(points)))
 
     for line in text.splitlines():
         heading = SECTION.match(line)
@@ -218,6 +223,8 @@ def parse_key(text: str) -> List[KeySection]:
             flush()
             current = int(heading.group(1))
             found = []
+            points = []
+            required = False
             continue
         if current is None:
             continue
@@ -226,6 +233,16 @@ def parse_key(text: str) -> List[KeySection]:
         if skill_line:
             found.append(skill_line.group(1))
             continue
+        if REQUIRED_LINE.match(stripped):
+            required = True
+            continue
+        if required:
+            point = POINT_LINE.match(stripped)
+            if point:
+                if point.group(1) not in points:
+                    points.append(point.group(1))
+            elif stripped and not line[:1].isspace():
+                required = False
     flush()
     return sections
 
