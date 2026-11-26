@@ -87,7 +87,7 @@ def observations(grades, topic: str, skill: str) -> List[Obs]:
     for grade in kept_grades(grades, topic):
         if grade.get("honor") is False:
             continue
-        if grade.get("kind") == "first-try":
+        if "first-try" in (grade.get("kind"), grade.get("task")):
             continue
         questions = [q for q in grade.get("questions") or []
                      if isinstance(q, dict) and q.get("skill") == skill and q.get("outcome") != "unsure"]
