@@ -2,7 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE, makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON } from "./harness.js";
+import { ENGINE, makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, legacy } from "./harness.js";
 import { seedLongDay } from "./longday.js";
 
 const FAKE_CLAUDE = path.join(ENGINE, "tests", "fake_claude.py");
@@ -50,14 +50,14 @@ async function withFirstVisit(s, { width = 1440, height = 900 } = {}, fn) {
 
 function editState(s, fn) {
   const p = path.join(s.v.vault, "_system", "state.json");
-  const st = readJSON(p);
+  const st = legacy(readJSON(p), s.v.vault);
   fn(st);
   fs.writeFileSync(p, JSON.stringify(st, null, 1));
 }
 
 function clearHistory(vault) {
   const p = path.join(vault, "_system", "state.json");
-  const st = readJSON(p);
+  const st = legacy(readJSON(p), vault);
   st.topics.forEach((t) => { t.history = []; });
   fs.writeFileSync(p, JSON.stringify(st, null, 1));
 }
@@ -184,7 +184,7 @@ test("A3.2 a history entry brings the Updated by Claude pill", async () => {
   await withServe({ seed: (v) => {
     clearHistory(v);
     const p = path.join(v, "_system", "state.json");
-    const st = readJSON(p);
+    const st = legacy(readJSON(p), v);
     st.topics[0].history.push({ date: "2026-01-02", kind: "lesson", title: "Lesson 01 graded", detail: "d", evidence: true });
     fs.writeFileSync(p, JSON.stringify(st, null, 1));
   } }, (s) => withPage(s, { view: "bar", width: 1440, height: 900 }, async (page) => {

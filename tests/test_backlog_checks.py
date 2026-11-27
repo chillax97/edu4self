@@ -47,6 +47,15 @@ class AnswerKeyPointsTest(unittest.TestCase):
         self.vault, _ = make_vault(self.tmp)
         self.state_path = os.path.join(self.vault, "_system", "state.json")
         self.state = read_json(self.state_path)
+        self.state["schema"] = 1
+        self.state["processed_inbox"] = []
+        for t in self.state["topics"]:
+            graph = read_json(os.path.join(self.vault, t["path"], "graph.json"))
+            t["regions"] = [{"code": r["code"], "name": r["name"], "level": 0, "note": "Not yet tested."}
+                            for r in graph.get("regions", [])]
+            t["history"] = [{"date": "2026-01-01", "kind": "setup", "title": "Vault created",
+                             "detail": "Example topic ready", "evidence": False}]
+        write_json(self.state_path, self.state)
         self.key_path = os.path.join(self.vault, "_system", "keys", "how-learning-works", "hlw-lesson-01.md")
         self.inbox_id = "ab12cd34ef"
 

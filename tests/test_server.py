@@ -181,13 +181,22 @@ class ServerTest(unittest.TestCase):
         code, d, _ = self.req("POST", "/api/inbox", reply)
         self.assertEqual((code, d.get("error")), (400, "no follow-up question was asked about that answer"))
         path = self.sys_path("state.json")
+        grades_path = self.sys_path("grades.jsonl")
         with open(path, encoding="utf-8") as fh:
             before = fh.read()
+        grades_before = open(grades_path, encoding="utf-8").read() if os.path.exists(grades_path) else None
         st = json.loads(before)
-        st["processed_inbox"].append(ref)
-        st["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Almost: one question first",
-                                           "detail": "d", "evidence": False, "inbox": ref, "follow_up": {"q": q, "point": "1a"}})
-        write_json(path, st)
+        if st.get("schema") == 2:
+            with open(grades_path, "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"type": "grade", "id": "g-followup001", "ts": "2026-01-02T10:00:00",
+                                     "attempt": ref, "topic": "how-learning-works", "task": "hlw-lesson-01",
+                                     "kind": "answers", "title": "Almost: one question first", "detail": "d",
+                                     "passed": False, "follow_up": {"q": "hlw-lesson-01#1", "point": "1a", "text": q}}) + "\n")
+        else:
+            st["processed_inbox"].append(ref)
+            st["topics"][0]["history"].append({"date": "2026-01-02", "kind": "lesson", "title": "Almost: one question first",
+                                               "detail": "d", "evidence": False, "inbox": ref, "follow_up": {"q": q, "point": "1a"}})
+            write_json(path, st)
         try:
             for change, msg in (({"ref": "nope"}, "no follow-up question was asked about that answer"),
                                 ({"ref": None}, "no follow-up question was asked about that answer"),
@@ -219,6 +228,12 @@ class ServerTest(unittest.TestCase):
         finally:
             with open(path, "w", encoding="utf-8") as fh:
                 fh.write(before)
+            if grades_before is None:
+                if os.path.exists(grades_path):
+                    os.remove(grades_path)
+            else:
+                with open(grades_path, "w", encoding="utf-8") as fh:
+                    fh.write(grades_before)
 
     def test_a_follow_up_ref_never_withdraws_the_answer_it_replies_to(self):
         entries = [{"id": "a", "kind": "answers"}, {"id": "f", "kind": "follow-up", "ref": "a"}]
@@ -646,6 +661,17 @@ class ValidatorTest(unittest.TestCase):
         self.vault, _ = make_vault(self.tmp)
         self.state_path = os.path.join(self.vault, "_system", "state.json")
         self.state = read_json(self.state_path)
+        # These tests exercise the schema-1 checks (history, regions, the overrule) while step 6
+        # still keeps that path: write schema 1 and the fields those checks read.
+        self.state["schema"] = 1
+        self.state["processed_inbox"] = []
+        for t in self.state["topics"]:
+            graph = read_json(os.path.join(self.vault, t["path"], "graph.json"))
+            t["regions"] = [{"code": r["code"], "name": r["name"], "level": 0, "note": "Not yet tested."}
+                            for r in graph.get("regions", [])]
+            t["history"] = [{"date": "2026-01-01", "kind": "setup", "title": "Vault created",
+                             "detail": "Example topic ready", "evidence": False}]
+        write_json(self.state_path, self.state)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -1031,8 +1057,8 @@ class ClaudeTest(unittest.TestCase):
         self.assertIn("WebFetch", denied)
         self.assertIn("--strict-mcp-config", args)
 
-    def test_grade_run_overrules_a_pass_the_checklist_does_not_allow(self):
-        os.environ.update(FAKE_CLAUDE_PASS_IF="all-points-here", FAKE_CLAUDE_LENIENT="1")
+    def test_a_grade_run_lets_the_engine_decide_the_pass(self):
+        os.environ.update(FAKE_CLAUDE_PASS_IF="all-points-here")
         try:
             sub = {"topic": "how-learning-works", "task": "hlw-lesson-01", "kind": "answers", "fields": {"1": "half of it"},
                    "confidence": "solid"}
@@ -1041,16 +1067,14 @@ class ClaudeTest(unittest.TestCase):
             self.assertEqual(self.req("POST", "/api/claude", {"kind": "grade"})[0], 202)
             d = self.wait_idle()
         finally:
-            for k in ("FAKE_CLAUDE_PASS_IF", "FAKE_CLAUDE_LENIENT"):
-                os.environ.pop(k, None)
+            os.environ.pop("FAKE_CLAUDE_PASS_IF", None)
         texts = [e["text"] for e in d["events"] if e["kind"] == "check"]
-        self.assertTrue(any(t.startswith("Not passed: Not yet.: point 1a missed") for t in texts), texts)
+        self.assertFalse(any(t.startswith("Not passed:") for t in texts), texts)
         self.assertEqual(texts[-1], "Check OK", texts)
-        with open(os.path.join(self.vault, "_system", "state.json"), encoding="utf-8") as fh:
-            st = json.load(fh)
-        h = [x for t in st["topics"] for x in t["history"] if x.get("detail", "").startswith("Graded by the fake tutor.")][-1]
+        _, st, _ = self.req("GET", "/api/state")
+        h = [x for t in st["state"]["topics"] for x in t["history"]
+             if x.get("detail") == "Graded by the fake tutor."][-1]
         self.assertIs(h["evidence"], False)
-        self.assertIn("Not passed by the check: point 1a missed", h["detail"])
 
     def test_first_try_grade_is_grade_only_and_fenced(self):
         # nothing to grade yet: refused, nothing runs
@@ -1075,10 +1099,10 @@ class ClaudeTest(unittest.TestCase):
         self.assertIn("WebFetch", args[args.index("--disallowedTools") + 1].split(","))   # fenced like grading
         self.assertNotIn("WebFetch", args[args.index("--allowedTools") + 1].split(","))
         self.assertNotIn("--resume", args)   # never joins the chat's conversation
-        # only the first try was graded; the other answer still waits for check my inbox
+        # only the first try was acknowledged; the other answer still waits for check my inbox
         _, st, _ = self.req("GET", "/api/state")
         self.assertEqual([e["id"] for e in st["inbox"]["pending"]], [o["id"]])
-        self.assertTrue(any(h.get("inbox") == f["id"] for h in st["state"]["topics"][0]["history"]))
+        self.assertNotIn(f["id"], [e["id"] for e in st["inbox"]["pending"]])
         self.req("POST", "/api/claude", {"kind": "grade"}); self.wait_idle()   # leave the inbox empty for the other tests
 
     def test_chat_keeps_one_conversation_until_reset(self):

@@ -164,3 +164,17 @@ export function wavFile(dir, seconds = 3, name = "Test Tone.wav") {
 export const readJSON = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
 export const readLines = (p) => fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+export function legacy(st, vault) {
+  st.schema = 1;
+  st.processed_inbox = st.processed_inbox || [];
+  for (const t of st.topics || []) {
+    t.history = t.history || [];
+    if (!t.regions) {
+      let g = {};
+      try { g = JSON.parse(fs.readFileSync(path.join(vault, t.path, "graph.json"), "utf8")); } catch (e) {}
+      t.regions = (g.regions || []).map((r) => ({ code: r.code, name: r.name, level: 0, note: "" }));
+    }
+  }
+  return st;
+}

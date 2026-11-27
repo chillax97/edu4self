@@ -1210,7 +1210,7 @@
       html = '<p class="ft-g-badge' + (e && e.evidence ? " is-proof" : "") + '">✦ ' + (e ? (e.evidence ? "Graded by Claude, and kept as proof" : "Graded by Claude, and kept in your record") : "Graded by Claude") + "</p>" +
         (e ? "<p><b>" + esc(e.title) + "</b>" + (e.detail ? " " + esc(e.detail) : "") + "</p>"
           : (g.coach.headline ? "<p><b>" + esc(g.coach.headline) + "</b>" + (g.coach.body ? " " + esc(g.coach.body) : "") + "</p>" : "")) +
-        (e && !e.evidence ? '<p class="ft-g-small">Not proof yet: one answer right after reading shows understanding, not memory. Proof comes when you can still say it days later.</p>' : "") +
+        (!(e && e.evidence) ? '<p class="ft-g-small">Not proof yet: one answer right after reading shows understanding, not memory. Proof comes when you can still say it days later.</p>' : "") +
         (g.recall ? '<p class="ft-g-small">In a few days this page asks you again, cold. If you still know it then, it\'s yours.</p>' : "");
     } else if (FT.phase === "problem") {
       html = '<p class="ft-g-line"><b>Claude couldn\'t finish the grade.</b> ' + esc(FT.why || "Open ✦ Claude to see what happened.") + " Your answer is still in your inbox; ✦ Grade tries again.</p>";

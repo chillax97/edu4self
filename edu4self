@@ -130,9 +130,6 @@ def cmd_init(args):
         state["coach"].update(headline="Welcome. Start your first topic.",
                               body="Open Claude Code in this folder and say what you want to learn.")
         state["coach"]["voices"] = [{"voice": "regular", "text": "Empty bar. Best seat in the house. What are we learning?"}]
-    for t in state["topics"]:
-        for h in t["history"]:
-            h["date"] = today.date().isoformat()
     with open(sp, "w", encoding="utf-8") as fh:
         json.dump(state, fh, indent=1, ensure_ascii=False)
         fh.write("\n")

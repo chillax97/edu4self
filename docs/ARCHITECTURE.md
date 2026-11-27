@@ -33,10 +33,13 @@ bundler, no network requests beyond its own server (except a radio stream, if th
 ## The vault
 
 ```
-_system/state.json     the tutor's view of the learner: topics, queue, milestones, regions, history, coach, recall
+_system/state.json     the plan only (schema 2): topics, queue, milestones, coach, recall (tutor writes)
 _system/inbox.jsonl    submissions and withdrawals (append-only)
 _system/blocks.jsonl   finished focus blocks (append-only)
 _system/config.json    Settings
+_system/grading/       grade requests, <attempt-id>.json, one per attempt (tutor writes; the engine ingests)
+_system/grades.jsonl   the engine's record of every accepted grade and ack (append-only; the tutor reads, never writes)
+_system/progress.json  the engine's computed levels, due dates, needs and pending attempts (server writes; read it)
 _system/keepsakes.json trophies won, with a copy of each one's drawing (server only)
 _system/reminders.json which away mails went out and which weeks were recapped (server only)
 _system/dashboard.json the dashboard's address, for a stuck checker's link (server only)
@@ -51,16 +54,19 @@ CLAUDE.md, AGENTS.md   tutor instructions, with this vault's paths and port fill
 PLAN.md                the running plan: every upcoming unit, in order, across topics (tutor writes)
 ```
 
-**Single writer per file.** `state.json` is written only by the tutor. The logs are appended only by the
-server. `config.json` is written by the server (from Settings) or by hand. Nothing writes the topic
-folders except the tutor. This is what makes the system easy to reason about and safe to sync.
-One exception: after a run started from the dashboard, the server runs `edu4self check --overrule`, which
-turns a pass the answer key's checklist doesn't allow back into not passed in `state.json`.
+**Single writer per file.** `state.json` (the plan) and `_system/grading/` are written only by the tutor.
+`_system/grades.jsonl` and `_system/progress.json` belong to the engine: the tutor reads them and never
+writes them. The logs are appended only by the server. `config.json` is written by the server (from
+Settings) or by hand. Nothing writes the topic folders except the tutor. This is what makes the system
+easy to reason about and safe to sync. `edu4self serve` moves a leftover schema-1 vault to schema 2
+before it listens; a vault already on schema 2 is left alone.
 
 `<topic>/graph.json` is the topic's skill map: its regions, what each skill lets the learner do, and which
 skills it requires. It sits beside `MISSION.md` and is written by the tutor; `edu4self check` reads it
 together with the `Skill:` line in each answer-key section, so a question, its skill and its required points
-stay one record. A topic without a `graph.json` is checked as before.
+stay one record. A grade request names its attempt and checklist, and the engine decides the pass; the
+levels, what is due and what needs repair are all computed from `grades.jsonl`. A topic without a
+`graph.json` is not linked to skills yet, and the progress report says so.
 
 ## HTTP API
 
@@ -97,8 +103,8 @@ All routes require `Host: 127.0.0.1:<port>` or `localhost:<port>`. POSTs from an
 **Claude from the page.** `/api/claude` starts `claude -p` in the vault, one run at a time, and turns its
 `stream-json` into short events (your message, "Reading …", Claude's text, done, check). `grade` sends
 "check my inbox" in a fresh session; `topic` starts a new conversation with the plugin's new-topic skill; `chat`
-resumes the last one. After every run the server runs `edu4self check` itself and adds the result.
-The page polls while a run is busy and reloads the state when it ends.
+resumes the last one. After every run the server ingests the grade requests and runs `edu4self check`
+itself, then adds the result. The page polls while a run is busy and reloads the state when it ends.
 
 **Is Claude usable?** `problem` is `missing` (no `claude` found; `detail` says why, from `claude_cli.py`), `signed_out`, or null. The login comes from
 `claude auth status` (it reads the saved login: no prompt, nothing billed), asked only when `claude --help` lists
@@ -118,8 +124,8 @@ bar name index, water choice, music position and volume, which proofs were alrea
 Everything that should survive a browser change lives in the vault.
 
 **Learner aids** (server-side, so the rules are unit tested; the page only draws them). `/api/state`
-carries three of them in `derived`: `calibration` ("How sure are you?" against graded history entries
-that name their `inbox` entry), `recall` (`pick_recall`: today's warm-up questions, only from tasks passed 3+ days ago, whether it's the
+carries three of them in `derived`: `calibration` ("How sure are you?" against how each graded attempt
+went), `recall` (`pick_recall`: today's warm-up questions, only from tasks passed 3+ days ago, whether it's the
 welcome back after a 3-day gap, whether one was sent today) and `stuck` (`stuck_tasks`: open
 exercises whose last 3 or more runs failed, with the next hint not opened yet). None of them writes.
 

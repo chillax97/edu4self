@@ -44,6 +44,7 @@ import edu_trace  # noqa: E402  (app/edu_trace.py: what a checker run saves for 
 import evidence
 import keepsakes
 import mastery
+import migrate
 import progress
 import reminders  # noqa: E402  (app/keepsakes.py: trophies won from focus blocks)
 import themes  # noqa: E402  (app/themes.py: rooms, their checks and cleaning)
@@ -1357,9 +1358,10 @@ GRADE_PROMPT = "check my inbox"
 # "first" is the welcome card's grade of the first try: grading only, see FIRST_PROMPT.
 FENCED = ("grade", "first", "gift")
 FIRST_PROMPT = ("Grade only my first try: the pending inbox entry with task \"first-try\", from the dashboard's welcome card. "
-                "Follow the edu4self PROTOCOL.md for a first-try entry (section 1) and keep it quick: grade that one answer, "
-                "add a history entry whose inbox is that entry's id, add the id to processed_inbox, write the coach note, "
-                "set updated, and run the check. Leave every other inbox entry for a later \"check my inbox\". "
+                "Follow the edu4self PROTOCOL.md for a note or first-try entry (section 1) and keep it quick: write an ack "
+                "request for that one entry to _system/grading/<id>.json with {\"attempt\": \"<id>\", \"grader\": "
+                "{\"agent\": \"...\", \"model\": \"...\", \"session\": \"...\"}, \"ack\": true}, write the coach note, set updated. "
+                "Never write history, processed_inbox or levels. Leave every other inbox entry for a later \"check my inbox\". "
                 "Don't write learning records, don't change PLAN.md, and don't write new lessons or probes.")
 
 
@@ -1497,8 +1499,10 @@ def claude_watch(proc, kind):
     # --overrule: a pass the answer key's checklist doesn't allow is turned into not passed before the check,
     # because a run started here has no shell and can't run the check itself (PROTOCOL section 3)
     evidence.ingest(ROOT, datetime.now().astimezone())
-    check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT, "--overrule"],
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    check_cmd = [sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT]
+    if read_state_safe().get("schema") != 2:
+        check_cmd.append("--overrule")
+    check = subprocess.run(check_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     with CLAUDE_LOCK:
         lines = [l for l in check.stdout.strip().splitlines() if l.strip()]
         for l in lines:
@@ -2167,8 +2171,24 @@ class Server(ThreadingHTTPServer):
         self.server_name, self.server_port = self.server_address[:2]
 
 
+def migrate_before_serving():
+    try:
+        with open(STATE, encoding="utf-8") as fh:
+            state = json.load(fh)
+    except (OSError, ValueError):
+        return
+    if not isinstance(state, dict) or state.get("schema") != 1:
+        return
+    try:
+        migrate.run(ROOT, datetime.now().astimezone())
+    except Exception as exc:
+        if sys.stderr is not None:
+            sys.stderr.write("migration to schema 2 failed, serving the vault as it is: %s\n" % exc)
+
+
 def make_server(vault, port):
     configure(vault, port)
+    migrate_before_serving()
     add_types()
     httpd = Server((HOST, PORT), Handler)
     httpd.daemon_threads = True

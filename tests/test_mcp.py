@@ -43,9 +43,11 @@ class McpTest(unittest.TestCase):
         cls.tmp = tempfile.mkdtemp(prefix="edu4self-mcp-")
         cls.vault, _ = make_vault(cls.tmp)
         st = read_json(os.path.join(cls.vault, "_system", "state.json"))
+        st["schema"] = 1
+        st["processed_inbox"] = []
         t = st["topics"][0]
         t["queue"][0]["rules"] = "Closed book. No AI."
-        t["history"].append({"date": "2026-11-01", "kind": "lesson", "title": "Lesson 01: proved it", "evidence": True})
+        t["history"] = [{"date": "2026-11-01", "kind": "lesson", "title": "Lesson 01: proved it", "evidence": True}]
         with open(os.path.join(cls.vault, "_system", "state.json"), "w", encoding="utf-8") as fh:
             json.dump(st, fh)
         cls.topic = t["id"]

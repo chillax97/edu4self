@@ -1,5 +1,5 @@
 {
- "schema": 1,
+ "schema": 2,
  "updated": "2026-01-01T09:00:00+00:00",
  "learner": "",
  "pace": {
@@ -104,32 +104,8 @@
      "why": "A few days after lesson 01, closed book. If you can still explain it, it's yours.",
      "unlock": "Opens a few days after lesson 01 is graded. Ask Claude then."
     }
-   ],
-   "regions": [
-    {
-     "code": "A",
-     "name": "Retrieval practice",
-     "level": 0,
-     "note": "Not yet tested."
-    },
-    {
-     "code": "B",
-     "name": "Spacing and review",
-     "level": 0,
-     "note": "Not yet tested."
-    }
-   ],
-   "history": [
-    {
-     "date": "2026-01-01",
-     "kind": "setup",
-     "title": "Vault created from the edu4self template",
-     "detail": "Example topic ready",
-     "evidence": false
-    }
    ]
   }
  ],
- "linked_topics": [],
- "processed_inbox": []
+ "linked_topics": []
 }

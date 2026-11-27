@@ -90,7 +90,7 @@ test("first try with Claude: quick check at once, the answer in the inbox, Claud
 
   await page.click("#ft-grade-go");
   await page.waitForSelector(".ft-g-badge", { timeout: 15000 });
-  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /Graded by Claude, and kept in your record.*First try graded by the fake tutor.*Not proof yet/s);
+  assert.match(await page.$eval("#ft-grade", (e) => e.innerText), /Graded by Claude.*First try graded by the fake tutor.*Not proof yet/s);
   const run = runs().at(-1);
   assert.match(run.args[run.args.indexOf("-p") + 1], /^Grade only my first try/, "the grade-only run, not the full check my inbox");
   assert.ok(run.args.includes("--disallowedTools") && run.args[run.args.indexOf("--disallowedTools") + 1].includes("WebFetch"), "fenced like grading");

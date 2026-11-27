@@ -252,6 +252,8 @@ for t in s.get("topics", []):
             err("task %s kind %r not in %s" % (k, task.get("kind"), sorted(KINDS)))
         if task.get("status") not in STATUSES:
             err("task %s status %r not in %s" % (k, task.get("status"), sorted(STATUSES)))
+        if TWO and task.get("status") == "done" and task.get("submit"):
+            err("task %s: done is computed from a passing grade; write todo or locked" % k)
         href = task.get("href")
         if task.get("status") == "todo" and not href and not task.get("submit"):
             err("task %s is actionable but has neither href nor submit" % k)

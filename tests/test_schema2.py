@@ -510,39 +510,23 @@ class Schema2TestBase(unittest.TestCase):
 
 
 class Schema2BehaviorTest(Schema2TestBase):
-    def test_migrate_schema1_fixture_preserves_view_creates_backup_and_passes_check(self):
+    def test_server_migrates_schema1_fixture_preserving_view_creates_backup_and_passes_check(self):
         vault = self.build_schema1_fixture()
         state_path = os.path.join(vault, "_system", "state.json")
+        old_state = read_json(state_path)
         old_state_bytes = read_bytes(state_path)
-
-        port1, proc1 = self.start_server(vault)
-        code1, before = self.http_req(port1, "GET", "/api/state")
-        self.stop_server(proc1)
-        self.assertEqual(code1, 200, before)
-
-        before_summary = {}
-        for topic in before["state"]["topics"]:
-            before_summary[topic["id"]] = {
-                "history_len": len(topic["history"]),
-                "history_titles": [h["title"] for h in topic["history"]],
-                "regions": [(r["code"], r["level"]) for r in topic["regions"]],
-                "done_tasks": [t["id"] for t in topic["queue"] if t["status"] == "done"],
+        expected = {}
+        for topic in old_state["topics"]:
+            expected[topic["id"]] = {
+                "history_titles": sorted(h["title"] for h in topic["history"]),
+                "regions": {r["code"]: r["level"] for r in topic["regions"]},
+                "done_tasks": sorted(t["id"] for t in topic["queue"] if t["status"] == "done" and t.get("submit")),
             }
 
-        res = self.run_migrate(vault, now=PINNED_NOW)
-        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
-        report = json.loads(res.stdout)
-        self.assertEqual(report["schema"], 1)
-        self.assertIs(report["dry_run"], False)
-        self.assertEqual(report["append"], {"legacy": 4, "legacy_topic": 2, "ack": 1})
-        self.assertEqual(sorted(report["undone"]), ["rs-01", "sp-01"])
-        self.assertTrue(report["backup"])
-
-        backup_path = report["backup"]
-        if not os.path.isabs(backup_path):
-            backup_path = os.path.join(vault, backup_path)
-        self.assertTrue(os.path.isfile(backup_path), backup_path)
-        self.assertEqual(read_bytes(backup_path), old_state_bytes)
+        port, proc = self.start_server(vault)
+        code, after = self.http_req(port, "GET", "/api/state")
+        self.stop_server(proc)
+        self.assertEqual(code, 200, after)
 
         disk_state = read_json(state_path)
         self.assertEqual(disk_state["schema"], 2)
@@ -554,23 +538,21 @@ class Schema2BehaviorTest(Schema2TestBase):
                 if task.get("submit"):
                     self.assertNotEqual(task["status"], "done")
 
+        backup_folder = os.path.join(vault, "_system", "backup")
+        backups = [os.path.join(backup_folder, n) for n in sorted(os.listdir(backup_folder))]
+        self.assertTrue(any(read_bytes(path) == old_state_bytes for path in backups), backups)
+
         check_rc, check_out = self.run_check(vault)
         self.assertEqual(check_rc, 0, check_out)
-
-        port2, proc2 = self.start_server(vault)
-        code2, after = self.http_req(port2, "GET", "/api/state")
-        self.stop_server(proc2)
-        self.assertEqual(code2, 200, after)
 
         after_summary = {}
         for topic in after["state"]["topics"]:
             after_summary[topic["id"]] = {
-                "history_len": len(topic["history"]),
-                "history_titles": [h["title"] for h in topic["history"]],
-                "regions": [(r["code"], r["level"]) for r in topic["regions"]],
-                "done_tasks": [t["id"] for t in topic["queue"] if t["status"] == "done"],
+                "history_titles": sorted(h["title"] for h in topic["history"]),
+                "regions": {r["code"]: r["level"] for r in topic["regions"]},
+                "done_tasks": sorted(t["id"] for t in topic["queue"] if t["status"] == "done"),
             }
-        self.assertEqual(after_summary, before_summary)
+        self.assertEqual(after_summary, expected)
 
     def test_dry_run_and_second_migrate_change_no_bytes(self):
         vault = self.build_schema1_fixture()
@@ -770,18 +752,23 @@ class Schema2BehaviorTest(Schema2TestBase):
         rc, out = self.run_check(vault)
         self.assertEqual(rc, 1, out)
 
-    def test_schema1_vault_unchanged_by_server_and_init_makes_schema1(self):
+    def test_init_makes_schema2_and_the_server_serves_it(self):
         vault = self.fresh_init_vault()
         state = read_json(os.path.join(vault, "_system", "state.json"))
-        self.assertEqual(state["schema"], 1)
+        self.assertEqual(state["schema"], 2)
+        self.assertNotIn("processed_inbox", state)
+        for topic in state["topics"]:
+            self.assertNotIn("history", topic)
+            self.assertNotIn("regions", topic)
 
         port, proc = self.start_server(vault)
         code, data = self.http_req(port, "GET", "/api/state")
         self.stop_server(proc)
         self.assertEqual(code, 200, data)
 
-        self.assertNotIn("progress", data["derived"])
-        self.assertFalse(os.path.exists(os.path.join(vault, "_system", "progress.json")))
+        self.assertIn("progress", data["derived"])
+        self.assertTrue(os.path.exists(os.path.join(vault, "_system", "progress.json")))
+        self.assertEqual(read_json(os.path.join(vault, "_system", "state.json"))["schema"], 2)
 
     def test_compare_legacy_prints_old_levels_and_unlinked_without_modifying_vault(self):
         vault = self.build_schema1_fixture()

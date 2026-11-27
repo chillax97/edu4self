@@ -4,7 +4,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, readLines } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, readLines, legacy } from "./harness.js";
 
 const Q = "You said plants need light. What do they make with it?";
 const TASK = "hlw-lesson-01", TOPIC = "how-learning-works";
@@ -28,7 +28,7 @@ beforeEach(() => fs.writeFileSync(INBOX, ""));
 // An answer to `task`, graded (processed); the grade asks the question unless followUp is false. `more` adds inbox
 // lines and their grades; `only` closes the other tasks, so Up next stays on this one after it is sent.
 function graded({ task = TASK, followUp = true, more = [], only = false } = {}) {
-  const st = structuredClone(STATE0);
+  const st = legacy(structuredClone(STATE0), v.vault);
   if (only) st.topics[0].queue.forEach((x) => { if (x.id !== task) x.status = "done"; });
   const lines = [{ id: "ans1", ts: "2026-01-02T10:00:00+00:00", topic: TOPIC, task, kind: "answers", title: "t",
     fields: { "1. Q": "light" }, note: "", honor: false, confidence: "shaky" }];

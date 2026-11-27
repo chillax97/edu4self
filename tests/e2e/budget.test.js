@@ -5,7 +5,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE, makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, sleep } from "./harness.js";
+import { ENGINE, makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, sleep, legacy } from "./harness.js";
 import { seedLongDay } from "./longday.js";
 
 const ROOMS = fs.readdirSync(path.join(ENGINE, "app", "dashboard", "themes")).sort();
@@ -29,6 +29,7 @@ function seed({ followUp }) {
     voices: [{ voice: "critic", text: "You said 'remembering' where you meant 'recalling'. Small, but it matters." },
       { voice: "logic", text: "Storage strength and retrieval strength are two different numbers." },
       { voice: "nostalgia", text: "A week ago this was a blank page." }] };
+  legacy(st, v.vault);
   st.processed_inbox = [];
   if (followUp) {
     st.processed_inbox.push("ans1");

@@ -1126,7 +1126,8 @@ class GradingServerTest(VaultTestBase):
         grades_path = os.path.join(vault, "_system", "grades.jsonl")
         self.assertTrue(os.path.isfile(grades_path))
         grades_after_first = read_bytes(grades_path)
-        self.assertEqual(len(read_jsonl(grades_path)), 1)
+        self.assertEqual(len([e for e in read_jsonl(grades_path)
+                              if e.get("type") == "grade" and e.get("attempt") == "a1"]), 1)
 
         code2, data2 = self.http_req(port, "GET", "/api/state")
         self.assertEqual(code2, 200, data2)

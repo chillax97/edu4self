@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE, PYTHON, makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, readLines, sleep } from "./harness.js";
+import { ENGINE, PYTHON, makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, readLines, sleep, legacy } from "./harness.js";
 
 const CLI = path.join(ENGINE, "edu4self");
 const TOPIC = "how-learning-works";
@@ -240,7 +240,7 @@ for (const mode of ["classic", "back"]) {
   test(`skills card (${mode}): legacy region is greyed with re-checking label and unlinked topic shows link line`, async () => {
     const v = makeVault("Tester");
     const stPath = path.join(v.vault, "_system", "state.json");
-    const st = readJSON(stPath);
+    const st = legacy(readJSON(stPath), v.vault);
     st.topics[0].regions = [
       { code: "A", name: "Retrieval practice", level: 1, note: "Old estimate" },
       { code: "B", name: "Spacing and review", level: 2, note: "Old estimate" },
@@ -485,7 +485,7 @@ for (const mode of ["classic", "front"]) {
 test("schema-1 vault shows none of the Step 5 elements in classic or room views", async () => {
   const v = makeVault("Tester");
   const stPath = path.join(v.vault, "_system", "state.json");
-  const st = readJSON(stPath);
+  const st = legacy(readJSON(stPath), v.vault);
   st.topics[0].regions[0].level = 2;
   st.topics[0].history.unshift({
     date: localDay(1).ymd,
@@ -494,9 +494,9 @@ test("schema-1 vault shows none of the Step 5 elements in classic or room views"
     detail: "Passed.",
     evidence: true,
   });
-  fs.writeFileSync(stPath, JSON.stringify(st, null, 1));
 
   await withServer(v, async (server) => {
+    fs.writeFileSync(stPath, JSON.stringify(st, null, 1));
     for (const mode of ["classic", "front", "back"]) {
       const page = await openView(server.url, mode);
       const rootSel = mode === "back" ? ".bx-back" : "#app";

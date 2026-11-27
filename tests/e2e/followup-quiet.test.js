@@ -2,7 +2,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, closeBrowser, openPage, closePage, readJSON, legacy } from "./harness.js";
 
 const Q = "You said plants need light. What do they make with it?";
 const TASK = "hlw-lesson-01", TOPIC = "how-learning-works";
@@ -24,7 +24,7 @@ after(async () => {
 beforeEach(() => fs.writeFileSync(INBOX, ""));
 
 function graded({ task = TASK, followUp = true, more = [], only = false } = {}) {
-  const st = structuredClone(STATE0);
+  const st = legacy(structuredClone(STATE0), v.vault);
   if (only) st.topics[0].queue.forEach((x) => { if (x.id !== task) x.status = "done"; });
   const lines = [{ id: "ans1", ts: "2026-01-02T10:00:00+00:00", topic: TOPIC, task, kind: "answers", title: "t",
     fields: { "1. Q": "light" }, note: "", honor: false, confidence: "shaky" }];

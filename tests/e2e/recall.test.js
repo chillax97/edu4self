@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, readLines } from "./harness.js";
+import { makeVault, freePort, startServer, stopServer, launch, openPage, closePage, readJSON, readLines, legacy } from "./harness.js";
 
 let v, server, browser;
 const sys = (f) => path.join(v.vault, "_system", f);
@@ -128,6 +128,7 @@ test("after three days away the card is the welcome back, from passed work only"
 test("the progress page shows how often solid passed, once three answers are graded", async () => {
   const st = readJSON(sys("state.json"));
   const entry = (id, c) => JSON.stringify({ id, ts: new Date().toISOString(), topic: st.topics[0].id, task: "hlw-lesson-01", kind: "answers", fields: { a: "b" }, confidence: c });
+  legacy(st, v.vault);
   fs.writeFileSync(sys("inbox.jsonl"), [entry("g1", "solid"), entry("g2", "solid"), entry("g3", "shaky")].join("\n") + "\n");
   st.processed_inbox = ["g1", "g2", "g3"];
   st.topics[0].history = [{ date: "2026-11-01", kind: "lesson", title: "a", evidence: true, inbox: "g1" },
