@@ -287,7 +287,7 @@
     var p = String(iso || "").slice(0, 10).split("-");
     return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 864e5;
   }
-  function daysSince(iso) { return Math.round(dateNumber(todayDate()) - dateNumber(iso)); }
+  function calendarDaysSince(iso) { return Math.round(dateNumber(todayDate()) - dateNumber(iso)); }
   function daysUntil(iso) { return Math.round(dateNumber(iso) - dateNumber(todayDate())); }
   function daysAgoText(n) { return n === 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago"; }
   function inDaysText(n) { return n === 0 ? "today" : n === 1 ? "in 1 day" : "in " + n + " days"; }
@@ -296,7 +296,7 @@
     var met = s.met || 0, missed = s.missed || 0;
     if (met + missed === 0) return s.skipped ? "Skipped: you said you know this. Not checked yet." : "Not checked yet.";
     if (s.due) {
-      var right = daysAgoText(daysSince(s.last_met)), left = daysUntil(s.due);
+      var right = daysAgoText(calendarDaysSince(s.last_met)), left = daysUntil(s.due);
       if (left > 0) {
         return "About " + wholePercent(s.estimate) + "% sure. Last right " + right + " (" + s.last_met +
           "), asked again " + inDaysText(left) + " (" + s.due + ").";
@@ -304,7 +304,7 @@
       return "About " + wholePercent(s.estimate) + "% sure. Last right " + right + " (" + s.last_met + "). Due for a warm-up now.";
     }
     return "Not solid yet: " + met + " right, " + missed + " not yet. Last tried " +
-      daysAgoText(daysSince(s.last_tried)) + " (" + s.last_tried + ").";
+      daysAgoText(calendarDaysSince(s.last_tried)) + " (" + s.last_tried + ").";
   }
   function disputed(ref) {
     return ((DATA && DATA.inbox && DATA.inbox.all_submissions) || []).some(function (e) {
