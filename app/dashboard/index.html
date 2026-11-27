@@ -143,6 +143,18 @@
   </form>
 </div>
 
+<div class="overlay" id="skip" hidden>
+  <div class="dialog skip-dialog" role="dialog" aria-modal="true" aria-labelledby="skip-title">
+    <h2 id="skip-title"></h2>
+    <p id="skip-intro"></p>
+    <p class="form-error" id="skip-error" role="alert" hidden></p>
+    <div class="sub-buttons">
+      <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+      <button class="btn btn-primary" type="button" id="skip-send">Skip</button>
+    </div>
+  </div>
+</div>
+
 <!-- help drawer -->
 <div class="overlay overlay-drawer" id="help" hidden>
   <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="help-title">

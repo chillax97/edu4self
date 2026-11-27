@@ -8,6 +8,8 @@
   var DATA = null;
   var lastStamp = null;
   var submitCtx = null;
+  var skipCtx = null;
+  var openRegions = {};
 
   var KIND = {
     lesson:     { label: "Lesson",     open: "Open lesson",     submit: "Submit answers" },
@@ -239,16 +241,75 @@
   }
 
   function heroTask(all) {
-    // first task that still needs the learner: todo and not yet submitted
+    var blocked = null;
     for (var i = 0; i < all.length; i++) {
       var t = all[i].task;
-      if (t.status === "todo" && !pendingFor(t.id)) return all[i];
+      if (t.status !== "todo" || pendingFor(t.id)) continue;
+      if (!notReady(all[i])) return all[i];
+      if (!blocked) blocked = all[i];
     }
-    // otherwise the first one waiting for grading
+    if (blocked) return blocked;
     for (var j = 0; j < all.length; j++) {
       if (all[j].task.status === "todo") return all[j];
     }
     return null;
+  }
+
+  function progress() { return (DATA && DATA.derived && DATA.derived.progress) || null; }
+  function progTopic(topic) {
+    var p = progress();
+    return p && p.topics && topic ? p.topics[topic.id] || null : null;
+  }
+  function taskProgress(entry) {
+    var pt = progTopic(entry && entry.topic);
+    return pt && pt.tasks && entry ? pt.tasks[entry.task.id] || null : null;
+  }
+  function notReady(entry) {
+    var t = taskProgress(entry);
+    return !!(t && t.ready === false);
+  }
+  function joinNames(names) {
+    if (names.length < 2) return names[0] || "";
+    if (names.length === 2) return names[0] + " and " + names[1];
+    return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+  function needsInfo(entry) {
+    var t = taskProgress(entry);
+    if (!t || t.ready !== false || !(t.needs || []).length) return null;
+    var pt = progTopic(entry.topic), ids = t.needs.slice();
+    var names = ids.map(function (id) { return (pt.skills && pt.skills[id] && pt.skills[id].name) || id; });
+    return { ids: ids, names: names, text: joinNames(names) };
+  }
+  function todayDate() {
+    return String((DATA && DATA.server && DATA.server.now) || "").slice(0, 10) || dayKey(new Date());
+  }
+  function dateNumber(iso) {
+    var p = String(iso || "").slice(0, 10).split("-");
+    return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2])) / 864e5;
+  }
+  function daysSince(iso) { return Math.round(dateNumber(todayDate()) - dateNumber(iso)); }
+  function daysUntil(iso) { return Math.round(dateNumber(iso) - dateNumber(todayDate())); }
+  function daysAgoText(n) { return n === 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago"; }
+  function inDaysText(n) { return n === 0 ? "today" : n === 1 ? "in 1 day" : "in " + n + " days"; }
+  function wholePercent(value) { return Math.round((Number(value) || 0) * 100); }
+  function skillSentence(s) {
+    var met = s.met || 0, missed = s.missed || 0;
+    if (met + missed === 0) return s.skipped ? "Skipped: you said you know this. Not checked yet." : "Not checked yet.";
+    if (s.due) {
+      var right = daysAgoText(daysSince(s.last_met)), left = daysUntil(s.due);
+      if (left > 0) {
+        return "About " + wholePercent(s.estimate) + "% sure. Last right " + right + " (" + s.last_met +
+          "), asked again " + inDaysText(left) + " (" + s.due + ").";
+      }
+      return "About " + wholePercent(s.estimate) + "% sure. Last right " + right + " (" + s.last_met + "). Due for a warm-up now.";
+    }
+    return "Not solid yet: " + met + " right, " + missed + " not yet. Last tried " +
+      daysAgoText(daysSince(s.last_tried)) + " (" + s.last_tried + ").";
+  }
+  function disputed(ref) {
+    return ((DATA && DATA.inbox && DATA.inbox.all_submissions) || []).some(function (e) {
+      return e && e.kind === "dispute" && e.ref === ref;
+    });
   }
 
 
@@ -343,15 +404,29 @@
     shelfNews();
   }
 
+  function rejectedPill() {
+    var r = DATA && DATA.grading && DATA.grading.rejected;
+    if (!r) return "";
+    var files = Object.keys(r).sort();
+    if (!files.length) return "";
+    var reason = String((r[files[0]] || [])[0] || "");
+    if (reason.length > 120) reason = reason.slice(0, 119) + "…";
+    var more = files.length > 1 ? " (+" + (files.length - 1) + " more)" : "";
+    var title = files.map(function (f) { return f + ": " + (r[f] || []).join("; "); }).join("\n");
+    return '<span class="pill is-alert" role="alert" title="' + esc(title) + '"><span class="led"></span>A grade wasn\'t recorded: ' +
+      esc(reason) + esc(more) + '</span>';
+  }
+
   function renderStatus() {
     var el = $("#status");
     if (!DATA) { el.innerHTML = ""; return; }
     if (DATA.__offline) {
-      el.innerHTML = '<span class="pill is-offline"><span class="led"></span>Can\'t reach the dashboard server. Retrying…</span>';
+      el.innerHTML = rejectedPill() + '<span class="pill is-offline"><span class="led"></span>Can\'t reach the dashboard server. Retrying…</span>';
       return;
     }
     var pending = pendingCount(), topics = (DATA.state && DATA.state.topics) || [];
-    var html = topics.some(function (t) { return (t.history || []).some(function (h) { return h.kind !== "setup"; }); })
+    var html = rejectedPill();
+    html += topics.some(function (t) { return (t.history || []).some(function (h) { return h.kind !== "setup"; }); })
       ? '<span class="pill" title="When Claude last updated your progress"><span class="led"></span>Updated by Claude ' + esc(ago(DATA.state && DATA.state.updated)) + '</span>'
       : '';
     if (pending) {
@@ -362,6 +437,8 @@
 
   // A topic with no proof yet and every skill at zero: show it as one quiet line, not four empty cards
   function isDormant(topic) {
+    var p = progress();
+    if (p && !((p.topics || {})[topic.id])) return false;
     return !(topic.history || []).some(function (h) { return h.evidence; }) &&
       (topic.regions || []).every(function (r) { return !r.level; });
   }
@@ -477,7 +554,7 @@
     if (t.kind === "lesson") facts.push("✦ Ends with exercises");
     return { task: t, topic: entry.topic, meta: meta, pend: pend, fu: !pend && followUpFor(t), color: "var(--" + (KIND[t.kind] ? t.kind : "lesson") + ")",
       facts: facts.map(function (f) { return "<span>" + f + "</span>"; }).join("") + calcChip(t), running: !!(active && active.task === t.id),
-      canStart: !active, minutes: taskMinutes(entry.topic) };
+      canStart: !active, minutes: taskMinutes(entry.topic), needs: needsInfo(entry) };
   }
 
   function renderCoach(coach) {
@@ -504,6 +581,12 @@
       '<h2 id="hero-title">' + esc(t.title) + '</h2>' +
       '<p class="hero-why">' + esc(t.why || "") + '</p>' +
       '<div class="hero-meta">' + job.facts + '</div>';
+    if (job.needs) {
+      html += '<p class="hero-needs">Needs ' + esc(job.needs.text) + ' first.</p>' +
+        '<div class="hero-skip">' + job.needs.ids.map(function (id, i) {
+          return '<button class="btn btn-ghost btn-sm" type="button" data-skip-task="' + esc(t.id) + '" data-skip-skill="' + esc(id) + '">Skip ' + esc(job.needs.names[i]) + '</button>';
+        }).join("") + '</div>';
+    }
     if (t.rules) html += '<div class="hero-rules"><span aria-hidden="true">⚑</span><span><strong>Rules:</strong> ' + esc(t.rules) + '</span></div>';
     if (pend) {
       html += '<div class="hero-submitted"><span class="chip chip-wait">' + sentWord(pend) + '</span>' +
@@ -587,7 +670,7 @@
     var locked = rest.filter(function (e) { return e.task.status === "locked"; });
     function row(e) {
       var t = e.task, meta = kindMeta(t.kind), pend = pendingFor(t.id), locked = t.status === "locked";
-      var fu = !locked && !pend && followUpFor(t);
+      var fu = !locked && !pend && followUpFor(t), need = locked ? null : needsInfo(e);
       n++;
       var right = "";
       if (locked) right = '<span class="chip">🔒 Locked</span>';
@@ -599,7 +682,8 @@
         '<div class="q-num">' + n + '</div>' +
         '<div><div class="q-kind"><span class="chip chip-' + esc(t.kind) + '">' + esc(meta.label) + '</span>' + (locked ? "" : calcChip(t)) + '<span class="card-sub">' + esc(t.label || "") + '</span></div>' +
         '<h3>' + esc(t.title) + '</h3><p>' + esc(locked ? (t.unlock || "Locked") : (t.why || "")) + '</p>' +
-        (fu ? '<p class="q-fu"><b>Almost: one question first.</b> ' + esc(fu.q) + "</p>" : "") + (locked ? "" : stuckNudge(t)) + '</div>' +
+        (fu ? '<p class="q-fu"><b>Almost: one question first.</b> ' + esc(fu.q) + "</p>" : "") +
+        (need ? '<p class="q-needs">Needs ' + esc(need.text) + ' first.</p>' : "") + (locked ? "" : stuckNudge(t)) + '</div>' +
         '<div class="q-actions">' + right + '</div></div>';
     }
     var items = open.map(row).join("");
@@ -716,8 +800,14 @@
       cells += '<i class="' + (n >= 3 ? "l3" : n === 2 ? "l2" : n === 1 ? "l1" : "") + (k === todayK ? " is-today" : "") + '" title="' + k + ": " + n + ' proven"></i>';
     }
     var wins = (topic.history || []).slice(0, 6).map(function (h) {
+      var action = "";
+      if (h.grade && progress()) {
+        action = disputed(h.grade)
+          ? '<small class="w-disputed">Disputed: a fresh grader will look again</small>'
+          : '<button class="btn btn-ghost btn-sm w-dispute" type="button" data-dispute="' + esc(h.grade) + '">Dispute</button>';
+      }
       return '<li><span class="w-dot' + (h.evidence ? " ev" : "") + '"></span><div><b>' + esc(h.title) + '</b>' +
-        '<small>' + esc(h.date) + (h.detail ? " · " + esc(h.detail) : "") + '</small></div></li>';
+        '<small>' + esc(h.date) + (h.detail ? " · " + esc(h.detail) : "") + '</small>' + action + '</div></li>';
     }).join("");
     return '<section class="card"><div class="card-head"><span class="card-title">Evidence log</span>' + ((DATA.state.topics || []).filter(function (t) { return !isDormant(t); }).length > 1 ? '<span class="card-sub">' + esc(topic.title) + "</span>" : "") + '<button class="info" data-help="evidence" aria-label="What is the evidence log?">?</button></div>' +
       '<div class="heat-wrap"><div class="heat" role="img" aria-label="' + plural(total, "thing") + " proven over " + plural(active, "day") + '">' + cells + '</div></div>' +
@@ -741,15 +831,39 @@
       '<small class="muted">Out of ' + plural(c.rated, "graded answer") + '. A pass means Claude logged it as proof. If "solid" often doesn\'t pass, slow down before you hand in.</small></section>';
   }
 
+  function renderRegionRow(topic, r, prog) {
+    var legacy = !!(progress() && r.legacy_level != null), bars = "";
+    for (var i = 1; i <= 4; i++) bars += '<i class="' + (r.level >= i ? "on" : "") + '"></i>';
+    if (!prog) {
+      return '<div class="skill' + (legacy ? " is-legacy" : "") + '"><div class="skill-top"><b>' + esc(r.name) + '</b><span>' + esc(LADDER[r.level] || "") + '</span></div>' +
+        '<div class="ladder' + (legacy ? " is-legacy" : "") + '" aria-label="' + esc(LADDER[r.level]) + '">' + bars + '</div><small>' + esc(r.note || "") + '</small></div>';
+    }
+    var key = topic.id + "|" + r.code, open = !!openRegions[key];
+    return '<div class="skill' + (legacy ? " is-legacy" : "") + '">' +
+      '<button class="skill-region" type="button" data-region="' + esc(key) + '" aria-expanded="' + (open ? "true" : "false") + '">' +
+        '<span class="skill-top"><b>' + esc(r.name) + '</b><span>' + esc(LADDER[r.level] || "") + '</span></span>' +
+        (legacy ? '<small class="skill-legacy">earlier estimate, re-checking</small>' : "") +
+        '<span class="ladder' + (legacy ? " is-legacy" : "") + '" aria-label="' + esc(LADDER[r.level]) + '">' + bars + '</span>' +
+        (r.note ? '<small>' + esc(r.note) + '</small>' : "") +
+      '</button>' + (open ? regionSkills(r.code, prog) : "") + '</div>';
+  }
+
+  function regionSkills(code, prog) {
+    var out = [];
+    Object.keys(prog.skills || {}).forEach(function (id) {
+      var s = prog.skills[id];
+      if (s.region !== code) return;
+      out.push('<li><b>' + esc(s.name) + '</b> ' + esc(skillSentence(s)) + '</li>');
+    });
+    return out.length ? '<ul class="skill-lines">' + out.join("") + '</ul>' : "";
+  }
+
   function renderSkills(topic) {
-    var rows = (topic.regions || []).map(function (r) {
-      var bars = "";
-      for (var i = 1; i <= 4; i++) bars += '<i class="' + (r.level >= i ? "on" : "") + '"></i>';
-      return '<div class="skill"><div class="skill-top"><b>' + esc(r.name) + '</b><span>' + esc(LADDER[r.level] || "") + '</span></div>' +
-        '<div class="ladder" aria-label="' + esc(LADDER[r.level]) + '">' + bars + '</div><small>' + esc(r.note || "") + '</small></div>';
-    }).join("");
+    var prog = progTopic(topic);
+    var rows = (topic.regions || []).map(function (r) { return renderRegionRow(topic, r, prog); }).join("");
     return '<section class="card" style="--topic:' + esc(topic.color) + '"><div class="card-head"><span class="card-title">Skills ladder</span><button class="info" data-help="ladder" aria-label="What is the skills ladder?">?</button></div>' +
       '<div class="skills">' + rows + '</div>' +
+      (progress() && !prog ? '<p class="skill-unlinked">Your tutor links this topic to skills next session.</p>' : "") +
       '<div class="legend" style="margin-top:14px"><span>heard of</span><span>understand</span><span>use alone</span><span>public proof</span></div></section>';
   }
 
@@ -780,6 +894,45 @@
       rules: t.rules, fields: sub.type === "done" ? [] : (sub.fields || ["Your answer"]), honor: submitCtx.probe, button: meta.submit, sure: true,
       calculator: t.calculator === true
     });
+  }
+
+  function openSkip(taskId, skillId) {
+    var entry = findTask(taskId), pt = entry && progTopic(entry.topic);
+    if (!entry) return;
+    var skill = pt && pt.skills && pt.skills[skillId], name = (skill && skill.name) || skillId;
+    skipCtx = { topic: entry.topic.id, task: taskId, skill: skillId, name: name };
+    $("#skip-title").textContent = "Skip " + name + "?";
+    $("#skip-intro").textContent = "Your tutor treats it as known for this topic. It doesn't raise its level.";
+    $("#skip-error").hidden = true;
+    $("#skip-send").disabled = false;
+    $("#skip-send").textContent = "Skip";
+    openOverlay("skip");
+  }
+
+  function sendSkip() {
+    if (!skipCtx) return;
+    var btn = $("#skip-send"), err = $("#skip-error");
+    btn.disabled = true; btn.textContent = "Saving…";
+    postInbox({ kind: "skip", topic: skipCtx.topic, task: skipCtx.task, skill: skipCtx.skill, note: "" })
+      .then(function () { closeOverlay($("#skip")); load(); })
+      .catch(function (e) { btn.disabled = false; btn.textContent = "Try again"; err.textContent = e.message; err.hidden = false; });
+  }
+
+  function findGrade(ref) {
+    var found = null;
+    ((DATA && DATA.state && DATA.state.topics) || []).forEach(function (topic) {
+      (topic.history || []).forEach(function (h) { if (h && h.grade === ref) found = { topic: topic, entry: h }; });
+    });
+    return found;
+  }
+
+  function openDispute(ref) {
+    var found = findGrade(ref);
+    if (!found) return;
+    submitCtx = { kind: "dispute", topic: found.topic.id, task: found.entry.task, ref: ref, title: "Dispute this grade" };
+    renderSubmitForm({ chipClass: "chip-wait", chip: "Dispute", title: "Dispute this grade",
+      intro: "Say what you think the grade missed. A fresh grader looks at your answer again, without this grade.",
+      fields: [], honor: false, button: "Send dispute", sure: false });
   }
 
   function openNote() {
@@ -862,7 +1015,7 @@
     function fail(msg) { err.textContent = msg; err.hidden = false; }
     if ((submitCtx.kind === "answers" || submitCtx.kind === "recall" || submitCtx.kind === "follow-up") && !Object.keys(fields).some(function (k) { return fields[k].trim(); })) return fail("Write at least one answer. \"I don't know\" counts.");
     if (submitCtx.kind === "note" && !note.trim()) return fail("Write your note first.");
-    if (submitCtx.kind !== "note" && submitCtx.kind !== "recall" && submitCtx.kind !== "follow-up" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
+    if (submitCtx.kind !== "note" && submitCtx.kind !== "recall" && submitCtx.kind !== "follow-up" && submitCtx.kind !== "dispute" && !sure) return fail("Pick how sure you are: guessed, shaky or solid. Any of them is fine, as long as it's honest.");
     if (submitCtx.probe && !honor) return fail("Tick the box to confirm you did it unaided. If you did get help, don't submit this one. Send Claude a note instead and you'll get a fresh probe.");
 
     var btn = $("#sub-send");
@@ -874,7 +1027,8 @@
         if (submitCtx.kind === "follow-up") delete fuDraft[submitCtx.task];
         clearDraft(sentCtx);
         closeOverlay($("#submit"));
-        savedToast();
+        if (sentCtx.kind === "dispute") toast("Dispute sent. A fresh grader will look at your answer again.", 7000);
+        else savedToast();
         load();
       })
       .catch(function (e) { btn.disabled = false; btn.textContent = "Try again"; fail("Couldn't save: " + e.message + ". Your text is still here."); });
@@ -2349,6 +2503,7 @@
       "<h2>" + (t.label ? '<span class="bx-label">' + esc(t.label) + "</span>" : "") + esc(t.title) + "</h2>" +
       (t.why ? "<p>" + esc(t.why) + "</p>" : "") +
       '<div class="bx-meta">' + job.facts + "</div>" +
+      (job.needs ? '<p class="bx-needs">Needs ' + esc(job.needs.text) + ' first.</p>' : "") +
       (t.rules ? '<div class="bx-rules">⚑ <b>Rules:</b> ' + esc(t.rules) + "</div>" : "") +
       (pend ? '<div class="bx-sent">' + sentWord(pend) + " " + esc(ago(pend.ts)) + "." + (claudeOK() ? "" : ' In Claude Code, say <b>"check my inbox"</b> to get it graded.') + " " + gradeButton() + "</div>" : fu ? followUpBox(t, fu, true) : stuckNudge(t, true)) +
       coasterHTML() +
@@ -2391,16 +2546,22 @@
         if (job.canStart) act('<button class="btn btn-link bx-r" type="button" data-start-task="' + esc(t.id) + '">[Start ' + job.minutes + " min on this.]" + chk(esc(BLOCKS[taskBlock(hero.topic)].label) + " block") + "</button>");
         else if (job.running) quiet("The clock is running on this one.");
       }
+      if (job.needs) {
+        job.needs.ids.forEach(function (id, i) {
+          act('<button class="btn btn-link bx-r" type="button" data-skip-task="' + esc(t.id) + '" data-skip-skill="' + esc(id) + '">[Skip ' + esc(job.needs.names[i]) + ".]</button>");
+        });
+      }
     }
     rest = !!hero;   // short replies: what belongs to the job stays out, everything after it folds
     actionableTasks().forEach(function (e) {
       var x = e.task;
       if (x.status !== "todo" || (hero && x.id === hero.task.id)) return;
-      var m = kindMeta(x.kind), name = x.label || x.title;
+      var m = kindMeta(x.kind), name = x.label || x.title, need = needsInfo(e);
+      var suffix = need ? " Needs " + esc(need.text) + " first." : "";
       if (pendingFor(x.id)) return quiet(esc(name) + chk("submitted, waiting for Claude"));
-      if (x.href) { var h2 = resolveHref(x.href); act('<a class="btn btn-link bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>"); }
-      if (followUpFor(x)) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[Answer the question: ' + esc(name) + ".]" + chk("one question before the pass") + "</button>");
-      else if (x.submit) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>");
+      if (x.href) { var h2 = resolveHref(x.href); act('<a class="btn btn-link bx-r" href="' + esc(h2) + '"' + openTarget(h2) + ">[" + esc(name) + ": " + esc(x.title) + ".] ↗</a>" + suffix); }
+      if (followUpFor(x)) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[Answer the question: ' + esc(name) + ".]" + chk("one question before the pass") + "</button>" + suffix);
+      else if (x.submit) act('<button class="btn btn-link bx-r" type="button" data-submit="' + esc(x.id) + '">[' + esc(m.submit) + ": " + esc(name) + ".]</button>" + suffix);
     });
     if (claudeOK()) act('<button class="btn btn-link bx-r" type="button" data-claude-open>"' + esc(W("note")) + '"' + chk("talk to Claude") + "</button>");
     else act('<button class="btn btn-link bx-r" type="button" data-note>"' + esc(W("note")) + '"' + chk("it goes to Claude") + "</button>");
@@ -4056,8 +4217,11 @@
 
   // ---------------------------------------------------------------- events
   document.addEventListener("click", function (ev) {
-    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n],[data-recall],[data-stuck-hint]");
+    var el = ev.target.closest("[data-submit],[data-withdraw],[data-close],[data-help],[data-go],[data-start-task],[data-note],[data-room],[data-barname],[data-drink],[data-gpu],[data-settings],[data-claude],[data-claude-open],[data-newtopic],[data-ks],[data-hints],[data-hint-n],[data-recall],[data-stuck-hint],[data-region],[data-skip-task],[data-dispute]");
     if (!el) return;
+    if (el.dataset.region) { openRegions[el.dataset.region] = !openRegions[el.dataset.region]; return render(); }
+    if (el.dataset.skipTask) return openSkip(el.dataset.skipTask, el.dataset.skipSkill);
+    if (el.dataset.dispute) return openDispute(el.dataset.dispute);
     if (el.dataset.stuckHint) return stuckHint(el.dataset.stuckHint, Number(el.dataset.n));
     if (el.dataset.recall) return el.dataset.recall === "go" ? openRecall() : recallLater();
     if (el.dataset.claude) return claudeSend(el.dataset.claude);
@@ -4098,6 +4262,7 @@
     var top = open[open.length - 1];
     if (top.id === "onboarding") finishOnboarding(); else closeOverlay(top);
   });
+  $("#skip-send").addEventListener("click", sendSkip);
   $("#submit-form").addEventListener("submit", submitForm);
   $("#submit-form").addEventListener("input", function (ev) { if (ev.target.closest("#sub-fields")) writeDraft(); });
   $("#submit-form").addEventListener("keydown", function (ev) {

@@ -42,6 +42,8 @@ def _topic_projection(tid, item, tc, graph, grades, skips, now_day, tz):
         met = [o for o in counted if o.met]
         missed = [o for o in counted if not o.met]
         entries[skill.id] = {
+            "name": skill.name,
+            "region": skill.region,
             "level": current_level,
             "estimate": _round(current.value),
             "p_learned": _round(current.p_learned),
@@ -50,6 +52,7 @@ def _topic_projection(tid, item, tc, graph, grades, skips, now_day, tz):
             "missed": len(missed),
             "first_met": _date(met[0].day, tz) if met else None,
             "last_met": _date(met[-1].day, tz) if met else None,
+            "last_tried": _date(counted[-1].day, tz) if counted else None,
             "due": _date(due_day, tz) if due_day is not None else None,
             "skipped": (tid, skill.id) in skips,
         }
@@ -157,7 +160,7 @@ def _grade_item(grade, tasks):
     answered = grade.get("answered") or grade.get("ts") or ""
     item = {"date": str(answered)[:10], "kind": kind, "title": grade.get("title"),
             "detail": grade.get("detail"), "evidence": grade.get("passed") is True,
-            "inbox": grade.get("attempt")}
+            "inbox": grade.get("attempt"), "task": grade.get("task")}
     if "record" in grade:
         item["record"] = grade.get("record")
     follow = grade.get("follow_up")

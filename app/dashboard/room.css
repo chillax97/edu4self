@@ -107,6 +107,11 @@ body.v-bar .bx-tabs button[aria-pressed="true"] { background: var(--primary); co
 .bx-label { display: block; font: 600 var(--t-sm) var(--bx-mono); text-transform: none; letter-spacing: 0; color: var(--bar-amber); margin-bottom: 2px; }
 .bx-job p { margin: 0 0 var(--s-2); font-size: var(--t-md); color: var(--c-orange-85-2); }
 .bx-meta { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-3); font: 400 var(--t-sm) var(--sans); color: var(--c-orange-75-2); }
+.bx-job .bx-needs { font-weight: 600; color: var(--c-grey-100); }
+.room .ladder.is-legacy i.on { background: var(--bx-faint); }
+.room .skill-lines li { color: var(--bx-dim); }
+.room .skill-lines b { color: var(--bx-text); }
+.room .skill-legacy, .room .skill-unlinked { color: var(--bx-dim); }
 .bx-rules { margin-top: var(--s-2); font: 400 var(--t-sm) var(--sans); color: var(--c-orange-85); }
 .bx-sent { margin-top: var(--s-2); font: 400 var(--t-sm) var(--sans); color: var(--c-green-80); }
 .bx-replies { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
