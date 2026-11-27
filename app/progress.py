@@ -57,7 +57,7 @@ def _topic_projection(tid, item, tc, graph, grades, skips, now_day, tz):
     regions = {}
     lows = {}
     for region in graph.regions:
-        regions[region.code] = {"level": 0, "skills": 0, "started": 0}
+        regions[region.code] = {"name": region.name, "level": 0, "skills": 0, "started": 0}
         lows[region.code] = None
     for skill in skills:
         projection = regions.get(skill.region)
@@ -140,3 +140,118 @@ def project(state, content, inbox, grades, now, topic: Optional[str] = None) -> 
                 recall_due.append({"topic": tid, "skill": skill_id, "due": entry["due"]})
     recall_due.sort(key=lambda row: (row["due"], row["topic"], row["skill"]))
     return {"topics": topics_out, "recall_due": recall_due, "unlinked": unlinked}
+
+
+def envelope(state, content_map, inbox, grades, now, topic: Optional[str] = None) -> dict:
+    out = {"schema": 1, "computed": now.isoformat(),
+           "model": {"name": "memory-v1", "bar": mastery.BAR, "learned_bar": mastery.LEARNED_BAR}}
+    out.update(project(state, content_map, inbox, grades, now, topic))
+    return out
+
+
+def _grade_item(grade, tasks):
+    task = tasks.get(grade.get("task"))
+    kind = task.get("kind") if task is not None else "probe"
+    if grade.get("kind") == "recall":
+        kind = "probe"
+    answered = grade.get("answered") or grade.get("ts") or ""
+    item = {"date": str(answered)[:10], "kind": kind, "title": grade.get("title"),
+            "detail": grade.get("detail"), "evidence": grade.get("passed") is True,
+            "inbox": grade.get("attempt")}
+    if "record" in grade:
+        item["record"] = grade.get("record")
+    follow = grade.get("follow_up")
+    if isinstance(follow, dict):
+        item["follow_up"] = {"q": follow.get("text"), "point": follow.get("point")}
+    item["grade"] = grade.get("id")
+    return item
+
+
+def view(state, grades, projection) -> dict:
+    if state.get("schema") != 2:
+        return state
+    grades = grades or []
+    legacy_topic = {}
+    legacy_by_topic = {}
+    handled = set()
+    grade_tasks = set()
+    for grade in grades:
+        if not isinstance(grade, dict):
+            continue
+        kind = grade.get("type")
+        tid = grade.get("topic")
+        if kind == "legacy":
+            legacy_by_topic.setdefault(tid, []).append(grade)
+            entry = grade.get("entry")
+            if isinstance(entry, dict) and isinstance(entry.get("inbox"), str):
+                handled.add(entry["inbox"])
+        elif kind == "legacy_topic":
+            legacy_topic[tid] = grade
+        elif kind == "ack":
+            if isinstance(grade.get("attempt"), str):
+                handled.add(grade["attempt"])
+        elif kind == "grade":
+            if isinstance(grade.get("attempt"), str):
+                handled.add(grade["attempt"])
+            grade_tasks.add((tid, grade.get("task")))
+
+    topics_out = []
+    for item in state.get("topics") or []:
+        if not isinstance(item, dict):
+            continue
+        tid = item.get("id") if isinstance(item.get("id"), str) else item.get("path")
+        tasks = {}
+        for task in item.get("queue") or []:
+            if isinstance(task, dict) and isinstance(task.get("id"), str):
+                tasks[task["id"]] = task
+        projection_topic = (projection.get("topics") or {}).get(tid) or {}
+        passed = {task_id for task_id, task in (projection_topic.get("tasks") or {}).items()
+                  if task.get("passed")}
+        old = legacy_topic.get(tid)
+        old_done = set(old.get("done") or []) if isinstance(old, dict) else set()
+        old_regions = old.get("regions") if isinstance(old, dict) else None
+
+        entries = [_grade_item(grade, tasks) for grade in mastery.kept_grades(grades, tid)]
+        for grade in reversed(legacy_by_topic.get(tid, [])):
+            entry = grade.get("entry")
+            if isinstance(entry, dict):
+                entries.append(dict(entry, legacy=True))
+        entries.sort(key=lambda entry: str(entry.get("date") or ""), reverse=True)
+
+        queue = []
+        for task in item.get("queue") or []:
+            if not isinstance(task, dict):
+                queue.append(task)
+                continue
+            out_task = dict(task)
+            task_id = task.get("id")
+            if task_id in passed or (task_id in old_done and (tid, task_id) not in grade_tasks):
+                out_task["status"] = "done"
+            queue.append(out_task)
+
+        if projection_topic:
+            old_by_code = {}
+            for region in old_regions or []:
+                if isinstance(region, dict):
+                    old_by_code[region.get("code")] = region
+            regions = []
+            for code, region in (projection_topic.get("regions") or {}).items():
+                row = {"code": code, "name": region.get("name"), "level": region.get("level"),
+                       "skills": region.get("skills"), "started": region.get("started")}
+                previous = old_by_code.get(code)
+                if previous is not None and not region.get("started"):
+                    row["level"] = previous.get("level")
+                    row["legacy_level"] = previous.get("level")
+                regions.append(row)
+        elif old_regions is not None:
+            regions = [dict(region, legacy_level=region.get("level"))
+                       for region in old_regions if isinstance(region, dict)]
+        else:
+            regions = []
+
+        topics_out.append(dict(item, history=entries, regions=regions, queue=queue))
+
+    out = dict(state)
+    out["topics"] = topics_out
+    out["processed_inbox"] = sorted(attempt for attempt in handled if isinstance(attempt, str) and attempt)
+    return out

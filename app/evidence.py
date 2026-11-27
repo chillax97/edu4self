@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import threading
+import time
 import uuid
 from datetime import datetime
 
@@ -9,9 +10,78 @@ import content
 import mastery
 
 INGEST_LOCK = threading.Lock()
+LOCK_WAIT = 5.0
 FORBIDDEN = ("outcome", "passed", "skill", "level")
 GRADABLE = ("answers", "done", "recall", "follow-up")
 NEVER_GRADED = ("dispute", "skip", "withdraw")
+
+
+class LockTimeout(Exception):
+    pass
+
+
+class GradesLock:
+    def __init__(self, vault, wait=LOCK_WAIT):
+        self.path = os.path.join(vault, "_system", ".grades.lock")
+        self.wait = wait
+        self.fd = None
+
+    def _lock(self):
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(self.fd, msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def _unlock(self):
+        if os.name == "nt":
+            import msvcrt
+            os.lseek(self.fd, 0, os.SEEK_SET)
+            msvcrt.locking(self.fd, msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(self.fd, fcntl.LOCK_UN)
+
+    def __enter__(self):
+        self.fd = os.open(self.path, os.O_RDWR | os.O_CREAT, 0o644)
+        deadline = time.monotonic() + self.wait
+        while True:
+            try:
+                self._lock()
+                return self
+            except OSError:
+                if time.monotonic() >= deadline:
+                    os.close(self.fd)
+                    self.fd = None
+                    raise LockTimeout()
+                time.sleep(0.05)
+
+    def __exit__(self, *exc):
+        if self.fd is not None:
+            try:
+                self._unlock()
+            finally:
+                os.close(self.fd)
+                self.fd = None
+        return False
+
+
+def grades_lock(vault, wait=LOCK_WAIT):
+    return GradesLock(vault, wait)
+
+
+def _already_handled(grades, attempt):
+    for grade in grades or []:
+        if not isinstance(grade, dict):
+            continue
+        if grade.get("type") == "ack" and grade.get("attempt") == attempt:
+            return True
+        if grade.get("type") == "legacy":
+            entry = grade.get("entry")
+            if isinstance(entry, dict) and entry.get("inbox") == attempt:
+                return True
+    return False
 
 
 def _forbidden(value, reasons):
@@ -305,6 +375,8 @@ def judge(request, filename, request_sha, inbox, state, content_map, grades, now
         return None, ["attempt %s is not in the inbox" % attempt]
     if any(e.get("kind") == "withdraw" and e.get("ref") == attempt for e in inbox or []):
         return None, ["attempt %s was withdrawn" % attempt]
+    if _already_handled(grades, attempt):
+        return None, ["attempt %s was %s" % (attempt, "already acknowledged" if ack else "already graded")]
     kind = entry.get("kind")
     if kind in NEVER_GRADED:
         return None, ["a %s entry is never graded" % kind]
@@ -464,48 +536,58 @@ def _append(path, line):
         os.close(fd)
 
 
-def ingest(vault, now, dry=False):
+def _ingest(vault, now, dry):
     accepted = []
     rejected = {}
     waiting = []
     folder = os.path.join(vault, "_system", "grading")
-    with INGEST_LOCK:
-        state, content_map, inbox, grades = _load(vault)
-        grades_path = os.path.join(vault, "_system", "grades.jsonl")
-        for name in _grading_files(vault):
-            path = os.path.join(folder, name)
-            try:
-                with open(path, "rb") as fh:
-                    raw = fh.read()
-            except OSError:
-                continue
-            sha = hashlib.sha1(raw).hexdigest()
-            if _duplicate(grades, name, sha):
-                if not dry:
-                    _remove(path)
-                continue
-            try:
-                request = json.loads(raw.decode("utf-8"))
-            except (ValueError, UnicodeDecodeError):
-                try:
-                    age = now.timestamp() - os.path.getmtime(path)
-                except OSError:
-                    age = 0
-                if age < 5:
-                    waiting.append(name)
-                else:
-                    rejected[name] = ["not valid JSON"]
-                continue
-            event, reasons = judge(request, name, sha, inbox, state, content_map, grades, now)
-            if reasons:
-                rejected[name] = reasons
-                continue
-            grades.append(event)
-            accepted.append(name)
+    state, content_map, inbox, grades = _load(vault)
+    grades_path = os.path.join(vault, "_system", "grades.jsonl")
+    for name in _grading_files(vault):
+        path = os.path.join(folder, name)
+        try:
+            with open(path, "rb") as fh:
+                raw = fh.read()
+        except OSError:
+            continue
+        sha = hashlib.sha1(raw).hexdigest()
+        if _duplicate(grades, name, sha):
             if not dry:
-                _append(grades_path, json.dumps(event, ensure_ascii=False) + "\n")
                 _remove(path)
+            continue
+        try:
+            request = json.loads(raw.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            try:
+                age = now.timestamp() - os.path.getmtime(path)
+            except OSError:
+                age = 0
+            if age < 5:
+                waiting.append(name)
+            else:
+                rejected[name] = ["not valid JSON"]
+            continue
+        event, reasons = judge(request, name, sha, inbox, state, content_map, grades, now)
+        if reasons:
+            rejected[name] = reasons
+            continue
+        grades.append(event)
+        accepted.append(name)
+        if not dry:
+            _append(grades_path, json.dumps(event, ensure_ascii=False) + "\n")
+            _remove(path)
     return {"accepted": accepted, "rejected": rejected, "waiting": waiting}
+
+
+def ingest(vault, now, dry=False):
+    with INGEST_LOCK:
+        if dry:
+            return _ingest(vault, now, True)
+        try:
+            with grades_lock(vault):
+                return _ingest(vault, now, False)
+        except LockTimeout:
+            return {"accepted": [], "rejected": {}, "waiting": _grading_files(vault)}
 
 
 def _remove(path):

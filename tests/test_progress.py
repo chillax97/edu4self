@@ -339,8 +339,8 @@ class ProgressCliTest(unittest.TestCase):
         self.assertIsNone(alpha["due"])
         self.assertIs(alpha["skipped"], False)
 
-        self.assertEqual(topic["regions"]["A"], {"level": 0, "skills": 1, "started": 0})
-        self.assertEqual(topic["regions"]["B"], {"level": 0, "skills": 1, "started": 0})
+        self.assertEqual(topic["regions"]["A"], {"name": "Core", "level": 0, "skills": 1, "started": 0})
+        self.assertEqual(topic["regions"]["B"], {"name": "Applied", "level": 0, "skills": 1, "started": 0})
 
         self.assertIn("sp-01", topic["tasks"])
         self.assertIn("sp-02", topic["tasks"])
@@ -901,8 +901,8 @@ class ProgressCliTest(unittest.TestCase):
 
         data = self.run_progress(vault, now="2026-06-05T12:00:00+00:00")
         regions = data["topics"][topic_id]["regions"]
-        self.assertEqual(regions["A"], {"level": 1, "skills": 3, "started": 2})
-        self.assertEqual(regions["B"], {"level": 0, "skills": 1, "started": 0})
+        self.assertEqual(regions["A"], {"name": "Core", "level": 1, "skills": 3, "started": 2})
+        self.assertEqual(regions["B"], {"name": "Applied", "level": 0, "skills": 1, "started": 0})
 
     def test_topic_filtering_and_unknown_topic_exit_one(self):
         vault = self.new_vault()

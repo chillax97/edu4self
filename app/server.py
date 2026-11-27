@@ -11,7 +11,8 @@ code never touches the data. The vault is picked with --vault or EDU4SELF_VAULT.
 
 Files it reads:   _system/state.json (written by Claude), _system/config.json, topic folders.
 Files it writes:  _system/inbox.jsonl and _system/blocks.jsonl (append-only),
-                  _system/config.json and _system/music/ (from the Settings panel). Nothing else.
+                  _system/config.json and _system/music/ (from the Settings panel),
+                  _system/progress.json (a schema-2 vault's computed progress). Nothing else.
 """
 import argparse
 import copy
@@ -68,7 +69,7 @@ BLOCKS_LOCK = threading.Lock()
 CONFIG_LOCK = threading.Lock()
 
 # Set by configure(); module-level so the handler and the tests share them.
-ROOT = SYSTEM = STATE = INBOX = BLOCKS = CONFIG = MUSIC_DIR = GRADES = GRADING = None
+ROOT = SYSTEM = STATE = INBOX = BLOCKS = CONFIG = MUSIC_DIR = GRADES = GRADING = PROGRESS = None
 PORT = 4747
 ALLOWED_HOSTS = set()
 ALLOWED_ORIGINS = set()
@@ -76,7 +77,7 @@ ALLOWED_ORIGINS = set()
 
 def configure(vault, port):
     """Point the server at a vault folder and a port."""
-    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, GRADES, GRADING, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES, REMINDERS
+    global ROOT, SYSTEM, STATE, INBOX, BLOCKS, CONFIG, MUSIC_DIR, GRADES, GRADING, PROGRESS, PORT, ALLOWED_HOSTS, ALLOWED_ORIGINS, KEEPSAKES, REMINDERS
     ROOT = os.path.abspath(os.path.expanduser(vault))
     SYSTEM = os.path.join(ROOT, "_system")
     STATE = os.path.join(SYSTEM, "state.json")
@@ -86,6 +87,7 @@ def configure(vault, port):
     MUSIC_DIR = os.path.join(SYSTEM, "music")
     GRADES = os.path.join(SYSTEM, "grades.jsonl")
     GRADING = os.path.join(SYSTEM, "grading")
+    PROGRESS = os.path.join(SYSTEM, "progress.json")
     KEEPSAKES = os.path.join(SYSTEM, "keepsakes.json")
     REMINDERS = os.path.join(SYSTEM, "reminders.json")
     PORT = int(port)
@@ -667,15 +669,76 @@ def read_state_safe():
         return {}
 
 
+def project_state(state, now):
+    try:
+        loaded = content.load_content(ROOT, state)
+    except content.ContentError:
+        loaded = {}
+    grades = read_jsonl(GRADES)
+    projection = progress.envelope(state, loaded, inbox_entries(), grades, now)
+    return progress.view(state, grades, projection), projection
+
+
+def load_view():
+    state = json.loads(read_text(STATE) or "{}")
+    if state.get("schema") != 2:
+        return state
+    return project_state(state, datetime.now().astimezone())[0]
+
+
+def load_view_safe():
+    try:
+        return load_view()
+    except ValueError:
+        return {}
+
+
 def pending_entries(state):
     entries = inbox_entries()
     processed = set(state.get("processed_inbox", []))
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     return [e for e in entries
-            if e.get("kind") != "withdraw" and e.get("id") not in processed and e.get("id") not in withdrawn]
+            if e.get("kind") not in ("withdraw", "dispute", "skip")
+            and e.get("id") not in processed and e.get("id") not in withdrawn]
 
 
 STAMP_SKIP = {"node_modules", "venv", "__pycache__", "target"}   # big tool folders a learner's code may grow: never trace/
+
+
+def keys_and_graphs():
+    paths = []
+    for base, dirs, files in os.walk(os.path.join(SYSTEM, "keys")):
+        dirs.sort()
+        paths += [os.path.join(base, name) for name in sorted(files)]
+    for topic in read_state_safe().get("topics") or []:
+        if isinstance(topic, dict) and isinstance(topic.get("path"), str):
+            paths.append(os.path.join(ROOT, topic["path"], "graph.json"))
+    return paths
+
+
+def change_stamp_paths():
+    paths = [STATE, INBOX, BLOCKS, CONFIG, GRADES, GRADING]
+    try:
+        paths += [os.path.join(GRADING, name) for name in sorted(os.listdir(GRADING))]
+    except OSError:
+        pass
+    return paths + keys_and_graphs()
+
+
+def progress_stamp():
+    h = hashlib.sha1()
+    paths = [STATE, INBOX, GRADES, GRADING]
+    try:
+        paths += [os.path.join(GRADING, name) for name in sorted(os.listdir(GRADING))]
+    except OSError:
+        pass
+    for path in paths + keys_and_graphs():
+        try:
+            st = os.stat(path)
+            h.update(("%s %d %d\n" % (path, st.st_mtime_ns, st.st_size)).encode())
+        except OSError:
+            h.update(("%s -\n" % path).encode())
+    return h.hexdigest()[:16]
 
 
 def change_stamp():
@@ -683,11 +746,7 @@ def change_stamp():
     checker runs in trace/ folders (size and time of each), plus the hour, for what turns with the clock. The page
     asks for it every few seconds and fetches /api/state only when it moves."""
     h = hashlib.sha1(datetime.now().astimezone().strftime("%Y-%m-%d %H").encode())
-    paths = [STATE, INBOX, BLOCKS, CONFIG, GRADES, GRADING]
-    try:
-        paths += [os.path.join(GRADING, name) for name in sorted(os.listdir(GRADING))]
-    except OSError:
-        pass
+    paths = change_stamp_paths()
     for base, dirs, files in os.walk(ROOT):
         dirs[:] = [d for d in dirs if not d.startswith(".") and d not in STAMP_SKIP
                    and not (base == ROOT and d in ("_system", "themes"))]
@@ -702,6 +761,27 @@ def change_stamp():
     return h.hexdigest()[:16]
 
 
+def write_progress(view, projection, report, now):
+    stamp = progress_stamp()
+    try:
+        stored = json.loads(read_text(PROGRESS) or "{}")
+    except ValueError:
+        stored = {}
+    if isinstance(stored, dict) and stored.get("inputs") == stamp \
+            and str(stored.get("computed") or "")[:10] == now.date().isoformat():
+        return
+    payload = dict(projection)
+    payload["inputs"] = stamp
+    payload["pending"] = {"attempts": [e.get("id") for e in pending_entries(view)]}
+    payload["rejected"] = [{"file": name, "reasons": reasons}
+                           for name, reasons in sorted(report["rejected"].items())]
+    tmp = PROGRESS + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=1, ensure_ascii=False)
+        fh.write("\n")
+    os.replace(tmp, PROGRESS)
+
+
 def api_state():
     report = evidence.ingest(ROOT, datetime.now().astimezone())
     grading = {"rejected": report["rejected"], "waiting": report["waiting"]}
@@ -712,7 +792,12 @@ def api_state():
         return {"error": "state.json could not be parsed: %s" % exc, "config": load_config()[0],
                 "grading": grading,
                 "server": {"now": now_iso(), "version": VERSION, "port": PORT}}
+    now = datetime.now().astimezone()
     derived = {"topics": {}, "linked": []}
+    if state.get("schema") == 2:
+        state, projection = project_state(state, now)
+        derived["progress"] = projection
+        write_progress(state, projection, report, now)
     for topic in state.get("topics", []):
         derived["topics"][topic["id"]] = local_topic(topic)
     for link in state.get("linked_topics", []):
@@ -726,7 +811,7 @@ def api_state():
     withdrawn = {e.get("ref") for e in entries if e.get("kind") == "withdraw"}
     derived["calibration"] = calibration(state, entries)
     derived["stuck"] = stuck_tasks(state)
-    derived["recall"] = pick_recall(state, entries, read_jsonl(BLOCKS), datetime.now().astimezone())
+    derived["recall"] = pick_recall(state, entries, read_jsonl(BLOCKS), now)
     cfg, cfg_err = load_config()
     return {
         "state": state,
@@ -1074,7 +1159,7 @@ def with_lesson_theme(page):
 
 
 def task_for_path(path):
-    for topic in read_state_safe().get("topics", []):
+    for topic in load_view_safe().get("topics", []):
         for task in topic.get("queue", []):
             if task.get("status") != "done" and urllib.parse.unquote(task.get("href") or "") == path:
                 return task
@@ -1294,7 +1379,7 @@ def claude_args(prompt, resume, kind="chat"):
     # edu_trace.py runs inside every checker, and trace/ is the learner's record: neither is Claude's to change
     locked = ["CLAUDE.md", "AGENTS.md", ".claude/**", ".mcp.json", "_system/keepsakes.json", "_system/reminders.json",
               "_system/edu_trace.py", "**/trace/**", "_system/inbox.jsonl", "_system/blocks.jsonl", "_system/music/**",
-              "_system/grades.jsonl"]
+              "_system/grades.jsonl", "_system/progress.json"]
     deny = ["Bash"] + ["%s(./%s)" % (t, f) for f in locked for t in ("Edit", "Write", "MultiEdit")]
     if kind in FENCED:
         deny += ["WebSearch", "WebFetch"]
@@ -1344,7 +1429,7 @@ def claude_start(body):
             prompt, resume = GRADE_PROMPT, None
             claude_event("you", "Grade my inbox")
         elif kind == "first":
-            if not any(e.get("task") == "first-try" for e in pending_entries(read_state_safe())):
+            if not any(e.get("task") == "first-try" for e in pending_entries(load_view_safe())):
                 return 409, {"error": "there's no first try waiting to be graded"}
             prompt, resume = FIRST_PROMPT, None
             claude_event("you", "Grade my first try")
@@ -1410,6 +1495,7 @@ def claude_watch(proc, kind):
             claude_event("error", "Claude stopped with a problem: %s" % (why if isinstance(why, str) else why[0]))
     # --overrule: a pass the answer key's checklist doesn't allow is turned into not passed before the check,
     # because a run started here has no shell and can't run the check itself (PROTOCOL section 3)
+    evidence.ingest(ROOT, datetime.now().astimezone())
     check = subprocess.run([sys.executable, os.path.join(ENGINE, "edu4self"), "check", "--vault", ROOT, "--overrule"],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     with CLAUDE_LOCK:
@@ -1419,7 +1505,6 @@ def claude_watch(proc, kind):
                 claude_event("check", "Not passed: " + l[len("OVERRULED: not passed, "):])
         claude_event("check", ("Check OK" if check.returncode == 0 else "Check FAILED: " + " / ".join(lines[-3:])))
         RUN.update(proc=None, busy=False)
-    evidence.ingest(ROOT, datetime.now().astimezone())
     maybe_gift()   # a gift that waited for Claude to be free
 
 
@@ -1492,7 +1577,7 @@ def reminder_tick(now=None):
     """Once a minute: send the away mail or this week's recap if one is due."""
     now = now or datetime.now().astimezone()
     try:
-        state = json.loads(read_text(STATE))
+        state = load_view()
     except ValueError:
         return None
     cfg = load_config()[0]
@@ -1551,8 +1636,7 @@ def sync_keepsakes():
 
 
 GIFT_PROMPT = """A surprise for the learner. They just {what}, studying in {room}. That earned them a {trophy}.
-Make them one small gift they'd enjoy, built from what they have actually proven: read _system/state.json
-(history entries with "evidence": true, the topics and their skills) and the topics' learning records.
+Make them one small gift they'd enjoy, built from what they have actually proven: {proven}
 You choose the form: a short story set in {room} where their skills talk about what they learned, a
 one-page map of what they now know, a puzzle or quiz built from it, a poem, a printable reference card,
 or something better. Make it personal and specific, not generic praise.
@@ -1581,7 +1665,14 @@ def maybe_gift():
     tid, meta = active_theme()
     what = ("met their goal for the week of %s" % item["date"] if item["kind"] == "week"
             else "finished die #%d (another 10 focused hours)" % item["n"])
-    prompt = GIFT_PROMPT.format(what=what, room=meta.get("name", "their room"), trophy=item["name"], id=item["id"])
+    if read_state_safe().get("schema") == 2:
+        proven = ('read _system/progress.json and the "type": "grade" lines with "passed": true in '
+                  '_system/grades.jsonl, and the topics\' learning records.')
+    else:
+        proven = ('read _system/state.json (history entries with "evidence": true, the topics and their skills) '
+                  'and the topics\' learning records.')
+    prompt = GIFT_PROMPT.format(what=what, room=meta.get("name", "their room"), trophy=item["name"], id=item["id"],
+                                proven=proven)
     with CLAUDE_LOCK:
         if RUN["busy"]:
             return False
@@ -1621,10 +1712,7 @@ def card_page(item_id):
     pal = dict({"bg": "#1a1411", "ink": "#f1e8da", "muted": "#b3a690", "accent": "#ffb36b", "line": "#3a2e26"},
                **(meta.get("palette") or {}))
     blocks = read_jsonl(BLOCKS)
-    try:
-        history = json.loads(read_text(STATE) or "{}").get("topics", [])
-    except ValueError:
-        history = []
+    history = load_view_safe().get("topics", [])
     d0 = datetime.fromisoformat(item["date"]).date()
     if item["kind"] == "day":
         start, end, title = d0, d0, "%s, %d %s" % (d0.strftime("%A"), d0.day, d0.strftime("%B %Y"))
@@ -1792,7 +1880,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, trace_summary())
         if route == "/api/hints":
             try:
-                task = find_task(json.loads(read_text(STATE)), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
+                task = find_task(load_view(), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
             except ValueError:
                 return self.send_json(500, {"error": "state.json is unreadable"})
             hints = hints_for(task)
@@ -1801,7 +1889,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {"task": task["id"], "hints": hints})
         if route == "/api/attempts":
             try:
-                task = find_task(json.loads(read_text(STATE)), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
+                task = find_task(load_view(), urllib.parse.parse_qs(parsed.query).get("task", [""])[0])
             except ValueError:
                 return self.send_json(500, {"error": "state.json is unreadable"})
             a = attempts(task)
@@ -1943,7 +2031,7 @@ class Handler(BaseHTTPRequestHandler):
             BLOCK_UNTIL = t if t and t < datetime.now().astimezone() + timedelta(hours=5) else None
             return self.send_json(200, {"ok": True})
         try:
-            state = json.loads(read_text(STATE))
+            state = load_view()
         except ValueError:
             return self.send_json(500, {"error": "state.json is unreadable"})
 

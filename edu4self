@@ -9,6 +9,7 @@
     ./edu4self restart | status      restart the service / show what's running
     ./edu4self check                 validate state.json and every link in the vault (Claude runs this)
     ./edu4self progress              print per-skill levels, due dates and task readiness from grades (read-only)
+    ./edu4self migrate               move state.json to schema 2: history and regions live in grades.jsonl
     ./edu4self doctor                check everything and say how to fix what's wrong
     ./edu4self open                  open the dashboard in a browser
     ./edu4self mail setup|test|off   away mails and the Sunday recap (your own mail account)
@@ -290,11 +291,8 @@ def read_jsonl(path):
     return entries
 
 
-def cmd_progress(args):
-    vault = need_vault(resolve(args)[0])
-    import content
+def parse_now(args):
     import mastery
-    import progress
     if getattr(args, "now", None):
         try:
             now = mastery.parse_iso(args.now)
@@ -302,8 +300,56 @@ def cmd_progress(args):
             sys.exit("--now must be an ISO 8601 time with an offset, e.g. 2026-01-02T12:00:00+00:00")
         if now.tzinfo is None:
             sys.exit("--now must be an ISO 8601 time with an offset, e.g. 2026-01-02T12:00:00+00:00")
+        return now
+    return datetime.now().astimezone()
+
+
+def _old_level(region):
+    if not isinstance(region, dict) or not isinstance(region.get("level"), int):
+        return "-"
+    return region.get("level")
+
+
+def compare_legacy(state, grades, body):
+    old = {}
+    if state.get("schema") == 2:
+        for grade in grades:
+            if isinstance(grade, dict) and grade.get("type") == "legacy_topic" and isinstance(grade.get("topic"), str):
+                old[grade["topic"]] = grade.get("regions") or []
     else:
-        now = datetime.now().astimezone()
+        for topic in state.get("topics") or []:
+            if isinstance(topic, dict) and isinstance(topic.get("id"), str):
+                old[topic["id"]] = topic.get("regions") or []
+    lines = []
+    for topic in state.get("topics") or []:
+        if not isinstance(topic, dict):
+            continue
+        tid = topic.get("id") if isinstance(topic.get("id"), str) else topic.get("path")
+        if not isinstance(tid, str):
+            continue
+        regions = old.get(tid) or []
+        projection = (body.get("topics") or {}).get(tid)
+        if projection is None:
+            for region in regions:
+                if isinstance(region, dict):
+                    lines.append("%s %s %s: old %s -> now unlinked" % (
+                        tid, region.get("code"), region.get("name") or "", _old_level(region)))
+            lines.append("%s: not linked to skills yet" % tid)
+            continue
+        by_code = {region.get("code"): region for region in regions if isinstance(region, dict)}
+        for code, region in (projection.get("regions") or {}).items():
+            previous = by_code.get(code)
+            lines.append("%s %s %s: old %s -> now %s (%d/%d skills with evidence)" % (
+                tid, code, region.get("name") or "", _old_level(previous), region.get("level"),
+                region.get("started") or 0, region.get("skills") or 0))
+    return "\n".join(lines)
+
+
+def cmd_progress(args):
+    vault = need_vault(resolve(args)[0])
+    import content
+    import progress
+    now = parse_now(args)
     try:
         with open(os.path.join(vault, "_system", "state.json"), encoding="utf-8") as fh:
             state = json.load(fh)
@@ -315,18 +361,32 @@ def cmd_progress(args):
         for problem in problems:
             print(problem, file=sys.stderr)
         return 1
-    if args.topic is not None:
+    topic = None if getattr(args, "compare_legacy", False) else args.topic
+    if topic is not None:
         known = {t.get("id") for t in state.get("topics") or [] if isinstance(t, dict)}
-        if args.topic not in known:
-            print("unknown topic: %s" % args.topic, file=sys.stderr)
+        if topic not in known:
+            print("unknown topic: %s" % topic, file=sys.stderr)
             return 1
     grades = read_jsonl(os.path.join(vault, "_system", "grades.jsonl"))
     inbox = read_jsonl(os.path.join(vault, "_system", "inbox.jsonl"))
-    body = progress.project(state, loaded, inbox, grades, now, args.topic)
-    out = {"schema": 1, "computed": now.isoformat(),
-           "model": {"name": "memory-v1", "bar": mastery.BAR, "learned_bar": mastery.LEARNED_BAR}}
-    out.update(body)
+    out = progress.envelope(state, loaded, inbox, grades, now, topic)
+    if getattr(args, "compare_legacy", False):
+        print(compare_legacy(state, grades, out))
+        return 0
     print(json.dumps(out, indent=1))
+    return 0
+
+
+def cmd_migrate(args):
+    vault = need_vault(resolve(args)[0])
+    import migrate
+    now = parse_now(args)
+    try:
+        report = migrate.run(vault, now, dry_run=getattr(args, "dry_run", False))
+    except migrate.MigrateError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(json.dumps(report, indent=1))
     return 0
 
 
@@ -1067,6 +1127,11 @@ def main(argv=None):
     p = common(sub.add_parser("progress", help="compute progress from grades (read-only)"))
     p.add_argument("--topic", help="only this topic id")
     p.add_argument("--now", help="compute as of this ISO 8601 time with an offset")
+    p.add_argument("--compare-legacy", action="store_true",
+                   help="show each old region level beside the level computed from grades")
+    p = common(sub.add_parser("migrate", help="move state.json to schema 2: history and regions to grades.jsonl"))
+    p.add_argument("--dry-run", action="store_true", help="print what would change and write nothing")
+    p.add_argument("--now", help="the time written on the migrated records (ISO 8601 with an offset)")
     common(sub.add_parser("ingest", help="grade the requests in _system/grading/"))
     common(sub.add_parser("mcp", help="progress for AI tools over MCP (stdio)"), vault=False)
     p = sub.add_parser("mail", help="reminders by mail: setup, test or off")
@@ -1084,7 +1149,8 @@ def main(argv=None):
         return 0
     return {"setup": cmd_setup, "serve": cmd_serve, "install": cmd_install, "uninstall": cmd_uninstall,
             "restart": cmd_restart, "status": cmd_status, "check": cmd_check, "progress": cmd_progress,
-            "ingest": cmd_ingest, "doctor": cmd_doctor, "open": cmd_open, "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
+            "migrate": cmd_migrate, "ingest": cmd_ingest, "doctor": cmd_doctor, "open": cmd_open,
+            "mail": cmd_mail, "mcp": cmd_mcp}[args.cmd](args)
 
 
 if __name__ == "__main__":

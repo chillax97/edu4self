@@ -36,9 +36,16 @@ except (OSError, ValueError) as exc:
     print("INVALID: cannot parse state.json:", exc)
     sys.exit(1)
 
-for key in ("schema", "updated", "topics", "processed_inbox"):
+TWO = s.get("schema") == 2
+for key in ("schema", "updated", "topics"):
     if key not in s:
         err("missing top-level key: %s" % key)
+if "schema" in s and s.get("schema") not in (1, 2):
+    err("schema must be 1 or 2, got %r" % (s.get("schema"),))
+if not TWO and "processed_inbox" not in s:
+    err("missing top-level key: processed_inbox")
+if TWO and "processed_inbox" in s:
+    err("schema 2 keeps no processed_inbox: grades go in _system/grading/ and levels are computed")
 
 # block kinds: from config.json if it has them, else the defaults
 KIND_IDS = {"lessons", "practice", "reading", "free", "play"}
@@ -177,7 +184,7 @@ def checklist_blocks(h, want):
     return ", ".join(reasons) or None
 
 
-if OVERRULE:
+if OVERRULE and not TWO:
     # The checklist decides the pass, not the grader (PROTOCOL section 3): undo a pass it doesn't allow.
     overruled = []
     for t in s.get("topics", []):
@@ -220,9 +227,14 @@ if OVERRULE:
 ids = set()
 for t in s.get("topics", []):
     tid = t.get("id", "?")
-    for key in ("id", "title", "path", "color", "milestones", "queue", "regions", "history"):
+    required = ("id", "title", "path", "color", "milestones", "queue") + (() if TWO else ("regions", "history"))
+    for key in required:
         if key not in t:
             err("topic %s missing %s" % (tid, key))
+    if TWO and "history" in t:
+        err("topic %s: schema 2 keeps no history: grades go in _system/grading/ and levels are computed" % tid)
+    if TWO and "regions" in t:
+        err("topic %s: schema 2 keeps no regions: grades go in _system/grading/ and levels are computed" % tid)
     if not os.path.isdir(os.path.join(ROOT, t.get("path", ""))):
         err("topic %s path does not exist: %s" % (tid, t.get("path")))
     if "gate" in t and (t.get("gate") or {}).get("level") not in ("RED", "AMBER", "GREEN"):
