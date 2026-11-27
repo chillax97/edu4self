@@ -10,9 +10,11 @@ answers from the dashboard. Reading it is not proof; the graded answers are. Wri
 1. **Read before writing.** In the topic folder: `MISSION.md`, `NOTES.md` (how they like to be
    taught), `GLOSSARY.md`, `RESOURCES.md`, the newest `learning-records/`, `assets/`, and the last
    lesson. In the vault: `PLAN.md` (which unit this is and what comes after) and the active room
-   (`theme` in `_system/config.json`). *Done when you can name the one idea, the learner's evidence
-   that they're ready for it, and the source you'll teach it from.* Missing evidence of a prerequisite
-   means a probe first (`write-probe` skill), not a lesson.
+   (`theme` in `_system/config.json`), the topic's `graph.json` (its skills and what each requires)
+   and `_system/progress.json` (each skill's level). *Done when you can name the one idea, the skill it
+   teaches, the learner's evidence that they're ready for it, and the source you'll teach it from.* A
+   skill the lesson requires that is below level 2 in `progress.json` means a probe or a repair unit
+   first (`write-probe` skill), not this lesson.
 2. **Size it.** One idea, about 15 minutes, one tangible win tied to the mission. An idea that needs
    two new terms or two exercises of different kinds is two **parts**: each its own page, task and
    exercise, numbered `Lesson 05 · part 1`, `part 2`.
@@ -50,7 +52,9 @@ answers from the dashboard. Reading it is not proof; the graded answers are. Wri
      with a one-screen refresher of the original idea (no exercise answers in it), then new exercises
      on the same skill.
 5. **Write the answer key** at `_system/keys/<topic path>/<task-id>.md`, in the format of PROTOCOL.md
-   section 7, now, before any answer exists. One section per exercise: the required points (each one a
+   section 7, now, before any answer exists. One section per exercise, each with one `Skill:` line
+   naming the skill it checks (add a new skill to `graph.json` first) or `Skill: none`; an exercise
+   that checks two skills is two exercises. Each section lists the required points (each one a
    claim you can check yes or no in an answer, and only what the question asks for), the wrong answers to
    watch for (the misconceptions the page warns about), and what is not required (examples, extras,
    other correct routes). For a checker exercise, what the code must do in full, including what
@@ -63,9 +67,12 @@ answers from the dashboard. Reading it is not proof; the graded answers are. Wri
    `submit: {type: "answers", intro: "Close the lesson first and answer from memory. Short is fine.",
    fields: [...]}` with one field per exercise, numbered as in the page. Add `exercise` for a checker
    folder, `calculator: true` only when the rules allow one. It is `todo` if it's the learner's next
-   unit, otherwise `locked` with an `unlock` line.
+   unit, otherwise `locked` with an `unlock` line. Never `done`: the engine marks it done when a grade
+   passes.
 8. **Plan and check.** Update `PLAN.md` (PROTOCOL.md section 5): the unit in its slot, a recall check a
-   few units later, a line under Changes. Set `updated`, then run the check command from the vault's
+   few units later, a line under Changes. Recall questions from this lesson, once it passes, each get
+   a `key` naming their key section (PROTOCOL.md section 3). Set `updated`, then run the check command
+   from the vault's
    `CLAUDE.md`. (From the dashboard panel there is no shell: the server runs the check after you
    reply.)
 

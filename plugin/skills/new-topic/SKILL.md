@@ -15,15 +15,18 @@ The learner wants a new topic: $ARGUMENTS
    `reference/`, `learning-records/`, `assets/`. Copy `lesson.css` and `quiz.js` into `assets/` from
    the vault's `how-learning-works/assets/` if it exists, otherwise from
    `template/how-learning-works/assets/` in the engine (its folder is named in the vault's `CLAUDE.md`).
-3. Write the first unit: usually a calibration probe with the `write-probe` skill, because what they
+3. **Map the skills** in `<topic>/graph.json` (PROTOCOL.md section 3): the skills the mission needs,
+   each with one `can` line, the regions that group them, and what each requires. Write it before the
+   first unit, because every answer key names its skills from it.
+4. Write the first unit: usually a calibration probe with the `write-probe` skill, because what they
    say they know is a guess until a probe shows it. When the probe has nothing to measure (a subject
    new to them), start with Lesson 01 using the `write-lesson` skill. Write the unit after it too, so
    two are ready.
-4. Register the topic in `_system/state.json` as described in section 2 of
-   [PROTOCOL.md](../check-inbox/PROTOCOL.md): id, title, tagline, path, colour, milestones with steps,
-   the queue from step 3, regions at level 0, and a history entry with `evidence: false`. Add a `gate`
-   only if the topic ends in a high-stakes attempt. Then put its units into the vault's `PLAN.md`,
+5. Register the topic in `_system/state.json` as described in section 2 of
+   [PROTOCOL.md](../check-inbox/PROTOCOL.md): id, title, tagline, path, colour, milestones with steps
+   and the queue from step 4. Levels and history come from grades, so the topic has neither. Add a
+   `gate` only if the topic ends in a high-stakes attempt. Then put its units into the vault's `PLAN.md`,
    taking turns with the other topics (PROTOCOL.md, section 5).
-5. Set `updated`, write a short `coach` note about the new topic in the learner's room (THEMES.md, "The
+6. Set `updated`, write a short `coach` note about the new topic in the learner's room (THEMES.md, "The
    one rule: stay in the room"), and run the check command from the vault's `CLAUDE.md`. It must exit 0.
-6. Tell the learner the topic is on the dashboard and what the first task is, with its `#submit=` link.
+7. Tell the learner the topic is on the dashboard and what the first task is, with its `#submit=` link.

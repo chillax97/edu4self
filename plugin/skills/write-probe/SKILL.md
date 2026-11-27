@@ -10,8 +10,9 @@ checkpoint on one passed lesson, a few units after it. Write it for: $ARGUMENTS
 
 1. **Pick the atoms.** List the separate things to measure: for a calibration probe, the
    prerequisites the mission needs; for a checkpoint, the milestone's skills; for a recall check, the
-   lesson's core idea. Read `MISSION.md`, the learning records and `PLAN.md` first. *Done when each
-   atom is one skill a single question can show or fail to show.*
+   lesson's core idea. Read `MISSION.md`, the learning records, `PLAN.md`, the topic's `graph.json`
+   and `_system/progress.json` (levels and what is due) first. *Done when each atom is one skill of
+   `graph.json` (add it there if it is missing) that a single question can show or fail to show.*
 2. **Write the questions,** one atom each, so a wrong answer names the missing piece. Ask the learner
    to produce (explain, compute, predict, write), never to recognize; no options to pick from, no
    hints, no worked example nearby. Build from easy to hard and stop at about 10 minutes. On a recall
@@ -27,17 +28,20 @@ checkpoint on one passed lesson, a few units after it. Write it for: $ARGUMENTS
    Words stay plain. A probe is a measurement, so it wears no room jokes; the room's look comes from
    the dashboard.
 4. **Write the answer key** at `_system/keys/<topic path>/<task-id>.md`, in the format of PROTOCOL.md
-   section 7, before any answer exists: per question, the required points (each checkable yes or no),
+   section 7, before any answer exists: per question, one `Skill:` line naming its atom's skill (or
+   `Skill: none` for a habit or goal question), the required points (each checkable yes or no),
    the wrong answers that would show the atom is missing, and what is not required. A question with no
    right answer (habits, goals) says so and lists what a complete answer contains. On a recall check,
-   key the lesson's core idea, not its exercises' wording. Never link the key from the page.
+   key the lesson's core idea, not its exercises' wording, under the lesson's skill. Never link the key
+   from the page.
 5. **Put it on the dashboard.** Add the task to the topic's `queue` in `_system/state.json`
    (PROTOCOL.md section 3): `kind: "probe"` or `"checkpoint"`, `label` (`Probe 02`, `Checkpoint M1`,
    `Recall check`), `title`, `why` (what it decides), `href: "/vault/<topic>/probes/<file>"`,
    `effort`, `rules` (one line, the same as the page), and `submit: {type: "answers", intro, fields}`
    with one field per question, numbered as in the page. `calculator: true` only when the rules allow
    one and the question isn't testing mental arithmetic. A recall check stays `locked` with an
-   `unlock` line until its slot in the plan comes up.
+   `unlock` line until its slot in the plan comes up. Never `done`: the engine marks it done when a
+   grade passes.
 6. **Plan and check.** Slot it in `PLAN.md` (PROTOCOL.md section 5: a recall check goes a few units
    after its lesson, never right after), add a line under Changes, set `updated`, and run the check
    command from the vault's `CLAUDE.md`.

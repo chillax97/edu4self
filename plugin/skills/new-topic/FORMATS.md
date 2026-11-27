@@ -8,6 +8,7 @@ skill by Matt Pocock (MIT, notice at the end).
 |---|---|---|
 | `MISSION.md` | why the learner wants this | the topic starts; the goal moves |
 | `RESOURCES.md` | the trusted sources lessons draw from | the topic starts; a gap is found |
+| `graph.json` | the skills the topic teaches, their regions and prerequisites (format in PROTOCOL.md section 3) | the topic starts; grades show the map is wrong |
 | `GLOSSARY.md` | terms the learner has proven they can use | a term is used right without notes |
 | `learning-records/NNNN-<slug>.md` | decision-grade facts about the learner | a grade shows something non-obvious |
 | `NOTES.md` | how the learner likes to be taught, working notes | they say so, or you notice |
@@ -71,7 +72,8 @@ Add `Evidence:` (how it was shown), `Implications:` (what it unlocks or rules ou
 `Status: superseded by 0007` only when they help. Write one when a grade shows real understanding of
 something non-trivial, a stated prior knowledge (with its claimed depth, still a hypothesis until a
 probe shows it), a corrected misconception, the kind of mistake behind a stall (PROTOCOL section 6),
-or a moved mission. Material merely covered is not a record; neither is a session log.
+or a moved mission. Material merely covered is not a record; neither is a session log. When a grade
+writes a record, name it in that grade request's `record` (PROTOCOL.md section 1).
 
 ## GLOSSARY.md
 
